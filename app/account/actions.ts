@@ -4,8 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/require-user";
 
+const MAX_EMAIL_LENGTH = 254;
+
 function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function isValidEmail(email: string) {
+  return email.length <= MAX_EMAIL_LENGTH && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export async function updateProfile(formData: FormData) {
@@ -25,7 +31,7 @@ export async function updateProfile(formData: FormData) {
 
 export async function updateEmail(formData: FormData) {
   const email = clean(formData.get("email")).toLowerCase();
-  if (!email || !email.includes("@")) redirect("/account?error=Enter%20a%20valid%20email.");
+  if (!isValidEmail(email)) redirect("/account?error=Enter%20a%20valid%20email.");
 
   const { supabase } = await requireUser();
   const { error } = await supabase.auth.updateUser({ email });

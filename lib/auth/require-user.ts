@@ -11,6 +11,16 @@ export async function requireUser() {
     redirect("/auth/login?message=Please%20log%20in%20to%20continue.");
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("account_status")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile || profile.account_status !== "active") {
+    redirect("/auth/blocked");
+  }
+
   return { supabase, user };
 }
 

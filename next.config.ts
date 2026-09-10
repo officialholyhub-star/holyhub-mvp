@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: isDevelopment
         ? [
+            "localhost:3000",
+            "127.0.0.1:3000",
             "fluffy-adventure-4qw46757wv6whqpg7-3000.app.github.dev",
             "*.app.github.dev",
           ]

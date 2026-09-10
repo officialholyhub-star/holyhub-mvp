@@ -5,12 +5,24 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
+const MAX_EMAIL_LENGTH = 254;
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
+
 function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
 }
 
 function raw(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value : "";
+}
+
+function isValidEmail(email: string) {
+  return email.length <= MAX_EMAIL_LENGTH && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidPasswordLength(password: string) {
+  return password.length >= MIN_PASSWORD_LENGTH && password.length <= MAX_PASSWORD_LENGTH;
 }
 
 function messageUrl(path: string, kind: "error" | "message", message: string) {
@@ -37,7 +49,9 @@ export async function login(formData: FormData) {
   const email = clean(formData.get("email")).toLowerCase();
   const password = raw(formData.get("password"));
 
-  if (!email || !password) redirect(messageUrl("/auth/login", "error", "Enter your email and password."));
+  if (!isValidEmail(email) || !password || password.length > MAX_PASSWORD_LENGTH) {
+    redirect(messageUrl("/auth/login", "error", "We couldn't log you in. Check your details and try again."));
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -53,9 +67,11 @@ export async function signup(formData: FormData) {
   const password = raw(formData.get("password"));
   const confirmPassword = raw(formData.get("confirm_password"));
 
-  if (!email || !password) redirect(messageUrl("/auth/signup", "error", "Email and password are required."));
+  if (!isValidEmail(email)) redirect(messageUrl("/auth/signup", "error", "Enter a valid email address."));
   if (fullName.length > 100) redirect(messageUrl("/auth/signup", "error", "Name is too long."));
-  if (password.length < 8) redirect(messageUrl("/auth/signup", "error", "Use at least 8 characters for your password."));
+  if (!isValidPasswordLength(password)) {
+    redirect(messageUrl("/auth/signup", "error", "Use a password between 8 and 128 characters."));
+  }
   if (password !== confirmPassword) redirect(messageUrl("/auth/signup", "error", "Your passwords don't match."));
 
   const supabase = await createClient();
@@ -82,7 +98,7 @@ export async function signup(formData: FormData) {
 
 export async function requestPasswordReset(formData: FormData) {
   const email = clean(formData.get("email")).toLowerCase();
-  if (!email) redirect(messageUrl("/auth/forgot-password", "error", "Enter your email address."));
+  if (!isValidEmail(email)) redirect(messageUrl("/auth/forgot-password", "error", "Enter a valid email address."));
 
   const supabase = await createClient();
   const siteUrl = await getSiteUrl();
@@ -98,7 +114,9 @@ export async function updatePassword(formData: FormData) {
   const password = raw(formData.get("password"));
   const confirmPassword = raw(formData.get("confirm_password"));
 
-  if (password.length < 8) redirect(messageUrl("/auth/reset-password", "error", "Use at least 8 characters for your password."));
+  if (!isValidPasswordLength(password)) {
+    redirect(messageUrl("/auth/reset-password", "error", "Use a password between 8 and 128 characters."));
+  }
   if (password !== confirmPassword) redirect(messageUrl("/auth/reset-password", "error", "Your passwords don't match."));
 
   const supabase = await createClient();

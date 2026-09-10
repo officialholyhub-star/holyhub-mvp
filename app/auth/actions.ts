@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 function clean(value: FormDataEntryValue | null) {
@@ -14,6 +15,22 @@ function raw(value: FormDataEntryValue | null) {
 
 function messageUrl(path: string, kind: "error" | "message", message: string) {
   return `${path}?${kind}=${encodeURIComponent(message)}`;
+}
+
+async function getSiteUrl() {
+  if (process.env.NODE_ENV === "development") {
+    const requestHeaders = await headers();
+    const forwardedHost = requestHeaders.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const host = forwardedHost || requestHeaders.get("host")?.trim();
+    const forwardedProto = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim();
+
+    if (host && (host === "localhost:3000" || host === "127.0.0.1:3000" || host.endsWith(".app.github.dev"))) {
+      const protocol = host.endsWith(".app.github.dev") ? "https" : (forwardedProto || "http");
+      return `${protocol}://${host}`;
+    }
+  }
+
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
 export async function login(formData: FormData) {
@@ -42,7 +59,7 @@ export async function signup(formData: FormData) {
   if (password !== confirmPassword) redirect(messageUrl("/auth/signup", "error", "Your passwords don't match."));
 
   const supabase = await createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = await getSiteUrl();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -68,7 +85,7 @@ export async function requestPasswordReset(formData: FormData) {
   if (!email) redirect(messageUrl("/auth/forgot-password", "error", "Enter your email address."));
 
   const supabase = await createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const siteUrl = await getSiteUrl();
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
   });

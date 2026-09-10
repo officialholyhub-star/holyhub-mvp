@@ -86,7 +86,9 @@ export async function signup(formData: FormData) {
     },
   });
 
-  if (error) redirect(messageUrl("/auth/signup", "error", "We couldn't create the account. Please try again."));
+  if (error) {
+    redirect(messageUrl("/auth/signup", "error", "We couldn't use that email address. Check it's correct and try again."));
+  }
 
   if (!data.session) {
     redirect(messageUrl("/auth/login", "message", "Account created. Check your email to confirm it, then log in."));

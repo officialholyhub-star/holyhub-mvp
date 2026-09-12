@@ -1,7 +1,9 @@
-name: Stage 1 CI
+name: HolyHub MVP checks
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -22,10 +24,19 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
 
       - name: Build
         run: npm run build
+
+      - name: Database and validation tests
+        run: npm test
+
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium --only-shell
+
+      - name: Browser journeys
+        run: npm run test:e2e

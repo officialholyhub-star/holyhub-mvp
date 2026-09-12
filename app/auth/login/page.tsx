@@ -1,18 +1,22 @@
 import Link from "next/link";
 import { login } from "@/app/auth/actions";
+import { SubmitButton } from "@/components/submit-button";
+import { safeNextPath } from "@/lib/auth/redirects";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; next?: string }> }) {
   const params = await searchParams;
+  const next = safeNextPath(params.next);
   return (
     <section className="auth-wrap">
       <div className="card">
         <div className="card-header">
-          <h2>Log in</h2>
+          <h1 className="form-title">Log in</h1>
           <p>Welcome back to HolyHub.</p>
         </div>
         {params.error && <p className="notice notice-error">{params.error}</p>}
         {params.message && <p className="notice notice-info">{params.message}</p>}
         <form className="form" action={login}>
+          <input type="hidden" name="next" value={next} />
           <div className="field">
             <label htmlFor="email">Email</label>
             <input id="email" name="email" type="email" autoComplete="email" required />
@@ -21,11 +25,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <label htmlFor="password">Password</label>
             <input id="password" name="password" type="password" autoComplete="current-password" required />
           </div>
-          <button className="button button-primary" type="submit">Log in</button>
+          <SubmitButton pendingText="Logging in…">Log in</SubmitButton>
         </form>
         <div className="form-footer">
           <Link className="text-link" href="/auth/forgot-password">Forgot password?</Link>
-          <Link className="text-link" href="/auth/signup">Create account</Link>
+          <Link className="text-link" href={`/auth/signup?next=${encodeURIComponent(next)}`}>Create account</Link>
         </div>
       </div>
     </section>

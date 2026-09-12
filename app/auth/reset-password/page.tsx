@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updatePassword } from "@/app/auth/actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -12,7 +13,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
     <section className="auth-wrap">
       <div className="card">
         <div className="card-header">
-          <h2>Choose a new password</h2>
+          <h1 className="form-title">Choose a new password</h1>
           <p>Use at least 8 characters.</p>
         </div>
         {params.error && <p className="notice notice-error">{params.error}</p>}
@@ -25,7 +26,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
             <label htmlFor="confirm_password">Confirm new password</label>
             <input id="confirm_password" name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
           </div>
-          <button className="button button-primary" type="submit">Update password</button>
+          <SubmitButton pendingText="Updating…">Update password</SubmitButton>
         </form>
       </div>
     </section>

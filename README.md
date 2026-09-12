@@ -6,7 +6,7 @@ Next.js 16, React 19, TypeScript, Supabase Auth/Postgres/Storage. The original H
 
 ## Taking over this project
 
-Start with [DEVELOPER_HANDOFF.md](DEVELOPER_HANDOFF.md) for the source status, setup commands, architecture map, access requirements and launch acceptance checklist. The accompanying source archive includes this handoff and all current tracked application files; GitHub upload and live deployment remain blocked by the access/setup issues recorded there.
+Start with [ALEA_START_HERE.md](ALEA_START_HERE.md) for the owner overview and ten-stage progress, then [DEVELOPER_HANDOFF.md](DEVELOPER_HANDOFF.md) for setup, architecture, access requirements and launch checks. The complete source is uploaded on `codex/full-marketplace-mvp`; production backend setup and deployment are still outstanding.
 
 ## Production launch
 

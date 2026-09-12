@@ -1,6 +1,6 @@
 # HolyHub developer handoff
 
-Prepared 12 September 2026. Read this first, then [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) for the detailed deployment sequence and [BUILD_STATUS.md](BUILD_STATUS.md) for feature boundaries.
+Prepared 12 September 2026; updated after the GitHub collaboration invitation was accepted. Alea can start with [ALEA_START_HERE.md](ALEA_START_HERE.md). Then read [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) for deployment and [BUILD_STATUS.md](BUILD_STATUS.md) for feature boundaries.
 
 ## 1. What you are taking over
 
@@ -20,10 +20,10 @@ HolyHub connects people with Christian businesses, brands, creators and events. 
 | Working branch | `codex/full-marketplace-mvp` |
 | Application baseline | `f2b749a` — real-listing launch infrastructure and empty catalogue; documentation is committed after this baseline |
 | Local checkout | `C:\Users\matth\holyhub-mvp` |
-| GitHub upload | **Blocked:** connected account `matthewjeanty` has pull but no push access; fresh push dry-run returned HTTP 403 |
+| GitHub upload | **Uploaded:** invitation accepted; `matthewjeanty` now has write access. The complete source is on `codex/full-marketplace-mvp`, not merged over main |
 | Public deployment | **Not completed.** Do not assume existing GitHub `main` contains this release |
 | Hosted backend | Existing database is not verified compatible; readiness/missing-table failures remain |
-| Hosting access | Browser automation timed out; no authenticated hosting/database setup was completed |
+| Hosting access | Browser automation timed out; no authenticated hosting/database setup was completed. A functional GPT Site was requested, not a read-only substitute; compatible Workers output and real backend setup remain necessary |
 | Existing landing site | Unchanged by this marketplace work |
 
 The accompanying source ZIP contains the complete current tracked application, assets, lockfile, tests, migrations and this handoff. It excludes local environment files, dependencies, build output and Git history. The ZIP filename identifies the release commit. **Do not substitute an older ZIP or GitHub's old main branch for this release.**
@@ -31,12 +31,12 @@ The accompanying source ZIP contains the complete current tracked application, a
 ## 2. First actions for the next developer
 
 1. Obtain named-account access to GitHub, Vercel, the chosen Supabase project and Namecheap. Use invitations, not shared passwords.
-2. Put this exact source release in the intended GitHub repository, preserving existing history and unrelated work. Review a pull request and run CI; do not force-push over `main`.
+2. Review the uploaded `codex/full-marketplace-mvp` branch and its pull request; run CI and preserve existing history/unrelated work. Do not force-push over `main`.
 3. Inspect the existing database without changing it. Agree with the owner whether to reconcile it or use a dedicated fresh marketplace project. Back up existing data first.
-4. Configure real Supabase Auth/Postgres/Storage and SMTP, then deploy the existing Next.js app to Vercel. No redesign, framework replacement or Stripe integration is needed for this release.
+4. Configure real Supabase Auth/Postgres/Storage and SMTP. The existing deployment configuration targets Vercel; the new request for a functional GPT Site additionally requires compatible Cloudflare Workers output, including safe image processing. Agree the hosting path before changing it. No Stripe integration is needed for this non-payment release.
 5. Add only the `app` DNS record using Vercel's supplied values. Complete section 8 on the real HTTPS app before announcing launch.
 
-From the existing local checkout, after GitHub access is fixed:
+From the existing local checkout, to upload further reviewed changes:
 
 ```sh
 git status --short --branch

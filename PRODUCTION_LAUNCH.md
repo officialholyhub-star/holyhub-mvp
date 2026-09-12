@@ -47,7 +47,7 @@ Image forms reject files above 4 MB before sending and validate them again on th
 
 - The configured Supabase project is mgzsxzixobyfdlutxtgs. Its public API returned missing-table errors for businesses, product_images, platform_settings and notifications. Other tables had permission errors; this does not establish whether they are absent.
 - Auth signup is enabled and email confirmation is required. SMTP delivery has not been verified.
-- Git push to officialholyhub-star/holyhub-mvp is still denied for matthewjeanty (403).
+- GitHub access is now resolved: the matching invitation was accepted, write access verified, and the complete codex/full-marketplace-mvp branch pushed to officialholyhub-star/holyhub-mvp. Main remains unchanged.
 - Browser access timed out, so no authenticated Supabase, Vercel or Namecheap changes were made.
 
 **This document and the local tests do not mean the app is live.** Do not send real people to the loopback preview.
@@ -89,7 +89,7 @@ Token-hash template examples are in README.md. Test that links return to this ma
 
 ### 3. Deploy the existing Next.js app
 
-Import officialholyhub-star/holyhub-mvp into Vercel after repository write/import access is fixed. Use the reviewed branch/commit containing this work, not the old main branch. Alternatively the owner can upload/push the source archive themselves.
+The source is now uploaded on codex/full-marketplace-mvp. For this documented Vercel path, import officialholyhub-star/holyhub-mvp and use the reviewed branch/commit, not the old main branch. The later request for a functional GPT Site requires a separate compatible Workers build and image-processing assessment; see ALEA_START_HERE.md. Do not publish a read-only copy or expose the demo as a substitute.
 
 Set Node 24 and the values in .env.production.example through Vercel's environment settings. Use the matching project URL and **publishable** key; do not expose a service-role key. This listing release does not require a Stripe key.
 

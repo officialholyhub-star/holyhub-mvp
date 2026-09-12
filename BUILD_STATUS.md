@@ -4,7 +4,7 @@
 
 Production target: **app.holyhub.co.uk**, leaving the current website intact. Added an empty-by-default local preview, clearer application-to-product navigation, a direct brand-website path, application notifications, deployment configuration, a public health route, read-only preflight and owner-only SQL setup templates. See PRODUCTION_LAUNCH.md for the full launch requirements and infrastructure.
 
-The current hosted database is not yet compatible: missing-table API errors remain. GitHub write access still returns 403 and browser access timed out. Nothing has been migrated, deployed, purchased or changed in DNS. This is **not yet a public, production-functional service**.
+The current hosted database is not yet verified compatible: missing-table API errors remain. GitHub access is now resolved: the collaboration invitation was accepted and the complete `codex/full-marketplace-mvp` branch uploaded. Browser access still timed out. Nothing has been migrated, deployed, purchased or changed in DNS. This is **not yet a public, production-functional service**. See ALEA_START_HERE.md for the owner handoff and the newly requested GPT Sites hosting constraints.
 
 Built on the repository's working Next.js/Supabase account foundation. The unavailable Codespace checkout code was not copied or assumed to exist. No live database migration, payment, payout, refund, DNS change or production deployment was performed.
 
@@ -71,4 +71,4 @@ The original holyhub.co.uk landing-page project remains untouched. This app is n
 - Lint, TypeScript, production build and git whitespace checks passed.
 - Production dependency audit reported zero known vulnerabilities at the time of the check; this is not a guarantee against security defects.
 - Desktop and phone-width screenshots were inspected; discovery was checked at widths from 320 to 1440 pixels.
-- GitHub still returned 403 for the connected matthewjeanty account. Changes are saved locally, not pushed to the remote repository.
+- GitHub access was subsequently resolved by accepting the matching invitation. The complete review branch is now pushed to the repository; main remains unchanged. Local test results are not a claim that GitHub Actions or production-provider checks have passed.

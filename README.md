@@ -138,6 +138,7 @@ Do not deploy the local demo or overwrite the existing landing site. A separate 
 
 - Home copy: app/page.tsx
 - Colours, spacing, responsive styles: app/globals.css
+- Typeface: app/layout.tsx and app/fonts/ (supplied Deepgrids Sans, locally hosted; the logo is unchanged)
 - Logo: public/holyhub-logo.png (unchanged)
 - Navigation and contact: components/site-header.tsx, app/layout.tsx
 - Product validation/categories: lib/marketplace.ts (keep SQL constraints in sync)

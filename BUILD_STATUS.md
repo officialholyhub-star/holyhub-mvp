@@ -2,6 +2,8 @@
 
 Built on the repository's working Next.js/Supabase account foundation. The unavailable Codespace checkout code was not copied or assumed to exist. No live database migration, payment, payout, refund, DNS change or production deployment was performed.
 
+The latest finishing pass is explicitly scoped to the current MVP **without payments**. It applies the supplied Deepgrids Sans font locally, retains the original logo, adds clear active navigation and keyboard-accessible product photo selection, and checks compact/mobile layouts. Disabled payment controls remain disabled; failed data reads now surface an error instead of a misleading empty result.
+
 ## Ready to exercise locally
 
 | Area | Implemented |
@@ -59,7 +61,7 @@ The original holyhub.co.uk landing-page project remains untouched. This app is n
 ## Verification completed for this build
 
 - 29 database/validation checks passed, including actual SQL role policies, fee enforcement, multi-seller amounts, private storage and payment replay protection.
-- Seven isolated browser journeys passed (three account/business journeys and four marketplace journeys).
+- Eight isolated browser journeys passed (three account/business journeys and five marketplace journeys), including actual Deepgrids Sans rendering, keyboard photo selection and active navigation.
 - Lint, TypeScript, production build and git whitespace checks passed.
 - Production dependency audit reported zero known vulnerabilities at the time of the check; this is not a guarantee against security defects.
 - Desktop and phone-width screenshots were inspected; discovery was checked at widths from 320 to 1440 pixels.

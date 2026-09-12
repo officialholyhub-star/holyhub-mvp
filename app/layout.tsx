@@ -33,7 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${deepgridsSans.variable} ${deepgridsExtended.variable}`}>
         <a href="#main" className="skip-link">Skip to content</a>
         <SiteHeader />
-        {process.env.HOLYHUB_LOCAL_DEMO === "true" && <div className="demo-banner">Local demo · fictional products and accounts · no real payments · data resets when restarted</div>}
+        {process.env.HOLYHUB_LOCAL_DEMO === "true" && <div className="demo-banner">Local preview · not live · no real emails or payments · do not enter personal information</div>}
         <main id="main" className="page-shell">{children}</main>
         <footer className="site-footer"><p><strong>HolyHub</strong><span>Connect. Discover. Grow.</span></p><nav aria-label="Footer"><Link href="/account/business">Become a Lister</Link><Link href="/privacy">Privacy</Link><a href="mailto:Official.holyhub@gmail.com">Contact</a></nav></footer>
       </body>

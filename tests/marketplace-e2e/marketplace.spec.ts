@@ -2,6 +2,30 @@ import { test,expect,type Page } from "@playwright/test";
 import sharp from "sharp";
 async function login(page:Page,role:string){await page.goto('/auth/login');await page.getByLabel('Email',{exact:true}).fill(`${role}@holyhub.test`);await page.getByLabel('Password',{exact:true}).fill('HolyHub-demo-2026!');await page.getByRole('button',{name:'Log in',exact:true}).click();await expect(page).toHaveURL(/\/account$/);}
 const png=()=>sharp({create:{width:300,height:300,channels:3,background:'#96b5cd'}}).png().toBuffer();
+
+test('empty catalogue welcomes the first applicant and preserves approval before publishing',async({page,request,browser})=>{
+ const reset=await request.post('http://127.0.0.1:54331/__test/reset?empty=1');expect(reset.ok()).toBe(true);
+ await page.goto('/');await expect(page.locator('.product-card')).toHaveCount(0);await expect(page.getByRole('heading',{name:'Be among our first brands.'})).toBeVisible();
+ expect((await request.get('/api/health')).status()).toBe(503);
+ await page.goto('/auth/signup?next=/account/business');
+ await page.getByLabel('Name',{exact:true}).fill('New founder');await page.getByLabel('Email',{exact:true}).fill('newfounder@holyhub.test');
+ await page.getByLabel('Password',{exact:true}).fill('HolyHub-demo-2026!');await page.getByLabel('Confirm password',{exact:true}).fill('HolyHub-demo-2026!');
+ await page.getByRole('button',{name:'Create account',exact:true}).click();await expect(page.getByText('Check your email to confirm your account',{exact:false})).toBeVisible();
+ // The local adapter does not send email; real SMTP confirmation is a separate launch gate.
+ await login(page,'newfounder');await page.goto('/account/business');
+ await page.getByLabel('Business or brand name').fill('First founder studio');await page.getByLabel('Category',{exact:true}).selectOption('Art & Creators');
+ await page.getByLabel('Location',{exact:true}).fill('London');await page.getByLabel('Short introduction').fill('Original artwork inspired by faith.');
+ await page.getByLabel('Your story & what you offer').fill('Our Christian-owned studio makes original artwork for people to enjoy at home.');
+ await page.getByLabel('Website or social profile').fill('https://example.com/founder');await page.getByRole('checkbox').check();
+ await page.getByRole('button',{name:'Submit for review'}).click();await expect(page.getByText('In review',{exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Manage products'}).click();await page.goto('/seller/products/new');
+ await page.getByLabel('Product name').fill('First founder print');await page.getByLabel('Description',{exact:true}).fill('An original faith-inspired print from our new studio.');
+ await page.getByLabel('Category',{exact:true}).selectOption('Art & Prints');await page.getByLabel('Price (£)').fill('12.00');await page.getByLabel('Stock available').fill('5');
+ await page.getByLabel('Delivery or fulfilment information').fill('Contact our studio directly for delivery details.');
+ await page.getByRole('button',{name:'Save draft & add photos'}).click();await expect(page.getByText('draft product',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Publish product',exact:true}).click();await expect(page.getByText('Your lister application must be approved before publishing',{exact:false})).toBeVisible();
+ const visitor=await browser.newPage();await visitor.goto('http://127.0.0.1:3102/products');await expect(visitor.getByRole('heading',{name:'First founder print'})).toHaveCount(0);await visitor.close();
+});
 test.beforeEach(async({request})=>{const response=await request.post('http://127.0.0.1:54331/__test/reset');expect(response.ok()).toBe(true);});
 
 test('responsive discovery, real image access, filters and unpaid multi-seller basket',async({page,request})=>{
@@ -21,8 +45,9 @@ test('seller saves, uploads, publishes, edits and archives a product',async({pag
  await login(page,'seller');await page.goto('/seller/products/new');
  await page.getByLabel('Product name').fill('New faith journal');await page.getByLabel('Description',{exact:true}).fill('A thoughtful new journal for prayer, reflection and everyday gratitude.');await page.getByLabel('Category',{exact:true}).selectOption('Books & Stationery');await page.getByLabel('Price (£)',{exact:true}).fill('12.50');await page.getByLabel('Stock available').fill('12');await page.getByLabel('Delivery or fulfilment information').fill('Delivery details are confirmed before purchasing.');await page.getByRole('button',{name:'Save draft & add photos'}).click();await expect(page).toHaveURL(/\/seller\/products\/[a-f0-9-]+/);
  const productUrl=page.url().split('?')[0];
+ await page.getByLabel('Add a photo').setInputFiles({name:'too-large.png',mimeType:'image/png',buffer:Buffer.alloc(4_000_001)});expect(await page.getByLabel('Add a photo').evaluate((el:HTMLInputElement)=>el.validationMessage)).toContain('4 MB');
  await page.getByLabel('Add a photo').setInputFiles({name:'journal.png',mimeType:'image/png',buffer:await png()});await page.getByRole('button',{name:'Upload photo',exact:true}).click();await expect(page.getByText('Image uploaded.',{exact:true})).toBeVisible();await page.getByLabel('Add a photo').setInputFiles({name:'journal-second.png',mimeType:'image/png',buffer:await png()});await page.getByRole('button',{name:'Upload photo',exact:true}).click();await expect(page.locator('.photo-grid img')).toHaveCount(2);await page.getByRole('button',{name:'Publish product'}).click();await expect(page.getByRole('link',{name:'View product'})).toBeVisible();
- const context=await browser.newContext(),visitor=await context.newPage();await visitor.goto('http://127.0.0.1:3102/products?q=New');await expect(visitor.getByRole('heading',{name:'New faith journal',exact:true})).toBeVisible();await visitor.getByRole('heading',{name:'New faith journal',exact:true}).getByRole('link').click();await visitor.getByRole('button',{name:'View photo 2 of 2'}).click();await expect(visitor.getByRole('button',{name:'View photo 2 of 2'})).toHaveAttribute('aria-pressed','true');await expect(visitor.getByText('Photo 2 of 2',{exact:true})).toBeVisible();await visitor.getByRole('button',{name:'View photo 1 of 2'}).focus();await visitor.keyboard.press('Enter');await expect(visitor.getByText('Photo 1 of 2',{exact:true})).toBeVisible();
+ const context=await browser.newContext(),visitor=await context.newPage();await visitor.goto('http://127.0.0.1:3102/products?q=New');await expect(visitor.getByRole('heading',{name:'New faith journal',exact:true})).toBeVisible();await visitor.getByRole('heading',{name:'New faith journal',exact:true}).getByRole('link').click();await expect(visitor.getByRole('link',{name:'Visit the brand’s website',exact:false})).toHaveAttribute('href','https://example.com/');await visitor.getByRole('button',{name:'View photo 2 of 2'}).click();await expect(visitor.getByRole('button',{name:'View photo 2 of 2'})).toHaveAttribute('aria-pressed','true');await expect(visitor.getByText('Photo 2 of 2',{exact:true})).toBeVisible();await visitor.getByRole('button',{name:'View photo 1 of 2'}).focus();await visitor.keyboard.press('Enter');await expect(visitor.getByText('Photo 1 of 2',{exact:true})).toBeVisible();
  await page.getByLabel('Price (£)',{exact:true}).fill('13.50');await page.getByRole('button',{name:'Save product',exact:true}).click();await expect(page.getByLabel('Price (£)',{exact:true})).toHaveValue('13.50');
  await page.goto(productUrl);await page.getByRole('button',{name:'Archive product'}).click();await expect(page.getByText('archived product',{exact:true})).toBeVisible();await visitor.reload();await expect(visitor.getByRole('heading',{name:'New faith journal',exact:true})).toHaveCount(0);await context.close();
 });

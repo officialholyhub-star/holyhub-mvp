@@ -15,7 +15,7 @@ export async function SiteHeader() {
       </Link>
       <nav className="header-actions" aria-label="Main navigation">
         <Link className="nav-link" href="/products">Discover</Link>
-        <Link className="nav-link" href="/basket">Basket</Link>
+        <Link className="nav-link" href="/account/business">List your business</Link>
         {user ? (
           <>
             <Link className="button button-quiet" href="/account">My account</Link>

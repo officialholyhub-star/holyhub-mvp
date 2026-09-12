@@ -1,5 +1,11 @@
 # Full MVP build status
 
+## Real-listing launch pass
+
+Production target: **app.holyhub.co.uk**, leaving the current website intact. Added an empty-by-default local preview, clearer application-to-product navigation, a direct brand-website path, application notifications, deployment configuration, a public health route, read-only preflight and owner-only SQL setup templates. See PRODUCTION_LAUNCH.md for the full launch requirements and infrastructure.
+
+The current hosted database is not yet compatible: missing-table API errors remain. GitHub write access still returns 403 and browser access timed out. Nothing has been migrated, deployed, purchased or changed in DNS. This is **not yet a public, production-functional service**.
+
 Built on the repository's working Next.js/Supabase account foundation. The unavailable Codespace checkout code was not copied or assumed to exist. No live database migration, payment, payout, refund, DNS change or production deployment was performed.
 
 The latest finishing pass is explicitly scoped to the current MVP **without payments**. It applies the supplied Deepgrids Sans font locally, retains the original logo, adds clear active navigation and keyboard-accessible product photo selection, and checks compact/mobile layouts. Disabled payment controls remain disabled; failed data reads now surface an error instead of a misleading empty result.
@@ -60,8 +66,8 @@ The original holyhub.co.uk landing-page project remains untouched. This app is n
 
 ## Verification completed for this build
 
-- 29 database/validation checks passed, including actual SQL role policies, fee enforcement, multi-seller amounts, private storage and payment replay protection.
-- Eight isolated browser journeys passed (three account/business journeys and five marketplace journeys), including actual Deepgrids Sans rendering, keyboard photo selection and active navigation.
+- 32 database/validation/configuration checks passed, including an empty database through first approved publication, role policies, fee enforcement, private storage and payment replay protection.
+- Nine isolated browser journeys passed (three account/business journeys and six marketplace journeys), including an empty catalogue and new applicant, upload size validation, external brand links, Deepgrids Sans rendering and keyboard photo selection.
 - Lint, TypeScript, production build and git whitespace checks passed.
 - Production dependency audit reported zero known vulnerabilities at the time of the check; this is not a guarantee against security defects.
 - Desktop and phone-width screenshots were inspected; discovery was checked at widths from 320 to 1440 pixels.

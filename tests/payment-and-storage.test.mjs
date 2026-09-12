@@ -23,7 +23,7 @@ test('image processing rejects disguised/oversized files and strips metadata',as
  const result=await sanitiseImage(new File([png],'photo.png',{type:'image/png'}));
  const info=await sharp(result).metadata();assert.equal(info.format,'webp');assert.equal(info.exif,undefined);
  await assert.rejects(sanitiseImage(new File(['<svg/>'],'fake.png',{type:'image/png'})),/could not be read/);
- await assert.rejects(sanitiseImage(new File([new Uint8Array(5*1024*1024+1)],'big.png',{type:'image/png'})),/5 MB/);
+ await assert.rejects(sanitiseImage(new File([new Uint8Array(4_000_001)],'big.png',{type:'image/png'})),/4 MB/);
  await assert.rejects(sanitiseImage(new File([png],'script.svg',{type:'image/svg+xml'})),/JPG, PNG or WebP/);
 });
 

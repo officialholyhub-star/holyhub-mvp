@@ -8,10 +8,11 @@ import { seedMarketplace,demoPassword } from './marketplace-seed.mjs';
 
 const port=Number(process.env.HOLYHUB_DEMO_API_PORT??54330);
 const secret=randomBytes(32),objects=new Map(),links=new Map();
-let database=await marketplaceDatabase(),accounts=await seedMarketplace(database,objects);
+const sampleData=process.env.HOLYHUB_DEMO_SAMPLE_DATA==='true';
+let database=await marketplaceDatabase(),accounts=sampleData?await seedMarketplace(database,objects):[];
 const tables=new Map();
 for(const row of (await database.db.query("select table_name,column_name from information_schema.columns where table_schema='public'")).rows){if(!tables.has(row.table_name))tables.set(row.table_name,new Set());tables.get(row.table_name).add(row.column_name);}
-const rpcs=new Set(['save_product','set_product_status','set_basket_item','add_basket_item','prepare_order','request_refund','respond_refund','decide_refund','appeal_refund','admin_marketplace','update_fulfillment','mark_notifications_read','register_image','review_business','order_delivery']);
+const rpcs=new Set(['launch_readiness','save_product','set_product_status','set_basket_item','add_basket_item','prepare_order','request_refund','respond_refund','decide_refund','appeal_refund','admin_marketplace','update_fulfillment','mark_notifications_read','register_image','review_business','order_delivery']);
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 const sign=value=>createHmac('sha256',secret).update(value).digest('base64url');
 const userObject=u=>({id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{full_name:u.name},created_at:'2026-01-01T00:00:00Z',email_confirmed_at:'2026-01-01T00:00:00Z'});
@@ -28,7 +29,7 @@ const server=createServer(async(request,response)=>{
  if(request.headers.origin&&!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(request.headers.origin))return send(403,{message:'Local demo only'});
  try{
   if(url.pathname==='/__test/health')return send(200,{ok:true});
-  if(url.pathname==='/__test/reset'&&request.method==='POST'){const next=await marketplaceDatabase(),newObjects=new Map(),newAccounts=await seedMarketplace(next,newObjects),previous=database;database=next;accounts=newAccounts;objects.clear();links.clear();for(const [key,value] of newObjects)objects.set(key,value);setTimeout(()=>previous.db.close(),5000).unref();return send(200,{ok:true});}
+  if(url.pathname==='/__test/reset'&&request.method==='POST'){const next=await marketplaceDatabase(),newObjects=new Map(),newAccounts=sampleData&&url.searchParams.get('empty')!=='1'?await seedMarketplace(next,newObjects):[],previous=database;database=next;accounts=newAccounts;objects.clear();links.clear();for(const [key,value] of newObjects)objects.set(key,value);setTimeout(()=>previous.db.close(),5000).unref();return send(200,{ok:true});}
   const chunks=[];let size=0;for await(const chunk of request){size+=chunk.length;if(size>8*1024*1024)return send(413,{message:'Too large'});chunks.push(chunk);}const bytes=Buffer.concat(chunks),body=request.headers['content-type']?.includes('application/json')&&bytes.length?JSON.parse(bytes):{};
   const current=database,u=authenticate(request.headers.authorization),as=fn=>current.as(u?.id??null,fn);
   if(url.pathname==='/auth/v1/token'){const match=accounts.find(a=>a.email===body.email);return match&&body.password===(match.password??demoPassword)?send(200,session(match)):send(400,{error_code:'invalid_credentials',msg:'Use a local demo account and password.'});}

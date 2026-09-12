@@ -4,7 +4,13 @@
 
 Next.js 16, React 19, TypeScript, Supabase Auth/Postgres/Storage. The original HolyHub logo is unchanged. This repository is separate from the live holyhub.co.uk landing page; no production deployment or live database changes have been made.
 
-## Try it without any accounts or Stripe setup
+## Production launch
+
+The real-listing launch target is **app.holyhub.co.uk**, keeping the current landing site intact. See [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) for the requirements, infrastructure, database operations and remaining live-access blockers. The repository is not a deployed service.
+
+Run `npm run check:production` against privately configured production values before inviting users. Vercel uses `build:production`; it refuses demo configuration. No sample data is added by migrations.
+
+## Empty local preview
 
 Use Node.js 24:
 
@@ -13,7 +19,9 @@ npm ci
 npm run demo
 ```
 
-Open http://127.0.0.1:3100. Log in with:
+Open http://127.0.0.1:3100. It starts with **no listings or accounts**. This is a temporary local preview, not a live signup service.
+
+For explicit developer-only sample fixtures, stop the preview and run `npm run demo:samples`. Only that mode has these test accounts:
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -21,7 +29,7 @@ Open http://127.0.0.1:3100. Log in with:
 | Seller | seller@holyhub.test | HolyHub-demo-2026! |
 | Administrator | admin@holyhub.test | HolyHub-demo-2026! |
 
-The demo runs on this computer only. Products, businesses, images, accounts and a simulated paid order are fictional. Data is held in memory and resets when the process restarts. It does not contact Stripe, send emails or connect to hosted Supabase. Do not enter real personal information. Stop it with Ctrl+C.
+The preview runs on this computer only. Optional sample products, businesses, images, accounts and a simulated paid order are fictional. Local data is held in memory and resets when the process restarts. It does not contact Stripe, send emails or connect to hosted Supabase. Do not enter real personal information. Stop it with Ctrl+C.
 
 The demo uses the actual SQL migrations and row-level security through a small local API adapter. It does **not** prove live Supabase email delivery, Storage infrastructure or Stripe integration. Never expose its ports (3100/54330), tunnel it publicly or deploy the test adapter. Production builds reject the demo flag.
 
@@ -64,7 +72,7 @@ The owner still needs to confirm whether “10 free” means lifetime listings o
 
 Reserve percentages/hold periods and appeal deadline/limit are also unset. Suggested reserve ranges in the specification are not treated as agreed defaults. Configure them in the admin settings after the owner confirms them. Shipping/tax fields record policy notes; they are not calculation engines.
 
-The **local demo only** explicitly uses lifetime allowance, a 15%/14-day new-seller reserve and one appeal within seven days to exercise those controls. These are fictional test settings, not recommended or agreed production policies.
+The **optional demo:samples mode only** explicitly uses lifetime allowance, a 15%/14-day new-seller reserve and one appeal within seven days to exercise those controls. These are fictional test settings, not recommended or agreed production policies.
 
 ## Connect a real development Supabase project
 
@@ -78,6 +86,7 @@ The **local demo only** explicitly uses lifetime allowance, a 15%/14-day new-sel
    - `004_marketplace_storage.sql`
    - `005_payment_boundary.sql`
    - `006_order_delivery.sql`
+   - `007_launch_readiness.sql`
 3. Existing databases require a schema comparison, backup and reviewed migration plan first. Do not rerun applied migrations or drop tables to make them fit.
 4. Configure Supabase Auth and Storage below.
 5. Run `npm run dev` and open http://localhost:3000.
@@ -106,7 +115,7 @@ Recommended token-hash email links support opening on a different device:
 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change">Confirm your email change</a>
 ```
 
-Migration 004 creates private product-images and refund-evidence buckets with policies. The app accepts JPG/PNG/WebP up to 5 MB, validates and re-encodes them, strips metadata and generates scoped object paths. Evidence is available only to case participants and administrators through short-lived links.
+Migration 004 creates private product-images and refund-evidence buckets with policies. The app accepts JPG/PNG/WebP up to 4 MB, validates and re-encodes them, strips metadata and generates scoped object paths. Evidence is available only to case participants and administrators through short-lived links.
 
 Order/refund notifications currently appear **inside the account**, not by email. Supabase SMTP is used for authentication mail only. The older landing page's Tally, Stripe and Resend integrations have not been moved into this separate marketplace.
 

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const isDevelopment = process.env.NODE_ENV === "development";
-if (!isDevelopment && process.env.HOLYHUB_LOCAL_DEMO === "true") {
+if (!isDevelopment && (process.env.HOLYHUB_LOCAL_DEMO === "true" || process.env.HOLYHUB_DEMO_SAMPLE_DATA === "true")) {
   throw new Error("The in-memory demo must never be built or deployed as production.");
 }
 const codespaceHost = process.env.CODESPACE_NAME ? `${process.env.CODESPACE_NAME}-3000.app.github.dev` : undefined;

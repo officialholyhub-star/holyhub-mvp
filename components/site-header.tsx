@@ -14,7 +14,8 @@ export async function SiteHeader() {
         <Image className="logo-image" src="/holyhub-logo.png" alt="HolyHub" width={168} height={85} priority />
       </Link>
       <nav className="header-actions" aria-label="Main navigation">
-        <Link className="nav-link" href="/businesses">Discover</Link>
+        <Link className="nav-link" href="/products">Discover</Link>
+        <Link className="nav-link" href="/basket">Basket</Link>
         {user ? (
           <>
             <Link className="button button-quiet" href="/account">My account</Link>

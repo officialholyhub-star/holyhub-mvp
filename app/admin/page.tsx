@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth/require-user";
 import { businessFields, pageNumber, publicWebsite, type Business } from "@/lib/businesses";
 import { SubmitButton } from "@/components/submit-button";
 import { reviewBusiness } from "./actions";
+import { MarketNav } from "@/components/market-nav";
 
 export const metadata = { title: "Review businesses" };
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; page?: string; error?: string; message?: string }> }) {
@@ -13,6 +14,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const { data, count, error } = await supabase.from("businesses").select(businessFields, { count: "exact" }).eq("status", status).order("created_at").order("id").range((page - 1) * 10, page * 10 - 1);
   if (error) throw new Error("Review queue unavailable");
   return <section className="content-narrow">
+    <MarketNav area="admin" />
     <Link href="/account" className="text-link">← My account</Link>
     <div className="section-heading"><p className="eyebrow">HolyHub review</p><h1 className="page-title">Make room for good things.</h1><p>Check each business and its public link before publishing. Owners confirm they represent a Christian-owned or faith-led business when submitting.</p></div>
     {params.error && <p className="notice notice-error" role="alert">{params.error}</p>}{params.message && <p className="notice notice-success" role="status">{params.message}</p>}

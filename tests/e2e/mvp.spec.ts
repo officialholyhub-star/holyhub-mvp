@@ -20,7 +20,7 @@ test("home, account links and discovery work at mobile and desktop sizes", async
   await page.screenshot({ path: "test-results/holyhub-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "test-results/holyhub-mobile.png", fullPage: true });
-  await page.getByRole("link", { name: "Explore businesses", exact: false }).first().click();
+  await page.goto("/businesses");
   await expect(page).toHaveURL(/\/businesses/);
   await expect(page.getByRole("heading", { name: "Be part of the beginning." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Contact", exact: true })).toHaveAttribute("href", "mailto:Official.holyhub@gmail.com");

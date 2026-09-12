@@ -1,40 +1,87 @@
-# HolyHub MVP
+# HolyHub marketplace MVP
 
-**Connect. Discover. Grow.** A Next.js + Supabase app for Christian business discovery.
+**Connect. Discover. Grow.**
 
-This is separate from the existing `holyhub.co.uk` landing page. It is intended for `app.holyhub.co.uk` when the owner chooses to launch it. Nothing in this repository deploys over the landing page.
+Next.js 16, React 19, TypeScript, Supabase Auth/Postgres/Storage. The original HolyHub logo is unchanged. This repository is separate from the live holyhub.co.uk landing page; no production deployment or live database changes have been made.
 
-## What is included
+## Try it without any accounts or Stripe setup
 
-- Signup, login, logout, email confirmation, password recovery, profile and email changes.
-- Public discovery with search, eight categories, pagination and individual business pages.
-- One business profile per account, with owner editing and clear review status.
-- A small, admin-only queue to approve, reject or unpublish listings.
-- Database-enforced ownership and permissions; only approved businesses belonging to active accounts are public. Editing a listing sends it back for review.
-- Responsive HolyHub styling, the original logo, contact links, loading/error/empty states and a basic data-use notice.
-- Automated validation, SQL-permission and browser tests.
+Use Node.js 24:
 
-There are no products, carts, checkout, commissions, paid listings, vendor payouts or customer payments. Visitors contact businesses on their own websites. The original Tally/Stripe/Resend landing-page integrations are not migrated into this separate app.
+```sh
+npm ci
+npm run demo
+```
 
-## Run locally
+Open http://127.0.0.1:3100. Log in with:
 
-Use **Node.js 24**.
+| Role | Email | Password |
+| --- | --- | --- |
+| Customer | customer@holyhub.test | HolyHub-demo-2026! |
+| Seller | seller@holyhub.test | HolyHub-demo-2026! |
+| Administrator | admin@holyhub.test | HolyHub-demo-2026! |
 
-1. Create `.env.local` from `.env.example`. Set the Supabase project URL, **publishable** key and `NEXT_PUBLIC_SITE_URL=http://localhost:3000`. Never use a service-role key in a `NEXT_PUBLIC_*` variable.
-2. Run `npm ci`.
-3. Apply the database migrations below and configure authentication.
-4. Run `npm run dev` and open `http://localhost:3000`.
+The demo runs on this computer only. Products, businesses, images, accounts and a simulated paid order are fictional. Data is held in memory and resets when the process restarts. It does not contact Stripe, send emails or connect to hosted Supabase. Do not enter real personal information. Stop it with Ctrl+C.
 
-The tracked `.env.development` contains the original project's public configuration. Local overrides belong in `.env.local`, which is ignored by Git. Production does not load `.env.development`; configure all three variables on the host.
+The demo uses the actual SQL migrations and row-level security through a small local API adapter. It does **not** prove live Supabase email delivery, Storage infrastructure or Stripe integration. Never expose its ports (3100/54330), tunnel it publicly or deploy the test adapter. Production builds reject the demo flag.
 
-## Database setup — required before real listing submissions
+## Working features
 
-In the correct Supabase project's SQL Editor:
+- Signup, login/logout, email confirmation, password recovery, profile/email changes.
+- Lister application, owner-editable business profile, admin approval/rejection and public storefronts. Business edits return to review.
+- Product drafts, editing, publishing, archiving, images, stock and prices.
+- Public product/business discovery, category/search/price filters and product pagination.
+- Persistent per-customer baskets and multi-seller **unpaid** order previews.
+- Server-calculated line totals, 5% commission and seller-specific allocations; immutable order item snapshots.
+- Customer order history and delivery progress; seller order/fulfilment screens and recorded earnings.
+- Refund questionnaires, private image evidence, seller responses, human admin decisions and configurable appeals.
+- Admin user/seller/product moderation, detailed order breakdowns, reserve settings, fee settings and a read-only audit log.
+- In-account notifications for lister reviews, verified test orders and refund activity.
+- Private image buckets, file validation/re-encoding, scoped access and server-enforced authorisation.
 
-1. For a new project only, run `supabase/migrations/001_stage1_foundation.sql`.
-2. Run `supabase/migrations/002_business_discovery.sql` once. If Stage 1 already exists, **do not rerun 001**. Migration 002 adds the business table and policies without dropping existing account data.
-3. Sign up through the app and confirm the intended HolyHub administrator's email.
-4. Find that person's UUID in Supabase Authentication → Users. Assign the admin role from SQL Editor, replacing the placeholder below:
+Archive products instead of deleting financial history. Closing an account in admin removes access; it does not erase records. No automated refund decisions have been implemented.
+
+## Payment status — deliberately not launch-ready for taking money
+
+A Stripe Payment Link is **not** required to build these screens and is not sufficient for a multi-seller marketplace.
+
+- `/api/checkout` always returns 503. The checkout screen cannot accept money.
+- `/api/stripe/webhook` is off by default. When explicitly configured for isolated testing, it verifies the raw-body signature, rejects stale/tampered events, matches the stored session, currency and amount, and records an event only once.
+- **Live-mode events are explicitly rejected in this build.**
+- Customers, sellers and admins cannot mark an order paid through browser requests or admin buttons.
+- Refund approvals record decisions and amounts; they **do not send refunds**.
+- Additional-listing fees can be recorded as due; they are **not collected** and the unpaid extra product remains a draft.
+- Stripe Connect onboarding, actual charge creation, stock reservations/decrements, shipping/tax calculations, transfers, payouts, reversals, disputes and actual refund execution are **not implemented**. Keys alone do not complete these integrations.
+- Seller totals are recorded figures, not a promise of immediately available funds. No payout button moves money.
+
+See [BUILD_STATUS.md](BUILD_STATUS.md) for the remaining work and business decisions. The future payments implementation should follow Stripe's [separate charges and transfers](https://docs.stripe.com/connect/separate-charges-and-transfers) model and [webhook signature verification](https://docs.stripe.com/webhooks/signature).
+
+## Confirmed pricing and open decisions
+
+The database starts with **10 free product listings, £0.20 per additional listing, 5% commission**.
+
+The owner still needs to confirm whether “10 free” means lifetime listings or currently active listings. Production migrations leave that choice unset and block publishing beyond the allowance until confirmed. Lifetime mode currently counts created product records, including drafts; confirm this interpretation before using it.
+
+Reserve percentages/hold periods and appeal deadline/limit are also unset. Suggested reserve ranges in the specification are not treated as agreed defaults. Configure them in the admin settings after the owner confirms them. Shipping/tax fields record policy notes; they are not calculation engines.
+
+The **local demo only** explicitly uses lifetime allowance, a 15%/14-day new-seller reserve and one appeal within seven days to exercise those controls. These are fictional test settings, not recommended or agreed production policies.
+
+## Connect a real development Supabase project
+
+**Do not blindly apply these migrations to the existing HolyHub project.** Its newer hosted schema has not been reconciled with this repository. Prefer a fresh non-production Supabase project for testing.
+
+1. Copy `.env.example` to `.env.local`. Set the project URL, publishable key and your exact app origin. Local environment files are ignored by Git. Do not put service-role keys in `NEXT_PUBLIC_*` variables.
+2. For a **fresh** project, apply these migrations once, in order:
+   - `001_stage1_foundation.sql`
+   - `002_business_discovery.sql`
+   - `003_marketplace.sql`
+   - `004_marketplace_storage.sql`
+   - `005_payment_boundary.sql`
+   - `006_order_delivery.sql`
+3. Existing databases require a schema comparison, backup and reviewed migration plan first. Do not rerun applied migrations or drop tables to make them fit.
+4. Configure Supabase Auth and Storage below.
+5. Run `npm run dev` and open http://localhost:3000.
+6. Sign up and verify the intended administrator, then assign their role in the SQL Editor:
 
 ```sql
 insert into public.user_roles (user_id, role)
@@ -42,37 +89,28 @@ values ('REPLACE_WITH_VERIFIED_ADMIN_USER_UUID', 'admin')
 on conflict do nothing;
 ```
 
-Do not use signup metadata or browser code to assign admin roles. Visit `/admin` after logging in as that verified account. Review the business details and destination link before approval; this is not an automated verification service.
+Never assign admin roles using signup metadata or a browser form. Keep Supabase's service-role key private; it bypasses row-level security.
 
-## Authentication setup
+## Authentication, storage and notifications
 
-In Supabase Authentication:
+Keep email confirmation enabled. Set the Supabase Site URL to the actual app origin and add its exact callback URL, plus explicitly approved local/preview origins. Avoid broad production wildcards. Configure a verified SMTP sender and test delivery using real test inboxes before launch.
 
-- Keep email confirmation enabled and set the production **Site URL** to the actual deployed app origin (for example `https://app.holyhub.co.uk`).
-- Allow `http://localhost:3000/**` for local development. Add the exact production callback URL `https://app.holyhub.co.uk/auth/callback` and, where needed, explicitly approved preview origins. Avoid broad production wildcards.
-- Configure a verified custom SMTP sender for public signup and recovery emails. The app relies on Supabase for these emails; the built-in development sender is not a production delivery setup.
-- Confirm the password policy and authentication rate limits. Enable additional abuse protection as needed; CAPTCHA integration is not included in this MVP.
+Recommended token-hash email links support opening on a different device:
 
-Recommended email template links use token hashes so confirmations also work when opened in a different browser:
-
-**Confirm signup**
 ```html
+<!-- Confirm signup -->
 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">Confirm your HolyHub account</a>
-```
-
-**Reset password**
-```html
+<!-- Reset password -->
 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery">Reset your password</a>
-```
-
-**Change email**
-```html
+<!-- Change email; keep secure email change enabled -->
 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email_change">Confirm your email change</a>
 ```
 
-Keep secure email change enabled. It may require confirmation at both email addresses. The `/auth/callback` route also supports Supabase's default PKCE email links when opened in the browser that initiated the request. `/auth/confirm` validates the token type and constrains redirects to this app.
+Migration 004 creates private product-images and refund-evidence buckets with policies. The app accepts JPG/PNG/WebP up to 5 MB, validates and re-encodes them, strips metadata and generates scoped object paths. Evidence is available only to case participants and administrators through short-lived links.
 
-## Checks
+Order/refund notifications currently appear **inside the account**, not by email. Supabase SMTP is used for authentication mail only. The older landing page's Tally, Stripe and Resend integrations have not been moved into this separate marketplace.
+
+## Verification
 
 ```sh
 npm run lint
@@ -81,31 +119,30 @@ npm test
 npm run build
 npx playwright install chromium --only-shell
 npm run test:e2e
+npm run test:marketplace
 ```
 
-`npm test` runs the actual SQL migrations in a temporary PostgreSQL-compatible PGlite database, then tests anonymous access, ownership, approval, stale-review prevention, editing and suspended accounts. It also tests validation and redirect safety.
+SQL tests use ephemeral PostgreSQL-compatible PGlite with the real migrations and role policies. Browser suites cover the original auth/application flow and the expanded product, basket, evidence, refund, appeal and admin flows. All tests use isolated local data and no real payments. Run browser suites sequentially; Next's development build directory is shared.
 
-Browser tests start their own app on port 3101 and an isolated Supabase API double on port 54329. They do **not** create real accounts, send emails or change hosted data. These validate application journeys, not the live provider's email delivery or settings. Screenshots and failure traces are saved under ignored `test-results/`. GitHub CI runs the same checks.
+CI runs these checks with placeholder configuration, not live account keys. Screenshots and traces are in ignored test-results. The historical Stage 1 importer is now manual-only so it cannot automatically overwrite the marketplace.
 
-## Launch checklist
+## Deployment checklist
 
-- [ ] Apply migration 002 to the live Supabase project and assign the correct administrator.
-- [ ] Configure production environment variables, authentication URLs, email templates and SMTP.
-- [ ] Review `/privacy` with the operator: add the appropriate operator identity, contact/address details, retention periods, lawful bases and rights/complaint information before public launch. The included short data-use notice is not a complete legal compliance review.
-- [ ] Confirm backup, restore, moderation, account closure and data-request processes. Closing a user in Supabase hides their business; deleting their auth user cascades their profile and listing. Handle these requests manually with verified ownership in this MVP.
-- [ ] Test signup confirmation, login, email change and password reset using a real test inbox on the deployed origin, including a link opened on another device.
-- [ ] Test one real business submission → approval → discovery → edit → re-review.
-- [ ] Verify mobile Safari/Chrome and desktop, and review Supabase logs/usage limits.
+This is a server-rendered Next.js app, not a static HTML export. Build with `npm run build`; run with `npm start` on Node 24 or a compatible managed host.
 
-For a Next.js-compatible host, the build is `npm run build`, the server command is `npm start`, and the runtime is Node 24. This app is **not a static HTML export**. Connect a separate app subdomain only when the owner approves deployment; keep the existing landing page intact.
+Before public launch: reconcile the hosted schema; configure environments, SMTP and authentication URLs; confirm policies; complete and test payments if taking money; review the operator identity, terms, privacy/refund notices and data retention; test backups/restoration, moderation and abuse limits; test mobile Safari/Chrome and real provider callbacks. The included privacy text is a factual starting point, not a complete compliance review.
 
-## Where to make small edits
+Do not deploy the local demo or overwrite the existing landing site. A separate app subdomain can be configured when the owner approves deployment.
 
-- Home copy: `app/page.tsx`
-- Colours, spacing and text sizes: `app/globals.css`
-- Logo: `public/holyhub-logo.png` (kept unchanged)
-- Navigation/contact: `components/site-header.tsx`, `app/layout.tsx`
-- Categories and input limits: `lib/businesses.ts` (keep category rules in migration 002 in sync)
-- Business submission: `components/business-form.tsx`, `app/account/business/`
-- Discovery: `app/businesses/`
-- Review queue: `app/admin/`
+## Editing map
+
+- Home copy: app/page.tsx
+- Colours, spacing, responsive styles: app/globals.css
+- Logo: public/holyhub-logo.png (unchanged)
+- Navigation and contact: components/site-header.tsx, app/layout.tsx
+- Product validation/categories: lib/marketplace.ts (keep SQL constraints in sync)
+- Product editor: components/product-form.tsx, app/seller/products/
+- Customer discovery/orders/refunds: app/products/, app/basket/, app/orders/, app/refunds/
+- Admin: app/admin/
+- Database permissions and state transitions: supabase/migrations/
+- Signed payment boundary: app/api/stripe/webhook/, lib/payments/

@@ -11,8 +11,8 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_SUPABASE_URL: https://mgzsxzixobyfdlutxtgs.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dUuixDq0gSBE6dReO_R0oA_BC7czWE3
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-public-placeholder
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
     steps:
       - name: Check out repository
@@ -40,3 +40,6 @@ jobs:
 
       - name: Browser journeys
         run: npm run test:e2e
+
+      - name: Marketplace browser journeys
+        run: npm run test:marketplace

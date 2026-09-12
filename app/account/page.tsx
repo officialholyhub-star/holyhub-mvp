@@ -2,6 +2,7 @@ import { updateEmail, updateProfile } from "./actions";
 import { requireUser } from "@/lib/auth/require-user";
 import Link from "next/link";
 import { SubmitButton } from "@/components/submit-button";
+import { MarketNav } from "@/components/market-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
   return (
     <section>
+      <MarketNav />
       <p className="eyebrow">My HolyHub</p>
       <h1 className="page-title">Your little corner of HolyHub.</h1>
       <p className="lead">Manage your profile, discover businesses and share your own with the community.</p>

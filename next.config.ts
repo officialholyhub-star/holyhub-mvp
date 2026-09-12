@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const isDevelopment = process.env.NODE_ENV === "development";
+if (!isDevelopment && process.env.HOLYHUB_LOCAL_DEMO === "true") {
+  throw new Error("The in-memory demo must never be built or deployed as production.");
+}
 const codespaceHost = process.env.CODESPACE_NAME ? `${process.env.CODESPACE_NAME}-3000.app.github.dev` : undefined;
 
 const securityHeaders = [
@@ -16,6 +19,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: isDevelopment && codespaceHost ? [codespaceHost] : [],
   experimental: {
     serverActions: {
+      bodySizeLimit: "8mb",
       allowedOrigins: isDevelopment
         ? [
             "localhost:3000",

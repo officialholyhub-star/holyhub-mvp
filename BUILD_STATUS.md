@@ -12,12 +12,15 @@ The latest finishing pass is explicitly scoped to the current MVP **without paym
 
 ## Ready to exercise locally
 
+Original ten-stage progress: **four built locally (1, 2, 3, 8), five partial (4, 5, 6, 7, 10), one not started (9, optional Bible)**. Local implementation is not production acceptance. This finishing pass completes the simple events directory and adds configurable authentication CAPTCHA support without new dependencies or enabling live payments.
+
 | Area | Implemented |
 | --- | --- |
 | Accounts | Signup, confirmation, login/logout, recovery, profile/email changes, role guards |
 | Listers | Business application, human approval, storefront, editing/re-review |
 | Products | Drafts, editing, validated photos, publication, archiving, stock, category and GBP price |
 | Discovery | Public business/product pages, search, category and price filters, pagination |
+| Events | Public search and detail pages; admin-only draft/edit/publish/archive, recurring-schedule text, organiser links, audit history and stale-write protection; no fake events |
 | Basket | Signed-in multi-seller basket, quantity/availability checks, unpaid order preview |
 | Orders | Immutable item snapshots, per-seller allocations, commission snapshots, order history and delivery progress |
 | Refunds | Questionnaire, private evidence, seller response, human full/partial/rejected decisions, configurable appeals |
@@ -25,6 +28,7 @@ The latest finishing pass is explicitly scoped to the current MVP **without paym
 | Administration | Applications, users, sellers, product moderation, order breakdowns, policy settings and audit history |
 | Notifications | In-account business review, payment-test and refund updates |
 | Security checks | Role/ownership restrictions, file validation, private storage, raw-body signatures and payment-event replay protection |
+| Optional auth bot protection | Turnstile widget and token forwarding for signup/login/recovery, with retry/expiry handling; configure the matching provider settings in Supabase before enabling |
 
 ## Not complete / intentionally disabled
 
@@ -35,7 +39,7 @@ The latest finishing pass is explicitly scoped to the current MVP **without paym
 5. **Email operations:** account messages use Supabase Auth once SMTP is configured; marketplace event emails/Resend, delivery retries and email verification of hosted settings are not connected.
 6. **Production setup:** the unknown newer live Supabase schema must be reconciled (or a fresh development project used), migrations reviewed, administrator assigned and production host configured.
 7. **Operating policies:** final operator identity, customer/seller terms, shipping, tax treatment, refunds/appeals, retention, backup/restore and abuse controls need owner review and live-environment testing.
-8. **Later scope:** dedicated events, Bible/community content, loyalty, subscriptions and advanced analytics have not been added. The build prioritises the marketplace.
+8. **Later scope:** Bible/community content, loyalty, subscriptions and advanced analytics have not been added. The events directory is implemented, but automatic recurrence, ticketing and attendee management are not part of this simple directory.
 
 A Stripe Payment Link alone cannot complete a multi-seller integration. A future developer needs appropriately scoped, privately configured Stripe API access and webhook signing secrets, Connect settings and the approved commercial rules. Do not paste passwords or secret keys into chat or Git.
 
@@ -66,9 +70,10 @@ The original holyhub.co.uk landing-page project remains untouched. This app is n
 
 ## Verification completed for this build
 
-- 32 database/validation/configuration checks passed, including an empty database through first approved publication, role policies, fee enforcement, private storage and payment replay protection.
-- Nine isolated browser journeys passed (three account/business journeys and six marketplace journeys), including an empty catalogue and new applicant, upload size validation, external brand links, Deepgrids Sans rendering and keyboard photo selection.
+- 38 database/validation/configuration checks passed, including an empty database through first approved publication, role policies, fee enforcement, private storage, payment replay protection and events security.
+- Eleven isolated browser journeys passed (three account/business journeys and eight marketplace journeys), including an empty catalogue and new applicant, upload size validation, external brand links, Deepgrids Sans rendering, keyboard photo selection, event curation and CAPTCHA retries.
+- CAPTCHA browser tests use a local provider stand-in and enforce forwarding in the isolated auth adapter; they do not prove real Cloudflare/Supabase verification. Hosted testing is required.
 - Lint, TypeScript, production build and git whitespace checks passed.
 - Production dependency audit reported zero known vulnerabilities at the time of the check; this is not a guarantee against security defects.
 - Desktop and phone-width screenshots were inspected; discovery was checked at widths from 320 to 1440 pixels.
-- GitHub access was subsequently resolved by accepting the matching invitation. The complete review branch is now pushed to the repository; main remains unchanged. Local test results are not a claim that GitHub Actions or production-provider checks have passed.
+- GitHub access was resolved by accepting the matching invitation. The complete review branch is pushed to the repository; main remains unchanged. [Pull request #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1) contains the source and current GitHub Actions checks. The previous c771b1b build passed GitHub Actions; consult the PR for the latest commit's result. Neither local nor CI results prove production-provider readiness.

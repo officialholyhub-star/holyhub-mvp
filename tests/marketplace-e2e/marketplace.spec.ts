@@ -1,6 +1,7 @@
 import { test,expect,type Page } from "@playwright/test";
 import sharp from "sharp";
-async function login(page:Page,role:string){await page.goto('/auth/login');await page.getByLabel('Email',{exact:true}).fill(`${role}@holyhub.test`);await page.getByLabel('Password',{exact:true}).fill('HolyHub-demo-2026!');await page.getByRole('button',{name:'Log in',exact:true}).click();await expect(page).toHaveURL(/\/account$/);}
+import { mockCaptchaWidget } from "../helpers/captcha-widget";
+async function login(page:Page,role:string){await mockCaptchaWidget(page);await page.goto('/auth/login');await page.getByLabel('Email',{exact:true}).fill(`${role}@holyhub.test`);await page.getByLabel('Password',{exact:true}).fill('HolyHub-demo-2026!');await expect(page.locator('input[name="captcha_token"]')).toHaveValue('holyhub-test-captcha-token');await page.getByRole('button',{name:'Log in',exact:true}).click();await expect(page).toHaveURL(/\/account$/);}
 const png=()=>sharp({create:{width:300,height:300,channels:3,background:'#96b5cd'}}).png().toBuffer();
 
 test('empty catalogue welcomes the first applicant and preserves approval before publishing',async({page,request,browser})=>{
@@ -26,7 +27,50 @@ test('empty catalogue welcomes the first applicant and preserves approval before
  await page.getByRole('button',{name:'Publish product',exact:true}).click();await expect(page.getByText('Your lister application must be approved before publishing',{exact:false})).toBeVisible();
  const visitor=await browser.newPage();await visitor.goto('http://127.0.0.1:3102/products');await expect(visitor.getByRole('heading',{name:'First founder print'})).toHaveCount(0);await visitor.close();
 });
-test.beforeEach(async({request})=>{const response=await request.post('http://127.0.0.1:54331/__test/reset');expect(response.ok()).toBe(true);});
+test.beforeEach(async({request,page})=>{await mockCaptchaWidget(page);const response=await request.post('http://127.0.0.1:54331/__test/reset');expect(response.ok()).toBe(true);});
+
+test('configured CAPTCHA blocks missing tokens and resets correctly after an auth failure',async({page})=>{
+ await page.goto('/auth/login');await expect(page.locator('input[name="captcha_token"]')).toHaveValue('holyhub-test-captcha-token');
+ await page.getByLabel('Email',{exact:true}).fill('customer@holyhub.test');await page.getByLabel('Password',{exact:true}).fill('wrong-password');
+ await page.evaluate(()=>{const token=document.querySelector<HTMLInputElement>('input[name="captcha_token"]');if(token)token.value='';});
+ await page.getByRole('button',{name:'Log in',exact:true}).click();await expect(page.getByText('Complete the security check before continuing.',{exact:false})).toBeVisible();
+ await expect(page.locator('input[name="captcha_token"]')).toHaveValue('holyhub-test-captcha-token');
+ await page.getByLabel('Email',{exact:true}).fill('customer@holyhub.test');await page.getByLabel('Password',{exact:true}).fill('wrong-password');
+ await page.getByRole('button',{name:'Log in',exact:true}).click();await expect(page.getByText('Check your details and try again.',{exact:false})).toBeVisible();
+ await expect(page.locator('input[name="captcha_token"]')).toHaveValue('holyhub-test-captcha-token');
+ await page.getByLabel('Email',{exact:true}).fill('customer@holyhub.test');await page.getByLabel('Password',{exact:true}).fill('HolyHub-demo-2026!');await page.getByRole('button',{name:'Log in',exact:true}).click();await expect(page).toHaveURL(/\/account$/);
+ await page.getByRole('button',{name:'Log out',exact:true}).click();await page.goto('/auth/forgot-password');await expect(page.locator('input[name="captcha_token"]')).toHaveValue('holyhub-test-captcha-token');
+ await page.getByLabel('Email',{exact:true}).fill('customer@holyhub.test');await page.getByRole('button',{name:'Send reset link',exact:true}).click();await expect(page.getByText('If that email belongs to a HolyHub account',{exact:false})).toBeVisible();
+});
+
+test('admin curates real event drafts, publishes, edits and archives while visitors can only browse',async({page,browser})=>{
+ await page.goto('/events');await expect(page.getByText('0 events to discover')).toBeVisible();
+ await login(page,'customer');await page.goto('/admin/events/new');await expect(page).toHaveURL(/\/account\?error=/);
+ await page.getByRole('button',{name:'Log out',exact:true}).click();await login(page,'admin');await page.goto('/admin/events');
+ await page.getByRole('link',{name:'Add an event'}).click();
+ await page.getByLabel('Event name',{exact:true}).fill('Faith and creativity gathering');
+ await page.getByLabel('Organiser',{exact:true}).fill('Community hosts');
+ await page.getByLabel('Location',{exact:true}).fill('London');
+ await page.getByLabel('Dates & recurring schedule').fill('Every first Friday, 7–9pm UK time');
+ await page.getByLabel('About the event').fill('A public gathering for Christian creators, local businesses and the wider community.');
+ await page.getByLabel('Organiser’s event link').fill('https://example.com/gathering');
+ await page.getByRole('button',{name:'Save event draft',exact:true}).click();await expect(page.getByText('draft event',{exact:true})).toBeVisible();
+ const context=await browser.newContext({baseURL:'http://127.0.0.1:3102'}),visitor=await context.newPage();
+ await visitor.goto('/events');await expect(visitor.getByText('0 events to discover')).toBeVisible();
+ await page.getByRole('button',{name:'Publish event',exact:true}).click();await expect(page.getByText('Event published.',{exact:true})).toBeVisible();
+ await visitor.goto('/events');await expect(visitor.getByRole('heading',{name:'Faith and creativity gathering',exact:true})).toBeVisible();
+ await visitor.getByLabel('Search events',{exact:true}).fill('London');await visitor.getByRole('button',{name:'Find events'}).click();await expect(visitor.getByText('1 event to discover')).toBeVisible();
+ await visitor.getByRole('heading',{name:'Faith and creativity gathering',exact:true}).getByRole('link').click();
+ await expect(visitor.getByRole('link',{name:'Visit the organiser',exact:false})).toHaveAttribute('href','https://example.com/gathering');
+ const publicUrl=visitor.url();
+ for(const width of [320,390,1440]){await visitor.setViewportSize({width,height:900});expect(await visitor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}
+ await page.getByLabel('Event name',{exact:true}).fill('Faith and creativity evening');await page.getByRole('button',{name:'Save event draft',exact:true}).click();await expect(page.getByText('draft event',{exact:true})).toBeVisible();
+ // Next may already have streamed a 200 shell before resolving notFound().
+ // Assert the actual access boundary and not-found content, not that shell code.
+ await visitor.goto(publicUrl);await expect(visitor.getByRole('heading',{name:'This page isn’t here.',exact:true})).toBeVisible();await expect(visitor.getByRole('heading',{name:/Faith and creativity/})).toHaveCount(0);
+ await page.getByRole('button',{name:'Publish event',exact:true}).click();await expect(page.getByText('published event',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Archive event',exact:true}).click();await expect(page.getByText('archived event',{exact:true})).toBeVisible();
+ await visitor.goto('/events');await expect(visitor.getByText('0 events to discover')).toBeVisible();await context.close();
+});
 
 test('responsive discovery, real image access, filters and unpaid multi-seller basket',async({page,request})=>{
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});await page.goto('/');await expect(page.getByText('Connect. Discover. Grow.',{exact:true}).first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.goto('/products');await expect(page.getByText('4 products to discover')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);}

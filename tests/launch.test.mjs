@@ -4,9 +4,9 @@ import { marketplaceDatabase } from './helpers/database.mjs';
 
 test('empty production migrations support the first real listing without sample data or payments', async t => {
   const {db,as}=await marketplaceDatabase();t.after(()=>db.close());
-  for(const table of ['businesses','products','orders']) assert.equal((await db.query('select count(*)::int as n from '+table)).rows[0].n,0);
+  for(const table of ['businesses','products','orders','events']) assert.equal((await db.query('select count(*)::int as n from '+table)).rows[0].n,0);
   const health=async()=>(await as(null,tx=>tx.query('select launch_readiness() as result'))).rows[0].result;
-  assert.deepEqual(await health(),{schema_version:7,schema_ready:true,storage_ready:true,admin_ready:false});
+  assert.deepEqual(await health(),{schema_version:8,schema_ready:true,storage_ready:true,admin_ready:false});
   const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',admin='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   await db.query("insert into auth.users(id,raw_user_meta_data) values($1,'{\"role\":\"admin\"}'),($2,'{}')",[owner,admin]);
   assert.equal((await as(owner,tx=>tx.query("select has_role('admin') as allowed"))).rows[0].allowed,false);

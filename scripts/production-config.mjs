@@ -40,7 +40,7 @@ export async function checkHostedServices(env, request = fetch) {
   };
   try {
     const status = await read('/rest/v1/rpc/launch_readiness', { method: 'POST', body: '{}' });
-    checks.push({ name: 'Database schema and row-level security', ok: status.schema_version === 7 && status.schema_ready === true });
+    checks.push({ name: 'Database schema and row-level security', ok: status.schema_version === 8 && status.schema_ready === true });
     checks.push({ name: 'Private image storage', ok: status.storage_ready === true });
     checks.push({ name: 'Active, email-confirmed administrator', ok: status.admin_ready === true });
   } catch { checks.push({ name: 'Database migrations / launch_readiness function', ok: false }); }

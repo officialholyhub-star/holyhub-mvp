@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/auth/site-url";
 import { safeNextPath } from "@/lib/auth/redirects";
 import { requireUser } from "@/lib/auth/require-user";
+import { captchaInput } from "@/lib/auth/captcha";
 
 const MAX_EMAIL_LENGTH = 254;
 const MIN_PASSWORD_LENGTH = 8;
@@ -41,8 +42,11 @@ export async function login(formData: FormData) {
     redirect(loginError);
   }
 
+  const captcha = captchaInput(formData, Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY));
+  if (captcha.error) redirect(`${messageUrl("/auth/login", "error", captcha.error)}&next=${encodeURIComponent(next)}`);
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken: captcha.token } });
   if (error) redirect(loginError);
 
   revalidatePath("/", "layout");
@@ -64,12 +68,16 @@ export async function signup(formData: FormData) {
   }
   if (password !== confirmPassword) redirect(signupError("Your passwords don't match."));
 
+  const captcha = captchaInput(formData, Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY));
+  if (captcha.error) redirect(signupError(captcha.error));
+
   const supabase = await createClient();
   const siteUrl = await getSiteUrl();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      captchaToken: captcha.token,
       data: { full_name: fullName },
       // With Supabase's normal confirmation email, PKCE returns an auth code here.
       emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
@@ -92,9 +100,13 @@ export async function requestPasswordReset(formData: FormData) {
   const email = clean(formData.get("email")).toLowerCase();
   if (!isValidEmail(email)) redirect(messageUrl("/auth/forgot-password", "error", "Enter a valid email address."));
 
+  const captcha = captchaInput(formData, Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY));
+  if (captcha.error) redirect(messageUrl("/auth/forgot-password", "error", captcha.error));
+
   const supabase = await createClient();
   const siteUrl = await getSiteUrl();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    captchaToken: captcha.token,
     redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
   });
 

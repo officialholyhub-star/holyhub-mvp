@@ -12,7 +12,7 @@ export async function marketplaceDatabase() {
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text references storage.buckets(id),name text,unique(bucket_id,name));
     alter table storage.objects enable row level security;
     grant usage on schema storage to anon,authenticated,service_role;grant all on storage.objects to anon,authenticated,service_role;grant select on storage.buckets to anon,authenticated,service_role;`);
-  for (const file of ['001_stage1_foundation.sql','002_business_discovery.sql','003_marketplace.sql','004_marketplace_storage.sql','005_payment_boundary.sql','006_order_delivery.sql','007_launch_readiness.sql']) await db.exec(await readFile(new URL(`../../supabase/migrations/${file}`,import.meta.url),'utf8'));
+  for (const file of ['001_stage1_foundation.sql','002_business_discovery.sql','003_marketplace.sql','004_marketplace_storage.sql','005_payment_boundary.sql','006_order_delivery.sql','007_launch_readiness.sql','008_events_directory.sql']) await db.exec(await readFile(new URL(`../../supabase/migrations/${file}`,import.meta.url),'utf8'));
   const as = (user, fn) => db.transaction(async tx => {
     await tx.exec(`set local role ${user === 'service' ? 'service_role' : user ? 'authenticated' : 'anon'}`);
     await tx.query("select set_config('request.jwt.claim.sub',$1,true)",[user === 'service' ? '' : user ?? '']);

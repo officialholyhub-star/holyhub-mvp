@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requestPasswordReset } from "@/app/auth/actions";
 import { SubmitButton } from "@/components/submit-button";
+import { AuthCaptcha } from "@/components/auth-captcha";
 
 export default async function ForgotPasswordPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const params = await searchParams;
@@ -18,6 +19,7 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
             <label htmlFor="email">Email</label>
             <input id="email" name="email" type="email" autoComplete="email" required />
           </div>
+          <AuthCaptcha />
           <SubmitButton pendingText="Sending…">Send reset link</SubmitButton>
         </form>
         <div className="form-footer">

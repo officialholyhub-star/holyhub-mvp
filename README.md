@@ -43,6 +43,8 @@ The demo uses the actual SQL migrations and row-level security through a small l
 - Lister application, owner-editable business profile, admin approval/rejection and public storefronts. Business edits return to review.
 - Product drafts, editing, publishing, archiving, images, stock and prices.
 - Public product/business discovery, category/search/price filters and product pagination.
+- Public events directory with search, recurring schedule descriptions, organiser links and admin-only draft/edit/publish/archive controls. Events are empty by default and do not sell tickets.
+- Optional Turnstile integration on signup, login and password recovery, with tokens forwarded to Supabase for provider verification.
 - Persistent per-customer baskets and multi-seller **unpaid** order previews.
 - Server-calculated line totals, 5% commission and seller-specific allocations; immutable order item snapshots.
 - Customer order history and delivery progress; seller order/fulfilment screens and recorded earnings.
@@ -91,6 +93,7 @@ The **optional demo:samples mode only** explicitly uses lifetime allowance, a 15
    - `005_payment_boundary.sql`
    - `006_order_delivery.sql`
    - `007_launch_readiness.sql`
+   - `008_events_directory.sql`
 3. Existing databases require a schema comparison, backup and reviewed migration plan first. Do not rerun applied migrations or drop tables to make them fit.
 4. Configure Supabase Auth and Storage below.
 5. Run `npm run dev` and open http://localhost:3000.
@@ -122,6 +125,14 @@ Recommended token-hash email links support opening on a different device:
 Migration 004 creates private product-images and refund-evidence buckets with policies. The app accepts JPG/PNG/WebP up to 4 MB, validates and re-encodes them, strips metadata and generates scoped object paths. Evidence is available only to case participants and administrators through short-lived links.
 
 Order/refund notifications currently appear **inside the account**, not by email. Supabase SMTP is used for authentication mail only. The older landing page's Tally, Stripe and Resend integrations have not been moved into this separate marketplace.
+
+### Optional bot protection
+
+The frontend and token forwarding are implemented; **the provider is not enabled automatically**. Register the actual app hostname in Cloudflare Turnstile, set its public site key as `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, and configure its private secret in Supabase Authentication → Bot and Abuse Protection, choosing Turnstile. Deploy the frontend configuration and enable the matching Supabase setting together. Never put the private secret in a `NEXT_PUBLIC_*` value or Git.
+
+Supabase must enforce verification on its own Auth endpoints; the app's token-length check is not verification. An empty site-key value leaves current auth unchanged and loads no widget. Tokens are cleared on expiry and refreshed after a completed submission, with visible errors if the widget cannot load. Test signup, login, invalid credentials/retry and recovery with the real configured provider before launch. Browser tests use an isolated widget stand-in and do not prove Cloudflare verification.
+
+See [Supabase CAPTCHA setup](https://supabase.com/docs/guides/auth/auth-captcha) and [Cloudflare widget configuration](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/).
 
 ## Verification
 
@@ -158,5 +169,7 @@ Do not deploy the local demo or overwrite the existing landing site. A separate 
 - Product editor: components/product-form.tsx, app/seller/products/
 - Customer discovery/orders/refunds: app/products/, app/basket/, app/orders/, app/refunds/
 - Admin: app/admin/
+- Public events and curation: app/events/, app/admin/events/, components/event-form.tsx, lib/events.ts
+- Optional auth bot protection: components/auth-captcha.tsx, lib/auth/captcha.ts, app/auth/actions.ts
 - Database permissions and state transitions: supabase/migrations/
 - Signed payment boundary: app/api/stripe/webhook/, lib/payments/

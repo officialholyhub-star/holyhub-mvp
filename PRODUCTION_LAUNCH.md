@@ -30,7 +30,7 @@ The confirmed commercial settings remain 10 free product listings, 20p extra lis
 | Component | Implementation |
 | --- | --- |
 | Web application | Existing Next.js 16 app, Node 24; Vercel configuration in vercel.json, London function region |
-| Persistent accounts/data | Supabase Auth/PostgreSQL; migrations 001–007 |
+| Persistent accounts/data | Supabase Auth/PostgreSQL; migrations 001–008 |
 | Persistent files | Private product-images and refund-evidence buckets, ownership policies and validated uploads |
 | Email | Supabase Auth using a verified custom SMTP sender; no demo mail adapter in production |
 | Moderation | Existing protected /admin application queue, account roles, audit history |
@@ -69,6 +69,7 @@ For a confirmed fresh project, apply these files once, in order through the SQL 
 5. supabase/migrations/005_payment_boundary.sql
 6. supabase/migrations/006_order_delivery.sql
 7. supabase/migrations/007_launch_readiness.sql
+8. supabase/migrations/008_events_directory.sql
 
 Do not run any file in tests/fixtures on the hosted database. Deployment must never run a database reset or seed.
 
@@ -82,7 +83,7 @@ In Supabase Authentication:
 - Keep email confirmation and secure email change on.
 - Configure verified custom SMTP; the default test mail service is not an unrestricted production mail sender.
 - Set sender name HolyHub and a verified sender address the owner controls. SMTP credentials stay in Supabase, not Git or browser code.
-- Keep Auth rate limits enabled. Supabase CAPTCHA needs a matching frontend token integration; do not switch on CAPTCHA in the provider alone. That integration is not included in this pass and should be reviewed before a public campaign.
+- Keep Auth rate limits enabled. The optional Turnstile widget and token forwarding are now implemented. Configure NEXT_PUBLIC_TURNSTILE_SITE_KEY and the matching private Turnstile secret in Supabase Auth together; see README. Do not enable only the provider or assume the local test stand-in proves real challenge verification.
 - Test signup, forgotten password and email change with owned test inboxes on another device.
 
 Token-hash template examples are in README.md. Test that links return to this marketplace, not the older landing site or localhost.
@@ -116,6 +117,8 @@ Then test on the actual HTTPS app:
 - Refresh, sign out/in and redeploy: the listing and image must still exist.
 - Another account must not be able to edit it. Unapproved/suspended businesses must stay hidden.
 - Password recovery and account-email changes must work on phone and desktop.
+- If Turnstile is enabled, verify the actual provider on signup, login, failed-login retry and recovery. Missing/expired tokens must not succeed.
+- Admin saves an event draft, publishes it, edits it back to draft and archives it; anonymous visitors see only published events and can follow the organiser link. Event schedules are human-maintained descriptions, not automatic recurrence or ticket sales.
 - /api/health must return 200 without cookies. It is a readiness signal, not proof of SMTP delivery or every security policy.
 
 Use only owner-controlled test accounts and clearly labelled test records; unpublish those records before inviting the public.

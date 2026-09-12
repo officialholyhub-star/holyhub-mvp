@@ -22,7 +22,7 @@ test('production preflight accepts only a real hosted configuration and never de
   ]) assert.ok(productionConfigErrors({ ...config, ...change }).length);
 });
 test('production checks fail closed for missing migrations, storage, admin or email confirmation', async () => {
-  const db = { schema_version: 7, schema_ready: true, storage_ready: true, admin_ready: true };
+  const db = { schema_version: 8, schema_ready: true, storage_ready: true, admin_ready: true };
   const auth = { disable_signup: false, mailer_autoconfirm: false, external: { email: true } };
   const request = (database, settings) => async url => Response.json(url.includes('/rpc/') ? database : settings);
   assert.ok((await checkHostedServices(config, request(db, auth))).every(check => check.ok));

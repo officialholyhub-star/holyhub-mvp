@@ -4,7 +4,7 @@ Prepared 12 September 2026; updated after the GitHub collaboration invitation wa
 
 ## 1. What you are taking over
 
-HolyHub connects people with Christian businesses, brands, creators and events. This release is a **non-payment business and product discovery MVP**: verified accounts, real lister applications, human approval, product uploads and public discovery. Dedicated events and community features are later work.
+HolyHub connects people with Christian businesses, brands, creators and events. This release is a **non-payment marketplace MVP**: verified accounts, real lister applications, human approval, product uploads, public discovery and a simple admin-curated events directory. Community/Bible features remain later work.
 
 - **Marketplace target:** `https://app.holyhub.co.uk`.
 - **Keep `holyhub.co.uk` and `www.holyhub.co.uk` running.** The existing landing site is a separate project and is not included here.
@@ -18,7 +18,7 @@ HolyHub connects people with Christian businesses, brands, creators and events. 
 | --- | --- |
 | Intended GitHub repository | [officialholyhub-star/holyhub-mvp](https://github.com/officialholyhub-star/holyhub-mvp) |
 | Working branch | `codex/full-marketplace-mvp` |
-| Application baseline | `f2b749a` — real-listing launch infrastructure and empty catalogue; documentation is committed after this baseline |
+| Application release | Latest reviewed commit on `codex/full-marketplace-mvp`; includes events migration 008 and optional CAPTCHA. Use [PR #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1), not an earlier handoff archive |
 | Local checkout | `C:\Users\matth\holyhub-mvp` |
 | GitHub upload | **Uploaded:** invitation accepted; `matthewjeanty` now has write access. The complete source is on `codex/full-marketplace-mvp`, not merged over main |
 | Public deployment | **Not completed.** Do not assume existing GitHub `main` contains this release |
@@ -26,7 +26,7 @@ HolyHub connects people with Christian businesses, brands, creators and events. 
 | Hosting access | Browser automation timed out; no authenticated hosting/database setup was completed. A functional GPT Site was requested, not a read-only substitute; compatible Workers output and real backend setup remain necessary |
 | Existing landing site | Unchanged by this marketplace work |
 
-The accompanying source ZIP contains the complete current tracked application, assets, lockfile, tests, migrations and this handoff. It excludes local environment files, dependencies, build output and Git history. The ZIP filename identifies the release commit. **Do not substitute an older ZIP or GitHub's old main branch for this release.**
+GitHub's review branch is the authoritative handoff. It contains the tracked application, assets, lockfile, tests, migrations and these documents, excluding local credentials, dependencies and build output. Earlier source ZIPs predate this finishing pass. **Do not substitute an older ZIP or GitHub's old main branch for this release.**
 
 ## 2. First actions for the next developer
 
@@ -34,7 +34,7 @@ The accompanying source ZIP contains the complete current tracked application, a
 2. Review the uploaded `codex/full-marketplace-mvp` branch and its pull request; run CI and preserve existing history/unrelated work. Do not force-push over `main`.
 3. Inspect the existing database without changing it. Agree with the owner whether to reconcile it or use a dedicated fresh marketplace project. Back up existing data first.
 4. Configure real Supabase Auth/Postgres/Storage and SMTP. The existing deployment configuration targets Vercel; the new request for a functional GPT Site additionally requires compatible Cloudflare Workers output, including safe image processing. Agree the hosting path before changing it. No Stripe integration is needed for this non-payment release.
-5. Add only the `app` DNS record using Vercel's supplied values. Complete section 8 on the real HTTPS app before announcing launch.
+5. If the Vercel path is agreed, add only the `app` DNS record using that project's supplied values. Complete section 8 on the real HTTPS app before announcing launch; do not modify root/www or email records.
 
 From the existing local checkout, to upload further reviewed changes:
 
@@ -70,7 +70,7 @@ npm run test:marketplace
 
 Run browser suites sequentially because they share Next's development build directory. `.github/workflows/ci.yml` runs on pull requests to `main`, pushes to `main`, or manual dispatch; pushing only the work branch does not automatically run it.
 
-**Last application verification:** 32 database/validation/configuration checks and nine browser journeys passed, along with lint, type checking, a production-mode build and whitespace checks. Layouts were checked from 320 to 1440 pixels. These isolated local checks are **not** evidence of hosted email delivery or a successful deployment. The handoff-only change does not alter application code.
+**Last application verification:** 38 database/validation/configuration checks and eleven browser journeys passed, along with lint, type checking, a production-mode build and whitespace checks. Layouts were checked from 320 to 1440 pixels. This pass adds events curation and CAPTCHA lifecycle tests. CAPTCHA uses a local provider stand-in; the real provider must be tested after configuration. These isolated checks are **not** evidence of hosted email delivery or a successful deployment. See PR #1 for the latest GitHub Actions result.
 
 ## 4. Architecture and edit map
 
@@ -87,7 +87,9 @@ Next.js 16.3.4 App Router, React 19.2.8, TypeScript and Supabase SSR sessions. S
 | Uploads and private file access | `app/uploads/`, `lib/image-upload.ts`, `components/image-file-input.tsx`, `app/api/product-image/`, `app/api/evidence/` |
 | Order/refund scaffolding | `app/basket/`, `app/orders/`, `app/refunds/`, `app/seller/orders/`, `app/seller/finances/` |
 | Disabled payment boundary | `app/api/checkout/route.ts`, `app/api/stripe/webhook/route.ts`, `lib/payments/verify.ts` |
-| Database/setup | `supabase/migrations/` (001–007), `supabase/ops/` |
+| Database/setup | `supabase/migrations/` (001–008), `supabase/ops/` |
+| Events directory and curation | `app/events/`, `app/admin/events/`, `components/event-form.tsx`, `lib/events.ts` |
+| Optional auth bot protection | `components/auth-captcha.tsx`, `lib/auth/captcha.ts`, `app/auth/actions.ts`; configuration in README |
 | Hosting/readiness | `vercel.json`, `.vercelignore`, `scripts/check-production.mjs`, `scripts/production-config.mjs`, `app/api/health/route.ts` |
 | Tests/local adapter | `tests/`, both `playwright*.config.ts` files, `scripts/demo.mjs` |
 
@@ -125,7 +127,7 @@ No service-role or Stripe key is required for this listing release. Public-prefi
 
 Previously configured project: `mgzsxzixobyfdlutxtgs`. Read-only checks returned missing-table errors for businesses, product images, platform settings and notifications. Some other requests returned permission errors, which do not prove table absence. Signup and email confirmation were enabled; actual delivery was untested.
 
-**Do not reset or blindly migrate that project.** Use `supabase/ops/inspect-existing.sql`, compare schemas and agree a backup/migration plan. For a confirmed fresh project only, apply migrations **001–007 once, in order**, as listed in [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md). They insert no fictional sellers or products.
+**Do not reset or blindly migrate that project.** Use `supabase/ops/inspect-existing.sql`, compare schemas and agree a backup/migration plan. For a confirmed fresh project only, apply migrations **001–008 once, in order**, as listed in [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md). They insert no fictional sellers, products or events. Existing installations already on 007 need only the reviewed new 008 migration; never replay earlier migrations blindly.
 
 Create and verify the owner's account, then use `supabase/ops/bootstrap-admin.sql` with its actual user UUID. Never trust signup metadata for admin access or promote solely on an email match. Migration 007 adds readiness checks and in-account application notifications.
 
@@ -133,17 +135,19 @@ Create and verify the owner's account, then use `supabase/ops/bootstrap-admin.sq
 
 **Implemented non-payment journey:** verified accounts; lister submission; human approval/rejection; business edits returning to review; product drafts, validated images and approved publication; search/filter discovery; external brand links; in-account moderation notifications. Persistence requires a correctly configured hosted backend.
 
+**Events:** administrators create drafts, review public details, publish, edit back to draft and archive. Visitors can search and read only published events. Recurring schedules are human-readable text with a time zone, not generated occurrences. Assign an administrator to verify organiser links and archive expired/cancelled events.
+
 **Not a working financial service:** baskets, unpaid previews, historical order/fulfilment screens, refund evidence/decisions and fee/reserve/commission records are scaffolding. `/api/checkout` always returns 503. The webhook is disabled by default and rejects live events even in its isolated test mode. Refund decisions do not move money. Connect, payment creation, stock reservation/decrement, transfers, payouts, provider refunds and shipping/tax calculations are not implemented.
 
 Confirmed rules are **10 free product listings, 20p per additional listing and 5% commission**. The initial ten created product records can publish after approval without payments; extra products remain blocked. The owner must still decide how the allowance counts, whether fees recur, shipping/tax policy, reserve settings, appeal rules and liability for payment costs/refunds/disputes. Do not invent defaults or activate payments to complete the listing launch.
 
-Marketplace event emails/Resend are not connected. Auth email separately depends on Supabase SMTP. The older landing site's Tally, support-payment and email integrations are not included here. Dedicated events, community content, loyalty, subscriptions and advanced analytics are not implemented.
+Marketplace notification emails/Resend are not connected. Auth email separately depends on Supabase SMTP. The older landing site's Tally, support-payment and email integrations are not included here. Events now have admin curation, search, public pages and organiser links; ticketing and automatic recurrence are not implemented. Community content, loyalty, subscriptions and advanced analytics are not implemented.
 
 ## 7. Operations to finish
 
 - Owner approval of operator identity, privacy/terms, data retention and moderation policies before public collection. The included privacy page is not a completed legal review.
 - Verified SMTP, correct app callback/recovery URLs and real-inbox testing. Keep confirmation, secure email change and rate limits enabled.
-- Abuse/CAPTCHA review: frontend CAPTCHA token integration is not included; enabling CAPTCHA only in Supabase would break forms.
+- Optional Turnstile is implemented, including token forwarding, expiry/reset handling and local stand-in tests. Enable the public site key and the matching private Supabase provider setting together; test the actual provider before launch. This does not replace rate limits or an abuse review.
 - Keep private bucket policies and independent server upload validation. JPG/PNG/WebP uploads are limited to 4 MB and re-encoded; do not casually raise the limit on Vercel.
 - Database backups **plus separate Storage object backups**, a restore rehearsal and an assigned owner. Never store backups in a public repo.
 - Spending alerts, error-log review and uptime alerts for `/api/health`. No monitoring automation has been created.
@@ -163,6 +167,8 @@ Use owned test accounts and clearly labelled records on the actual HTTPS deploym
 - [ ] Approved seller uploads and publishes an allowed product; signed-out discovery and external brand link work.
 - [ ] Another account cannot edit it or access private records; pending/suspended businesses stay hidden.
 - [ ] Listing and image survive sign-out, refresh and redeployment.
+- [ ] Admin creates/publishes an event; signed-out visitors discover it; saving edits hides it pending re-publication; archiving removes it; ordinary accounts cannot curate events.
+- [ ] If CAPTCHA is enabled, real signup/login/recovery and failed-login retries work with the actual provider on the chosen domains.
 - [ ] iPhone/Android and desktop flows work; no button promises functioning checkout.
 - [ ] App subdomain has valid HTTPS/auth links; root/www site and existing email DNS remain unchanged.
 - [ ] Owner approves notices; backups, moderation responsibility and monitoring are established.

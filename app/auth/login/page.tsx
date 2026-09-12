@@ -2,6 +2,7 @@ import Link from "next/link";
 import { login } from "@/app/auth/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { safeNextPath } from "@/lib/auth/redirects";
+import { AuthCaptcha } from "@/components/auth-captcha";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; next?: string }> }) {
   const params = await searchParams;
@@ -25,6 +26,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <label htmlFor="password">Password</label>
             <input id="password" name="password" type="password" autoComplete="current-password" required />
           </div>
+          <AuthCaptcha />
           <SubmitButton pendingText="Logging in…">Log in</SubmitButton>
         </form>
         <div className="form-footer">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signup } from "@/app/auth/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { safeNextPath } from "@/lib/auth/redirects";
+import { AuthCaptcha } from "@/components/auth-captcha";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; next?: string }> }) {
   const params = await searchParams;
@@ -33,6 +34,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             <input id="confirm_password" name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
           </div>
           <p className="muted-small">We use your details to provide your account. Read <Link className="text-link" href="/privacy">how we handle your information</Link>.</p>
+          <AuthCaptcha />
           <SubmitButton pendingText="Creating account…">Create account</SubmitButton>
         </form>
         <div className="form-footer">

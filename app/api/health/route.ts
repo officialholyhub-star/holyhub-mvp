@@ -16,7 +16,7 @@ export async function GET() {
     });
     if (!response.ok) return unavailable();
     const status = await response.json();
-    if (status.schema_version !== 7 || !status.schema_ready || !status.storage_ready || !status.admin_ready) return unavailable();
+    if (status.schema_version !== 8 || !status.schema_ready || !status.storage_ready || !status.admin_ready) return unavailable();
     return Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } });
   } catch { return unavailable(); }
 }

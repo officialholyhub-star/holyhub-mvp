@@ -2,7 +2,7 @@
 
 ## What has been handed over
 
-The HolyHub marketplace source is now uploaded to your [GitHub repository](https://github.com/officialholyhub-star/holyhub-mvp/tree/codex/full-marketplace-mvp), on **codex/full-marketplace-mvp**. Matthew's GitHub collaboration invitation was accepted and write access verified on 12 September 2026. The existing main branch and the separate holyhub.co.uk landing site were not overwritten.
+The HolyHub marketplace source is uploaded to your [GitHub repository](https://github.com/officialholyhub-star/holyhub-mvp/tree/codex/full-marketplace-mvp), on **codex/full-marketplace-mvp**, with [pull request #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1) for review. Matthew's GitHub collaboration invitation was accepted and write access verified on 12 September 2026. The existing main branch and the separate holyhub.co.uk landing site were not overwritten.
 
 This is a real Next.js/Supabase implementation, not a collection of design screenshots. However, the saved local preview uses a temporary test backend. **The production marketplace is not yet live.** A public read-only substitute was offered and declined; no such substitute has been published.
 
@@ -16,7 +16,7 @@ Read these documents in order:
 
 ## Progress against the original ten stages
 
-“Built locally” means implemented and tested against the isolated local backend, not production sign-off. The local-stage summary is **three built, five partial, two not started**.
+“Built locally” means implemented and tested against the isolated local backend, not production sign-off. The local-stage summary is **four built, five partial, one not started (optional)**. This finishing pass adds Stage 8 and optional authentication bot protection; it does not activate payments or claim a production launch.
 
 | Stage | Done | Still required |
 | --- | --- | --- |
@@ -27,13 +27,13 @@ Read these documents in order:
 | 5. Orders/payouts/commission/reserves — partial | Order snapshots, seller allocations, settings and accounting records/screens | Connect onboarding, charge/transfer/payout reconciliation, actual reserves/releases and listing-fee collection |
 | 6. Refunds/appeals — partial | Questionnaire, private evidence, seller response, human decisions and appeals | Real provider refunds, seller balance/transfer adjustments, retries and agreed appeal rules |
 | 7. Administration — partial overall | Dashboard, moderation, audit, settings and review workflows are built | Live admin setup and end-to-end integration with real payments/refunds/payouts when those exist |
-| 8. Events — not started | Nothing yet | Simple public events directory |
+| 8. Events — built locally | Empty-by-default public directory, search, detail pages, organiser links, recurring-schedule text and admin draft/publish/archive controls with audit and stale-edit protection | Run migration 008 on the reviewed hosted database; add verified real events and assign someone to maintain dates/cancellations |
 | 9. Bible — not started, optional | Nothing yet | Decide whether needed; appropriately licensed content and implementation |
-| 10. Full verification — partial | 41 local automated checks, lint, types, build and responsive checks passed | Hosted-provider tests, real devices, production security review, backups/restore, monitoring and payment tests |
+| 10. Full verification — partial | 49 local automated checks, lint, types, build and responsive checks passed; see the PR checks for GitHub's latest result | Hosted-provider tests, real devices, production security review, backups/restore, monitoring and payment tests |
 
 ## Immediate launch scope
 
-The latest agreed release is **real accounts, approved businesses and product discovery, without payments**. Products can link to the brand's own website. Keep the original logo, supplied Deepgrids Sans and **Connect. Discover. Grow.**
+The release is **real accounts, approved businesses, product discovery and an admin-curated events directory, without payments**. Products can link to the brand's own website; events link to their organisers. Keep the original logo, supplied Deepgrids Sans and **Connect. Discover. Grow.**
 
 - Checkout stays disabled; a payment link is not a multi-seller payment integration.
 - Refund decisions are recorded, but no money is refunded.
@@ -49,7 +49,7 @@ The previously configured project, `mgzsxzixobyfdlutxtgs`, returned missing-tabl
 
 In your Supabase dashboard, select the intended project. Your developer should first use **SQL Editor** to run [inspect-existing.sql](supabase/ops/inspect-existing.sql), then compare the schema and agree a backup/migration plan. Do not reset it or run the initial migration over conflicting existing tables.
 
-If you choose a confirmed fresh marketplace project, run the seven SQL files in [supabase/migrations](supabase/migrations) once, in filename order, 001 through 007. Never run files from tests/fixtures there. The detailed checklist is in PRODUCTION_LAUNCH.md.
+If you choose a confirmed fresh marketplace project, run the eight SQL files in [supabase/migrations](supabase/migrations) once, in filename order, 001 through 008. Never run files from tests/fixtures there. An existing installation already at migration 007 needs only the reviewed new 008 migration. The detailed checklist is in PRODUCTION_LAUNCH.md.
 
 Grant your developer appropriate project access by invitation. Share the selected project URL and its **publishable** key through your deployment setup; never put a service-role key into a NEXT_PUBLIC variable or send passwords/secrets in chat.
 
@@ -60,6 +60,8 @@ In Supabase Authentication, configure the approved site/callback URLs, keep emai
 After the real app is connected, create and confirm your own owner account. Your developer then uses [bootstrap-admin.sql](supabase/ops/bootstrap-admin.sql), replacing its placeholder with that confirmed account's Auth user UUID. It refuses unverified users. Never expose a public “make me admin” option.
 
 Test signup, password recovery and email change with real owner-controlled inboxes, including opening a link on a different device. Authentication messages are separate from marketplace notification emails; review notifications currently appear in the account only.
+
+Optional bot protection is now coded. Your developer can configure the public Turnstile site key in the app and the matching private secret in Supabase Auth, following README. Do not enable one side alone; real provider testing is still required.
 
 ### 3. Hosting the existing application
 

@@ -4,6 +4,10 @@
 
 Next.js 16, React 19, TypeScript, Supabase Auth/Postgres/Storage. The original HolyHub logo is unchanged. This repository is separate from the live holyhub.co.uk landing page; no production deployment or live database changes have been made.
 
+## Taking over this project
+
+Start with [DEVELOPER_HANDOFF.md](DEVELOPER_HANDOFF.md) for the source status, setup commands, architecture map, access requirements and launch acceptance checklist. The accompanying source archive includes this handoff and all current tracked application files; GitHub upload and live deployment remain blocked by the access/setup issues recorded there.
+
 ## Production launch
 
 The real-listing launch target is **app.holyhub.co.uk**, keeping the current landing site intact. See [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) for the requirements, infrastructure, database operations and remaining live-access blockers. The repository is not a deployed service.

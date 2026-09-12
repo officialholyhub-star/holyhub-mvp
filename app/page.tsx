@@ -1,17 +1,8 @@
 import Link from "next/link";
-
-export default function HomePage() {
-  return (
-    <section className="hero">
-      <p className="eyebrow">HolyHub</p>
-      <h1>Connect. Discover. Grow.</h1>
-      <p className="lead">
-        One place to discover and support Christian brands. Create your HolyHub account to get started.
-      </p>
-      <div className="button-row">
-        <Link className="button button-primary" href="/auth/signup">Create account</Link>
-        <Link className="button button-quiet" href="/auth/login">Log in</Link>
-      </div>
-    </section>
-  );
+import { createClient } from "@/lib/supabase/server";
+import { productCategories,type Product } from "@/lib/marketplace";
+import { ProductCard } from "@/components/product-card";
+export default async function HomePage(){
+ const supabase=await createClient();const {data:featured,error:featuredError}=await supabase.from("products").select("*").eq("status","published").eq("moderation_status","visible").order("created_at",{ascending:false}).limit(4);
+ return <><section className="home-hero"><div className="hero-copy"><p className="eyebrow">Connect. Discover. Grow.</p><h1>Where Christian brands & <span className="accent-word">community</span> meet.</h1><p className="lead">Thoughtful products. Independent businesses. Discover the Christian brands you’ll love to support.</p><div className="button-row"><Link className="button button-primary" href="/products">Discover Christian Brands <span aria-hidden="true">→</span></Link><Link className="button button-quiet" href="/account/business">Become a Lister <span aria-hidden="true">→</span></Link></div><p className="hero-note">Connecting Christian Businesses</p></div><aside className="community-panel"><span className="panel-star" aria-hidden="true">✦</span><p className="eyebrow">A little discovery.<br/>A lot of possibility.</p><h2>Your next favourite<br/>could be right here.</h2><div className="category-tiles">{[{name:"Home & Gifts",icon:"♡"},{name:"Art & Prints",icon:"✳"},{name:"Books & Stationery",icon:"✧"},{name:"Clothing & Accessories",icon:"✦"}].map(item=><Link key={item.name} href={`/products?category=${encodeURIComponent(item.name)}`}><span aria-hidden="true">{item.icon}</span><strong>{item.name}</strong><span aria-hidden="true">→</span></Link>)}</div><p>Rooted in faith. Open to discovery.</p></aside></section><nav className="category-strip" aria-label="Explore by category"><span>Find your thing</span>{productCategories.map(c=><Link key={c} href={`/products?category=${encodeURIComponent(c)}`}>{c}</Link>)}</nav>{featuredError?<div className="notice notice-info" role="status">The collection is temporarily unavailable. Please try again shortly.</div>:!featured?.length&&<section className="listing-invite"><div><h2>Be among our first brands.</h2><p>Our collection starts with real businesses like yours. Create your profile and submit it for review.</p></div><Link className="button button-primary" href="/account/business">List your business →</Link></section>}{!!featured?.length&&<section className="featured-section"><div className="split-heading"><div><p className="eyebrow">Fresh discoveries</p><h2>Meet your next favourite.</h2></div><Link href="/products" className="text-link">Explore the collection →</Link></div><div className="product-grid">{(featured as Product[]).map(p=><ProductCard key={p.id} product={p} eager/>)}</div></section>}</>;
 }

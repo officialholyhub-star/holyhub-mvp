@@ -1,5 +1,8 @@
 import { updateEmail, updateProfile } from "./actions";
 import { requireUser } from "@/lib/auth/require-user";
+import Link from "next/link";
+import { SubmitButton } from "@/components/submit-button";
+import { MarketNav } from "@/components/market-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -7,19 +10,22 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const { supabase, user } = await requireUser();
 
-  const [{ data: profile }, { data: roles }] = await Promise.all([
+  const [{ data: profile, error: profileError }, { data: roles, error: roleError }] = await Promise.all([
     supabase.from("profiles").select("full_name, account_status, created_at").eq("id", user.id).single(),
     supabase.from("user_roles").select("role").eq("user_id", user.id),
   ]);
+  if (profileError || roleError) throw new Error("Account details unavailable");
 
   return (
     <section>
+      <MarketNav />
       <p className="eyebrow">My HolyHub</p>
-      <h2>Account</h2>
-      <p className="lead">Your account can shop as a customer and can later gain lister access if HolyHub approves your application.</p>
+      <h1 className="page-title">Your little corner of HolyHub.</h1>
+      <p className="lead">Manage your profile, discover businesses and share your own with the community.</p>
+      <div className="button-row"><Link className="button button-primary" href="/account/business">Your business listing →</Link><Link className="button button-quiet" href="/businesses">Explore businesses</Link>{roles?.some(({ role }) => role === "admin") && <Link className="button button-secondary" href="/admin">Review listings</Link>}</div>
 
-      {params.error && <p className="notice notice-error">{params.error}</p>}
-      {params.message && <p className="notice notice-success">{params.message}</p>}
+      {params.error && <p className="notice notice-error" role="alert">{params.error}</p>}
+      {params.message && <p className="notice notice-success" role="status">{params.message}</p>}
 
       <div className="account-grid">
         <div className="card">
@@ -29,7 +35,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
               <label htmlFor="full_name">Name</label>
               <input id="full_name" name="full_name" type="text" defaultValue={profile?.full_name ?? ""} maxLength={100} />
             </div>
-            <button className="button button-primary" type="submit">Save profile</button>
+            <SubmitButton pendingText="Saving…">Save profile</SubmitButton>
           </form>
         </div>
 
@@ -38,9 +44,9 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <form className="form" action={updateEmail}>
             <div className="field">
               <label htmlFor="email">Email address</label>
-              <input id="email" name="email" type="email" defaultValue={user.email ?? ""} required />
+              <input id="email" name="email" type="email" autoComplete="email" maxLength={254} defaultValue={user.email ?? ""} required />
             </div>
-            <button className="button button-secondary" type="submit">Change email</button>
+            <SubmitButton className="button button-secondary" pendingText="Updating…">Change email</SubmitButton>
             <p className="muted-small">Email changes may require confirmation.</p>
           </form>
         </div>

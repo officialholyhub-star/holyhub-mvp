@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const protectedPrefixes = ["/account", "/lister", "/admin"];
+const protectedPrefixes = ["/account", "/lister", "/admin", "/seller", "/basket", "/orders", "/refunds", "/notifications", "/checkout"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -33,9 +33,14 @@ export async function updateSession(request: NextRequest) {
 
   if (needsAuth && !isSignedIn) {
     const url = request.nextUrl.clone();
+    const next = url.pathname + url.search;
     url.pathname = "/auth/login";
+    url.search = "";
     url.searchParams.set("message", "Please log in to continue.");
-    return NextResponse.redirect(url);
+    url.searchParams.set("next", next);
+    const redirected = NextResponse.redirect(url);
+    response.cookies.getAll().forEach(cookie => redirected.cookies.set(cookie));
+    return redirected;
   }
 
   return response;

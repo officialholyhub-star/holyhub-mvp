@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/auth/redirects";
 
 export type AppRole = "customer" | "lister" | "admin";
 
-export async function requireUser() {
+export async function requireUser(next = "/account") {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/auth/login?message=Please%20log%20in%20to%20continue.");
+    redirect(`/auth/login?message=Please%20log%20in%20to%20continue.&next=${encodeURIComponent(safeNextPath(next))}`);
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -17,7 +18,8 @@ export async function requireUser() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile || profile.account_status !== "active") {
+  if (profileError || !profile) throw new Error("Account profile unavailable");
+  if (profile.account_status !== "active") {
     redirect("/auth/blocked");
   }
 

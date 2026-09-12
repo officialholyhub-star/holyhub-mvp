@@ -2,6 +2,8 @@
 
 ## Real-listing launch pass
 
+Final release safeguard: `build:production` now runs online, read-only service readiness checks before compilation. A missing backend, unsafe configuration, unavailable provider, missing verified admin, unready private image storage or disabled email confirmation stops deployment. Two added gate/failure tests bring the suite to 51 checks. No paid features have been activated and no new dependencies added.
+
 Production target: **app.holyhub.co.uk**, leaving the current website intact. Added an empty-by-default local preview, clearer application-to-product navigation, a direct brand-website path, application notifications, deployment configuration, a public health route, read-only preflight and owner-only SQL setup templates. See PRODUCTION_LAUNCH.md for the full launch requirements and infrastructure.
 
 The current hosted database is not yet verified compatible: missing-table API errors remain. GitHub access is now resolved: the collaboration invitation was accepted and the complete `codex/full-marketplace-mvp` branch uploaded. Browser access still timed out. Nothing has been migrated, deployed, purchased or changed in DNS. This is **not yet a public, production-functional service**. See ALEA_START_HERE.md for the owner handoff and the newly requested GPT Sites hosting constraints.
@@ -70,10 +72,10 @@ The original holyhub.co.uk landing-page project remains untouched. This app is n
 
 ## Verification completed for this build
 
-- 38 database/validation/configuration checks passed, including an empty database through first approved publication, role policies, fee enforcement, private storage, payment replay protection and events security.
+- 40 database/validation/configuration checks passed, including an empty database through first approved publication, role policies, fee enforcement, private storage, payment replay protection, events security and production readiness failures.
 - Eleven isolated browser journeys passed (three account/business journeys and eight marketplace journeys), including an empty catalogue and new applicant, upload size validation, external brand links, Deepgrids Sans rendering, keyboard photo selection, event curation and CAPTCHA retries.
 - CAPTCHA browser tests use a local provider stand-in and enforce forwarding in the isolated auth adapter; they do not prove real Cloudflare/Supabase verification. Hosted testing is required.
 - Lint, TypeScript, production build and git whitespace checks passed.
 - Production dependency audit reported zero known vulnerabilities at the time of the check; this is not a guarantee against security defects.
 - Desktop and phone-width screenshots were inspected; discovery was checked at widths from 320 to 1440 pixels.
-- GitHub access was resolved by accepting the matching invitation. The complete review branch is pushed to the repository; main remains unchanged. [Pull request #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1) contains the source and current GitHub Actions checks. The previous c771b1b build passed GitHub Actions; consult the PR for the latest commit's result. Neither local nor CI results prove production-provider readiness.
+- GitHub access was resolved by accepting the matching invitation. The complete review branch is pushed to the repository; main remains unchanged. [Pull request #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1) contains the source and current GitHub Actions checks. The events/CAPTCHA release 77d20e3 passed GitHub Actions; consult the PR for the latest release-gate commit's result. Neither local nor CI results prove production-provider readiness.

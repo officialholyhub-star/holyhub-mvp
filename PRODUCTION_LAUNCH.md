@@ -36,7 +36,7 @@ The confirmed commercial settings remain 10 free product listings, 20p extra lis
 | Moderation | Existing protected /admin application queue, account roles, audit history |
 | Health | /api/health returns 200 only when schema, RLS, private product storage and a verified active admin are present |
 | Preflight | npm run check:production; read-only hosted checks, no credentials printed |
-| Build gate | Vercel runs build:production, rejecting demo endpoints, sample-data flags, placeholder or secret public keys |
+| Build gate | Vercel runs build:production, rejecting unsafe configuration and checking hosted schema, private image storage, verified admin and email confirmation before compilation; failures stop deployment |
 | Tests | Existing account/browser/SQL checks plus empty-database first-listing and production-config checks |
 
 The SQL operations in supabase/ops are owner-run templates, not automatic migrations or public endpoints.
@@ -88,15 +88,17 @@ In Supabase Authentication:
 
 Token-hash template examples are in README.md. Test that links return to this marketplace, not the older landing site or localhost.
 
-### 3. Deploy the existing Next.js app
+### 3. Bootstrap the verified owner, then deploy
+
+The deployment gate requires a verified active administrator before the first public build. Connect the normal development app (`npm run dev`, **not** `npm run demo`) to the intended real Supabase project using an ignored `.env.local`. Temporarily allow its exact local callback/recovery URLs in Supabase, use the corresponding local NEXT_PUBLIC_SITE_URL, and have the owner create and confirm their account with their own inbox. Run supabase/ops/bootstrap-admin.sql using that confirmed account's actual Auth UUID. The template refuses placeholders and unverified users; it does not automatically trust an email match. Remove temporary local callback permissions when bootstrap is finished. The local app is only a setup client; accounts and records in this mode persist in the selected hosted project.
 
 The source is now uploaded on codex/full-marketplace-mvp. For this documented Vercel path, import officialholyhub-star/holyhub-mvp and use the reviewed branch/commit, not the old main branch. The later request for a functional GPT Site requires a separate compatible Workers build and image-processing assessment; see ALEA_START_HERE.md. Do not publish a read-only copy or expose the demo as a substitute.
 
 Set Node 24 and the values in .env.production.example through Vercel's environment settings. Use the matching project URL and **publishable** key; do not expose a service-role key. This listing release does not require a Stripe key.
 
-Keep previews protected while setup is incomplete. The Vercel project reads vercel.json and runs the production configuration gate before building. Build success alone is not a launch sign-off.
+Keep previews protected while setup is incomplete. The Vercel project reads vercel.json and runs the **online** readiness gate before building. A missing migration, inaccessible provider, unready image bucket, missing verified administrator or disabled email confirmation prevents deployment. Do not bypass this by changing the build command to the ungated development build. A passing gate still does not prove real email delivery, every ownership policy or operational readiness.
 
-Create and confirm the intended owner's account, then run supabase/ops/bootstrap-admin.sql in the chosen project's SQL Editor after replacing its UUID. The template refuses the placeholder and unverified users. Never assign admin access automatically by matching an email address.
+A provider-issued HTTPS project address can be the initial public link without waiting for Namecheap. Use that exact chosen address in NEXT_PUBLIC_SITE_URL and Supabase's approved Site URL/callbacks, rebuild and test email links there before sharing. Domain setup in the next section is optional for the initial release. When changing to app.holyhub.co.uk later, update those settings together and rerun the acceptance checks. Agree the hosting path with the owner; the requested GPT Site is not yet supported by this Next/Node build.
 
 ### 4. Add only the app subdomain
 

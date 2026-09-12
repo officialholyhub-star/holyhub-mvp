@@ -9,7 +9,7 @@
     "dev": "next dev",
     "dev:codespace": "NEXT_PUBLIC_SITE_URL=https://${CODESPACE_NAME}-3000.app.github.dev next dev --hostname 0.0.0.0",
     "build": "next build",
-    "build:production": "node scripts/check-production.mjs --offline && next build",
+    "build:production": "node scripts/check-production.mjs && next build",
     "check:production": "node scripts/check-production.mjs",
     "start": "next start",
     "lint": "eslint .",

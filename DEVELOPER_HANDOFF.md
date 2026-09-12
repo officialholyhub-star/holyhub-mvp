@@ -70,7 +70,7 @@ npm run test:marketplace
 
 Run browser suites sequentially because they share Next's development build directory. `.github/workflows/ci.yml` runs on pull requests to `main`, pushes to `main`, or manual dispatch; pushing only the work branch does not automatically run it.
 
-**Last application verification:** 38 database/validation/configuration checks and eleven browser journeys passed, along with lint, type checking, a production-mode build and whitespace checks. Layouts were checked from 320 to 1440 pixels. This pass adds events curation and CAPTCHA lifecycle tests. CAPTCHA uses a local provider stand-in; the real provider must be tested after configuration. These isolated checks are **not** evidence of hosted email delivery or a successful deployment. See PR #1 for the latest GitHub Actions result.
+**Application verification:** the events/CAPTCHA release (`77d20e3`) passed 38 database/validation/configuration checks, eleven browser journeys, lint, type checking and build locally and in GitHub Actions. The final release-gate pass adds two tests, bringing the automated suite to 51 checks; see PR #1 for the latest result. Layouts were checked from 320 to 1440 pixels. CAPTCHA uses a local provider stand-in; test the real provider after configuration. These isolated checks are **not** evidence of hosted email delivery or a successful deployment.
 
 ## 4. Architecture and edit map
 
@@ -121,7 +121,7 @@ Use `.env.production.example`; configure values in Vercel or ignored `.env.produ
 
 No service-role or Stripe key is required for this listing release. Public-prefixed values are exposed to visitors and must never contain privileged credentials. SMTP credentials belong in Supabase, not client configuration.
 
-`vercel.json` already sets Next.js, `npm ci`, `npm run build:production` and London functions (`lhr1`). Set Node 24. The production build checks configuration shapes, not live service availability. `npm run check:production` performs additional read-only hosted checks.
+`vercel.json` sets Next.js, `npm ci`, `npm run build:production` and London functions (`lhr1`). Set Node 24. The production build now performs the online read-only hosted checks before compilation and stops on unsafe configuration, provider failures, missing schema/storage/admin or disabled email confirmation. Bootstrap the confirmed owner using the real connected development app before the first deployment, as detailed in PRODUCTION_LAUNCH.md. `--offline` remains only a manual configuration-shape diagnostic, not the deployment path. CI's ordinary build deliberately stays isolated from production services.
 
 ### Database and administrator
 

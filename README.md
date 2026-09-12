@@ -12,7 +12,7 @@ Start with [ALEA_START_HERE.md](ALEA_START_HERE.md) for the owner overview and t
 
 The real-listing launch target is **app.holyhub.co.uk**, keeping the current landing site intact. See [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) for the requirements, infrastructure, database operations and remaining live-access blockers. The repository is not a deployed service.
 
-Run `npm run check:production` against privately configured production values before inviting users. Vercel uses `build:production`; it refuses demo configuration. No sample data is added by migrations.
+Run `npm run check:production` against privately configured production values before inviting users. Vercel uses `build:production`; it checks the real hosted schema, private image storage, verified administrator and email-confirmation settings before compiling. Missing setup, outages or demo configuration stop deployment. No sample data is added by migrations. `npm run build` remains available for isolated development/CI; it is not the production deployment command.
 
 ## Empty local preview
 

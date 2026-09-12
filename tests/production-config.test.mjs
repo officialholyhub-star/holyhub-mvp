@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { productionConfigErrors, checkHostedServices } from '../scripts/production-config.mjs';
 
 const config = {
@@ -7,6 +8,28 @@ const config = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_abcdefghijklmnopqrstuv',
   NEXT_PUBLIC_SITE_URL: 'https://app.holyhub.co.uk',
 };
+test('the configured deployment runs the hosted readiness gate before building', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const hosting = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
+  assert.equal(hosting.buildCommand, 'npm run build:production');
+  assert.equal(manifest.scripts['build:production'], 'node scripts/check-production.mjs && next build');
+  assert.equal(manifest.scripts.build, 'next build'); // Isolated CI remains independent of production.
+});
+
+test('hosted readiness rejects network failures and malformed provider responses', async () => {
+  const requests = [
+    async () => { throw new Error('Network unavailable'); },
+    async () => new Response('unavailable', { status: 503 }),
+    async () => new Response('not JSON', { status: 200 }),
+    async () => Response.json(null),
+    async () => Response.json({ schema_version: 8, schema_ready: 'true', storage_ready: 'true', admin_ready: 'true' }),
+  ];
+  for (const request of requests) {
+    const checks = await checkHostedServices(config, request);
+    assert.ok(checks.length > 0);
+    assert.ok(checks.some(check => !check.ok));
+  }
+});
 test('production preflight accepts only a real hosted configuration and never demo mode', () => {
   assert.deepEqual(productionConfigErrors(config), []);
   for (const change of [

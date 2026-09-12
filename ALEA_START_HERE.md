@@ -1,103 +1,102 @@
-# Alea — start here
+# HolyHub — release and developer handoff
+Updated 12 September 2026.
 
-## What has been handed over
+## 1. Read this first
 
-The HolyHub marketplace source is uploaded to your [GitHub repository](https://github.com/officialholyhub-star/holyhub-mvp/tree/codex/full-marketplace-mvp), on **codex/full-marketplace-mvp**, with [pull request #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1) for review. Matthew's GitHub collaboration invitation was accepted and write access verified on 12 September 2026. The existing main branch and the separate holyhub.co.uk landing site were not overwritten.
+**The marketplace code is built and uploaded. It is not yet publicly deployed.**
 
-This is a real Next.js/Supabase implementation, not a collection of design screenshots. However, the saved local preview uses a temporary test backend. **The production marketplace is not yet live.** A public read-only substitute was offered and declined; no such substitute has been published.
+The existing holyhub.co.uk landing site is a separate project and has not been replaced. The local preview is temporary and must not be exposed publicly or used for real personal information.
 
-Read these documents in order:
+| Item | Location / status |
+| --- | --- |
+| Complete source | [Review branch](https://github.com/officialholyhub-star/holyhub-mvp/tree/codex/full-marketplace-mvp) |
+| Review and automated checks | [Pull request #1](https://github.com/officialholyhub-star/holyhub-mvp/pull/1); Alea's officialholyhub-star account has been requested to review |
+| Public marketplace link | **Not available yet** — do not use the existing landing URL as proof the marketplace is live |
+| Eventual marketplace address | app.holyhub.co.uk; preserve root/www and email DNS |
+| Local review | http://127.0.0.1:3100 — empty, temporary test backend, no real email or payments |
+| Latest verified application baseline | 77d20e3: 49 automated checks and GitHub Actions passed; the later release-gate pass adds two checks |
+| Current access blocker | Browser connection times out; alternate helper fails during startup. No Supabase/Vercel deployment credentials are configured in the task environment |
 
-1. **This page:** owner overview, exact progress and first steps.
-2. [DEVELOPER_HANDOFF.md](DEVELOPER_HANDOFF.md): setup, architecture, file map, tests, access and safeguards.
-3. [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md): database inspection, migrations, email, hosting and go-live checklist.
-4. [BUILD_STATUS.md](BUILD_STATUS.md): implemented features, financial boundaries and unresolved business decisions.
-5. [README.md](README.md): running locally, development configuration and commands.
+**Do not rebuild the app.** Continue from the review branch, not the old main branch or an older ZIP. Keep the original logo, supplied Deepgrids Sans and **Connect. Discover. Grow.**
 
-## Progress against the original ten stages
+## 2. What people can do once the real backend is connected
 
-“Built locally” means implemented and tested against the isolated local backend, not production sign-off. The local-stage summary is **four built, five partial, one not started (optional)**. This finishing pass adds Stage 8 and optional authentication bot protection; it does not activate payments or claim a production launch.
+- Create and confirm an account, log in, recover access and update their profile.
+- Apply as a Christian business; an administrator reviews the application.
+- Prepare products and images; publish only after business approval.
+- Browse approved businesses and products, search/filter and visit a brand's website.
+- Discover public events and follow organiser links.
+- Administrators create, edit, publish and archive events, moderate businesses/products and review recorded activity.
 
-| Stage | Done | Still required |
+Business edits return to review. Event edits return to draft. Visitors cannot curate events or edit another person's listings. The catalogue starts empty; no fake businesses, products or events are added by production migrations.
+
+Basket, order, finance and refund screens exist, but **checkout and actual money movement do not work and must remain disabled**. No customer should be told a payment or refund has occurred.
+
+## 3. The shortest safe route to a public link
+
+A working public link needs both the web host and the real Supabase backend. Namecheap is **not** the current blocker: a host-issued HTTPS address can be used first.
+
+1. **Restore named-account access.** Alea grants the developer access to the intended Supabase and hosting projects. GitHub access is already working. Use invitations and private project settings, not shared passwords or secrets in chat.
+2. **Inspect the database before changing it.** The configured project is `mgzsxzixobyfdlutxtgs`. Its readiness function still fails; email signup and required confirmation are enabled, but delivery is untested. Run [inspect-existing.sql](supabase/ops/inspect-existing.sql), review any existing data/schema and agree a backup/migration plan. Never reset the project or blindly replay old migrations.
+3. **Apply reviewed schema changes.** A confirmed fresh project needs migrations 001–008 once, in order. An existing compatible installation already at 007 needs only 008. Do not run anything from tests/fixtures in production.
+4. **Set up email and the verified owner.** Configure real SMTP, confirmation/recovery URLs and secure email change. Connect the normal development app to the real project, have the owner confirm their own account, then use [bootstrap-admin.sql](supabase/ops/bootstrap-admin.sql) with that account's Auth UUID. The detailed first-deployment sequence is in [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md). Never promote an unverified account.
+5. **Complete the agreed hosting path.** The current Next.js/Node build has Vercel configuration. A Vercel project URL can be shared without Namecheap after real acceptance checks. The requested GPT Site is a different runtime and still needs a compatible server build and safe image-processing solution; uploading this Node build or a static copy will not work. Agree any host change with the owner.
+6. **Verify before sharing.** Set the chosen public URL in the app and Supabase's allowed URLs. The production build now checks hosted readiness before compilation and stops on failure. Then complete the real-user checklist below. Add app.holyhub.co.uk afterward if desired.
+
+No hosted migrations, DNS changes, infrastructure purchases or production deployment have been performed during this handoff work. Browser startup failed again during the final publishing attempt; no account settings were changed.
+
+## 4. Real launch acceptance — all must pass
+
+- [ ] Reviewed source and latest GitHub checks pass.
+- [ ] Hosted schema, private image storage and verified active administrator are ready.
+- [ ] An owner-controlled test user receives confirmation and recovery emails, including cross-device use.
+- [ ] A new user submits a business, the administrator approves it, and the seller uploads/publishes a product.
+- [ ] A signed-out visitor discovers that product; another account cannot change it.
+- [ ] The listing and photo remain after sign-out, refresh and redeployment.
+- [ ] An administrator publishes an event; draft/archived events remain hidden and ordinary users cannot curate them.
+- [ ] If enabled, actual Turnstile verification works for signup/login/recovery and retry after an error.
+- [ ] Phone and desktop journeys work on the actual HTTPS address.
+- [ ] Privacy/operator details, moderation responsibility, backups including images, restore procedure and monitoring are approved.
+- [ ] Test listings are unpublished; demo/sample/payment flags stay off.
+- [ ] The verified public URL is recorded in this guide and sent to Alea.
+
+A passing build or health endpoint is not proof of email delivery, all permissions, backups or a finished payment system.
+
+## 5. Progress against the original ten stages
+
+**Four built locally, five partial, one optional stage not started.** “Built locally” is not production sign-off.
+
+| Stage | Status | Remaining |
 | --- | --- | --- |
-| 1. Foundation, accounts, security — built locally | Signup, login, confirmation/recovery flows, profiles, role checks and database ownership policies | Reconcile hosted schema, configure real SMTP and verify hosted authentication/security |
-| 2. Listers/storefronts — built locally | Applications, human approval/rejection, owner editing, re-review and publication restrictions | Set up verified real administrator and test the complete live approval journey |
-| 3. Products/marketplace — built locally | Draft/edit/archive, images, categories, search, filters and public discovery; no default fake listings | Verify real hosted Storage, first approved publication and persistence across redeployments |
-| 4. Basket/Stripe checkout — partial | Multi-seller baskets, unpaid previews, trusted totals and isolated signed-webhook checks | Checkout Sessions, inventory reservations/expiry, delivery/shipping/tax rules and complete Stripe test checkout |
-| 5. Orders/payouts/commission/reserves — partial | Order snapshots, seller allocations, settings and accounting records/screens | Connect onboarding, charge/transfer/payout reconciliation, actual reserves/releases and listing-fee collection |
-| 6. Refunds/appeals — partial | Questionnaire, private evidence, seller response, human decisions and appeals | Real provider refunds, seller balance/transfer adjustments, retries and agreed appeal rules |
-| 7. Administration — partial overall | Dashboard, moderation, audit, settings and review workflows are built | Live admin setup and end-to-end integration with real payments/refunds/payouts when those exist |
-| 8. Events — built locally | Empty-by-default public directory, search, detail pages, organiser links, recurring-schedule text and admin draft/publish/archive controls with audit and stale-edit protection | Run migration 008 on the reviewed hosted database; add verified real events and assign someone to maintain dates/cancellations |
-| 9. Bible — not started, optional | Nothing yet | Decide whether needed; appropriately licensed content and implementation |
-| 10. Full verification — partial | 49 local automated checks, lint, types, build and responsive checks passed; see the PR checks for GitHub's latest result | Hosted-provider tests, real devices, production security review, backups/restore, monitoring and payment tests |
+| 1. Foundation/accounts/security | Built locally | Hosted Auth/SMTP, live security checks and operational setup |
+| 2. Lister applications/storefronts | Built locally | Verified live admin and real application/approval acceptance |
+| 3. Products/discovery | Built locally | Hosted Storage and first real publication/persistence checks |
+| 4. Basket/checkout | Partial | Stripe sessions, stock reservation/expiry, delivery/tax rules and payment tests |
+| 5. Orders/payouts/commission/reserves | Partial | Connect onboarding, real money movement, reconciliation, reserves/releases and fee collection |
+| 6. Refunds/appeals | Partial | Provider refunds, balance/reversal reconciliation, retries and approved appeal policy |
+| 7. Administration | Partial overall | Live owner/admin setup and future financial integrations; non-payment admin controls are built |
+| 8. Events directory | Built locally | Hosted migration and verified real event content; dates/cancellations need a human maintainer |
+| 9. Bible | Not started; optional | Owner decision and appropriately licensed content |
+| 10. Final verification | Partial | Hosted providers, real devices, operational security, restore rehearsal, monitoring and future payment tests |
 
-## Immediate launch scope
+Events support written recurring schedules, not automatic occurrences or ticket sales. Optional CAPTCHA is coded but must be enabled on both the app and Supabase; its browser tests use a provider stand-in.
 
-The release is **real accounts, approved businesses, product discovery and an admin-curated events directory, without payments**. Products can link to the brand's own website; events link to their organisers. Keep the original logo, supplied Deepgrids Sans and **Connect. Discover. Grow.**
+## 6. Financial decisions only Alea should make
 
-- Checkout stays disabled; a payment link is not a multi-seller payment integration.
-- Refund decisions are recorded, but no money is refunded.
-- No fake products, sellers or demonstration accounts should be inserted in production.
-- The eventual app domain is **app.holyhub.co.uk**. Leave root/www and existing email DNS alone.
-- A public GPT Site was requested as an interim host, but a fully functional publication is still blocked as described below. There is no new public marketplace URL to share yet.
+Confirmed commercial figures remain **10 free product listings, 20p per additional listing and 5% commission**. They are not an active payment integration. Extra products remain blocked by the current allowance/fee boundary; there is no silent waiver.
 
-## What is blocking a functional public link
+Still decide: lifetime vs active/first-published allowance, one-off vs recurring listing fees, reserve percentages/periods, shipping and tax, appeal windows/limits, and who bears refunds/disputes/payment costs. Implement and test financial stages separately before enabling them.
 
-### 1. Real Supabase project setup
+## 7. Developer entry points
 
-The previously configured project, `mgzsxzixobyfdlutxtgs`, returned missing-table/readiness failures. Having migration files in Git does not mean that they have run in Supabase. Its signup/confirmation settings were enabled, but actual email delivery was not verified.
+Use Node 24 and the existing lockfile. Clone the review branch, run `npm ci`, then `npm run demo` for an empty local review. This mode loses data on restart and must never be published. Use README's real-development configuration to connect actual Supabase.
 
-In your Supabase dashboard, select the intended project. Your developer should first use **SQL Editor** to run [inspect-existing.sql](supabase/ops/inspect-existing.sql), then compare the schema and agree a backup/migration plan. Do not reset it or run the initial migration over conflicting existing tables.
+- [DEVELOPER_HANDOFF.md](DEVELOPER_HANDOFF.md) — architecture, file map, access, security boundaries and operational details.
+- [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) — ordered database/email/admin/hosting steps and acceptance checks.
+- [BUILD_STATUS.md](BUILD_STATUS.md) — feature and financial limitations.
+- [README.md](README.md) — setup, commands, authentication templates and configuration.
+- [.env.production.example](.env.production.example) — public configuration names and disabled-mode flags; never put privileged secrets into NEXT_PUBLIC values.
 
-If you choose a confirmed fresh marketplace project, run the eight SQL files in [supabase/migrations](supabase/migrations) once, in filename order, 001 through 008. Never run files from tests/fixtures there. An existing installation already at migration 007 needs only the reviewed new 008 migration. The detailed checklist is in PRODUCTION_LAUNCH.md.
+The latest suite contains **40 database/validation/configuration checks and 11 browser journeys**. The application baseline passed lint, types, production-mode compilation and GitHub CI; use PR #1's latest commit checks for the release-gate update. The configured production command additionally verifies real services and must not be bypassed.
 
-Grant your developer appropriate project access by invitation. Share the selected project URL and its **publishable** key through your deployment setup; never put a service-role key into a NEXT_PUBLIC variable or send passwords/secrets in chat.
-
-### 2. Authentication email and administrator
-
-In Supabase Authentication, configure the approved site/callback URLs, keep email confirmation and secure email change enabled, and configure a verified custom SMTP sender. Put SMTP credentials directly into the service's private settings.
-
-After the real app is connected, create and confirm your own owner account. Your developer then uses [bootstrap-admin.sql](supabase/ops/bootstrap-admin.sql), replacing its placeholder with that confirmed account's Auth user UUID. It refuses unverified users. Never expose a public “make me admin” option.
-
-Test signup, password recovery and email change with real owner-controlled inboxes, including opening a link on a different device. Authentication messages are separate from marketplace notification emails; review notifications currently appear in the account only.
-
-Optional bot protection is now coded. Your developer can configure the public Turnstile site key in the app and the matching private secret in Supabase Auth, following README. Do not enable one side alone; real provider testing is still required.
-
-### 3. Hosting the existing application
-
-The existing app is **Next.js 16 on Node 24**, configured for Vercel. GPT Sites runs Cloudflare Workers, so uploading the current Next build is not sufficient. A faithful compatible server build still needs to be implemented and tested if GPT Sites is retained. In particular, native Sharp image validation/re-encoding cannot simply be assumed compatible with that runtime.
-
-Do not replace Supabase security with a demo adapter, expose localhost, disable upload validation, or swap the requested account system for ChatGPT sign-in just to obtain a URL. A static copy cannot provide the requested real accounts/listings and was not approved as a substitute.
-
-For the existing Vercel deployment path, import the reviewed branch, select Node 24 and configure [.env.production.example](.env.production.example) through project environment settings. Vercel already has its build configuration in [vercel.json](vercel.json). Choosing that alternative host instead of the currently requested GPT Site should be agreed with the owner.
-
-## Business decisions only Alea should make
-
-Confirmed prices remain **10 free listings, 20p for each additional listing, 5% commission**. Do not change these silently.
-
-- Does the free allowance count lifetime-created, first-published or currently active products? The implementation currently offers lifetime-created or currently-active modes; the choice is not set for production.
-- Is 20p one-off or recurring, and what happens after archiving/republication?
-- Exact reserve percentages and holding periods, rather than selecting a number from the suggested ranges without agreement.
-- Shipping coverage/rates, tax treatment, appeal window/limits and responsibility for payment/refund/dispute costs.
-- The operator identity, privacy/terms, retention rules and who reviews lister applications.
-
-These decisions and the missing financial integration prevent calling the complete original ten-stage specification finished. They do not justify exposing an unsafe demo while the non-payment launch is prepared.
-
-## Commands for your developer
-
-```sh
-git clone --branch codex/full-marketplace-mvp https://github.com/officialholyhub-star/holyhub-mvp.git
-cd holyhub-mvp
-npm ci
-npm run demo
-```
-
-Use Node 24. The preview is at http://127.0.0.1:3100 and starts empty. No real emails/payments; no real personal information; data resets on restart. Use README's separate real-development instructions when Supabase is ready.
-
-Before inviting the public, complete the checklist in PRODUCTION_LAUNCH.md: a real user confirms email, submits a business, receives admin approval, uploads a product and is discovered while signed out; the data and image survive a redeployment; another user cannot edit them. Run `npm run check:production`; a successful build alone is not launch verification.
-
-## Source ownership and next step
-
-All source, tests, database migrations, fonts/licence, original logo and handoff documents are on the review branch. Local credentials, customer data, installed packages and generated build files are not uploaded. No code was merged over main automatically.
-
-Your next developer should begin with the **hosted database inspection and authentication setup**, then finish the selected host's compatible deployment and real-user checks. Payment development comes afterward. Use account invitations for access; no shared passwords are required.
+**Next action:** regain project access, safely finish Supabase/email/admin setup, and publish through the agreed compatible host. The source and guides are ready for that work; public launch is still pending.

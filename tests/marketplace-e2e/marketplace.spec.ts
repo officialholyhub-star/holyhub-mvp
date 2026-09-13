@@ -81,8 +81,8 @@ test('responsive discovery, real image access, filters and unpaid multi-seller b
  await login(page,'customer');
  for(const name of ['Hope art print','Everyday tote']){await page.goto('/products');await page.getByRole('heading',{name,exact:true}).getByRole('link').click();await page.getByRole('button',{name:'Add to basket'}).click();await expect(page.getByText('Basket updated.',{exact:true})).toBeVisible();}
  await expect(page.getByText('£40.00',{exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Review order'}).click();await expect(page).toHaveURL(/\/checkout\//);await expect(page.getByRole('button',{name:/payment coming soon/})).toBeDisabled();
- expect((await request.post('/api/checkout')).status()).toBe(503);expect((await request.post('/api/stripe/webhook',{data:'{}'})).status()).toBe(503);
+ await page.getByRole('button',{name:'Review order'}).click();await expect(page).toHaveURL(/\/checkout\//);await expect(page.getByRole('button',{name:/Continue to secure TEST payment/})).toBeVisible();
+ expect((await request.post('/api/checkout')).status()).toBe(401);expect((await request.post('/api/stripe/webhook',{data:'{}'})).status()).toBe(503);
 });
 
 test('seller saves, uploads, publishes, edits and archives a product',async({page,browser})=>{

@@ -38,6 +38,8 @@ test('multi-seller settlement boundary, fees, appeals and private storage',async
   await rpc(buyer.id,'set_basket_item',[a.id,2]);await rpc(buyer.id,'set_basket_item',[b.id,1]);
   order=(await rpc(buyer.id,'prepare_order')).rows[0].result;
   assert.equal((await db.query('select subtotal_pence from orders where id=$1',[order])).rows[0].subtotal_pence,5800);
+  await assert.rejects(rpc(null,'begin_checkout',[order]),/permission denied/);
+  await assert.rejects(rpc(other.id,'begin_checkout',[order]),/Order unavailable/);
   const allocations=(await db.query('select * from seller_orders where order_id=$1',[order])).rows;
   assert.equal(allocations.length,2);assert.equal(allocations.reduce((sum,s)=>sum+s.commission_pence,0),290);
   assert.equal((await as(seller.id,tx=>tx.query('select * from seller_orders where order_id=$1',[order]))).rows.length,1);
@@ -47,12 +49,18 @@ test('multi-seller settlement boundary, fees, appeals and private storage',async
  await t.test('verified test checkout is service-only, matched to server totals and idempotent',async()=>{
   const args=['evt_boundary','checkout.session.completed','cs_test_boundary',order,5800,'gbp'];
   await assert.rejects(rpc(buyer.id,'record_verified_checkout',args),/permission denied/);
-  await db.query("update orders set status='awaiting_payment',payment_reference='cs_test_boundary' where id=$1",[order]);
+    await rpc(buyer.id,'begin_checkout',[order]);
+    await rpc(buyer.id,'attach_checkout_session',[order,'cs_test_boundary']);
   await assert.rejects(rpc('service','record_verified_checkout',[...args.slice(0,4),1,'gbp']),/does not match/);
   await assert.rejects(rpc('service','record_verified_checkout',[...args.slice(0,5),'usd']),/does not match/);
   assert.equal((await rpc('service','record_verified_checkout',args)).rows[0].result,true);
   assert.equal((await rpc('service','record_verified_checkout',args)).rows[0].result,false);
   assert.equal((await rpc('service','record_verified_checkout',['evt_second',...args.slice(1)])).rows[0].result,false);
+  assert.equal((await db.query('select status from orders where id=$1',[order])).rows[0].status,'paid');
+  assert.deepEqual((await db.query('select stock from products where id=$1',[a.id])).rows[0].stock,17);
+  assert.deepEqual((await db.query('select stock from products where id=$1',[b.id])).rows[0].stock,18);
+  assert.equal((await db.query('select * from basket_items where user_id=$1',[buyer.id])).rows.length,0);
+  await assert.rejects(rpc(buyer.id,'begin_checkout',[order]),/already been paid/);
   assert.equal((await db.query("select * from audit_log where entity_id=$1 and action='payment.verified'",[order])).rows.length,1);
   const allocations=(await db.query('select * from seller_orders where order_id=$1',[order])).rows;
   assert.equal(allocations.find(s=>s.business_id===a.business_id).reserve_pence,513);
@@ -63,6 +71,25 @@ test('multi-seller settlement boundary, fees, appeals and private storage',async
   assert.equal(delivery.find(d=>d.seller_order_id===allocation.id).tracking_note,'Demo tracking reference');
   assert.equal(Object.hasOwn(delivery[0],'reserve_pence'),false);
   await assert.rejects(as(other.id,tx=>tx.query('select * from order_delivery($1)',[order])),/Order unavailable/);
+ });
+ await t.test('checkout retries release reservations and stale stock is rejected',async()=>{
+  await rpc(buyer.id,'set_basket_item',[a.id,1]);
+  const retryOrder=(await rpc(buyer.id,'prepare_order')).rows[0].result;
+  const first=(await rpc(buyer.id,'begin_checkout',[retryOrder])).rows[0].result;
+  assert.equal(first.existing,false);
+  await rpc(buyer.id,'attach_checkout_session',[retryOrder,'cs_test_retry']);
+  const duplicate=(await rpc(buyer.id,'begin_checkout',[retryOrder])).rows[0].result;
+  assert.equal(duplicate.existing,true);assert.equal(duplicate.checkout_session_id,'cs_test_retry');
+  assert.equal((await rpc('service','record_checkout_failure',['evt_retry_expired','checkout.session.expired','cs_test_retry'])).rows[0].result,true);
+  assert.equal((await db.query('select status from orders where id=$1',[retryOrder])).rows[0].status,'cancelled');
+  assert.equal((await db.query("select status from stock_reservations where order_id=$1",[retryOrder])).rows[0].status,'released');
+  assert.equal((await db.query('select stock from products where id=$1',[a.id])).rows[0].stock,17);
+
+  await rpc(buyer.id,'set_basket_item',[b.id,1]);
+  const staleOrder=(await rpc(buyer.id,'prepare_order')).rows[0].result;
+  await db.query('update products set stock=0 where id=$1',[b.id]);
+  await assert.rejects(rpc(buyer.id,'begin_checkout',[staleOrder]),/stock|available/);
+  await db.query('update products set stock=19 where id=$1',[b.id]);
  });
  await t.test('published image access follows moderation; another seller cannot upload to it',async()=>{
   const image=(await db.query('select path from product_images where product_id=$1',[a.id])).rows[0];

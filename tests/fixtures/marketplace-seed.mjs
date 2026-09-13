@@ -26,7 +26,8 @@ export async function seedMarketplace({db,as},objects) {
  // A simulated, verified test order allows refund and seller journeys to be explored locally.
  for(const id of [productIds[0],productIds[2]])await as(accounts[0].id,tx=>tx.query('select set_basket_item($1,1)',[id]));
  const order=(await as(accounts[0].id,tx=>tx.query('select prepare_order() as id'))).rows[0].id;
- await db.query("update orders set status='awaiting_payment',payment_reference='cs_test_local_demo' where id=$1",[order]);
+ await as(accounts[0].id,tx=>tx.query('select begin_checkout($1)',[order]));
+ await as(accounts[0].id,tx=>tx.query("select attach_checkout_session($1,'cs_test_local_demo')",[order]));
  await as('service',tx=>tx.query("select record_verified_checkout('evt_local_demo','checkout.session.completed','cs_test_local_demo',$1,4000,'gbp')",[order]));
  await db.exec('delete from basket_items');
  return accounts;

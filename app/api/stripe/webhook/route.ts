@@ -12,8 +12,13 @@ export async function POST(request:Request){
  let event:Stripe.Event;try{event=verifyStripeEvent(raw,request.headers.get("stripe-signature")??"",secret);}catch{return NextResponse.json({error:"Invalid signature."},{status:400});}
  // This build has no live checkout/transfer path. Live events are deliberately rejected.
  if(event.livemode)return NextResponse.json({error:"Live payment processing is not enabled in this build."},{status:503});
- if(!["checkout.session.completed","checkout.session.async_payment_succeeded"].includes(event.type))return NextResponse.json({received:true,ignored:true});
+ if(!["checkout.session.completed","checkout.session.async_payment_succeeded","checkout.session.async_payment_failed","checkout.session.expired"].includes(event.type))return NextResponse.json({received:true,ignored:true});
  const session=event.data.object as Stripe.Checkout.Session;
+ if(event.type==="checkout.session.async_payment_failed"||event.type==="checkout.session.expired"){
+  const {data,error}=await createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}}).rpc("record_checkout_failure",{stripe_event_id:event.id,stripe_event_type:event.type,checkout_session_id:session.id});
+  if(error)return NextResponse.json({error:"Payment failure reconciliation failed. The event has not been acknowledged as processed."},{status:500});
+  return NextResponse.json({received:true,processed:data===true});
+ }
  if(session.payment_status!=="paid")return NextResponse.json({received:true,pending:true});
  const orderId=session.metadata?.holyhub_order_id;
  if(!isUuid(orderId)||!Number.isSafeInteger(session.amount_total)||session.currency!=="gbp")return NextResponse.json({error:"Invalid HolyHub checkout metadata."},{status:400});

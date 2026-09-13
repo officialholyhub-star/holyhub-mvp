@@ -12,7 +12,7 @@ const sampleData=process.env.HOLYHUB_DEMO_SAMPLE_DATA==='true';
 let database=await marketplaceDatabase(),accounts=sampleData?await seedMarketplace(database,objects):[];
 const tables=new Map();
 for(const row of (await database.db.query("select table_name,column_name from information_schema.columns where table_schema='public'")).rows){if(!tables.has(row.table_name))tables.set(row.table_name,new Set());tables.get(row.table_name).add(row.column_name);}
-const rpcs=new Set(['launch_readiness','save_event','set_event_status','save_product','set_product_status','set_basket_item','add_basket_item','prepare_order','request_refund','respond_refund','decide_refund','appeal_refund','admin_marketplace','update_fulfillment','mark_notifications_read','register_image','review_business','order_delivery']);
+const rpcs=new Set(['launch_readiness','save_event','set_event_status','save_product','set_product_status','set_basket_item','add_basket_item','prepare_order','begin_checkout','attach_checkout_session','release_checkout','request_refund','respond_refund','decide_refund','appeal_refund','admin_marketplace','update_fulfillment','mark_notifications_read','register_image','review_business','order_delivery']);
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 const sign=value=>createHmac('sha256',secret).update(value).digest('base64url');
 const userObject=u=>({id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{full_name:u.name},created_at:'2026-01-01T00:00:00Z',email_confirmed_at:'2026-01-01T00:00:00Z'});

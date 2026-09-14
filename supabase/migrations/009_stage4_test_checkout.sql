@@ -1,10 +1,84 @@
 -- Stage 4 TEST-mode checkout only. No Connect, transfers, payouts, tax or shipping rates.
 begin;
 
-alter table public.orders
-  add column checkout_session_id text unique,
-  add column checkout_state text not null default 'none' check(checkout_state in ('none','creating','open','completed','cancelled','expired','failed')),
-  add column checkout_expires_at timestamptz;
+do $$
+declare
+  column_type text;
+  column_not_null boolean;
+  column_default text;
+  column_number smallint;
+begin
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid='public.orders'::regclass and attname='checkout_session_id' and not attisdropped
+  ) then
+    alter table public.orders add column checkout_session_id text unique;
+  else
+    select format_type(a.atttypid,a.atttypmod), a.attnotnull, a.attnum
+      into column_type, column_not_null, column_number
+      from pg_attribute a
+     where a.attrelid='public.orders'::regclass and a.attname='checkout_session_id' and not a.attisdropped;
+    if column_type <> 'text' then
+      raise exception 'orders.checkout_session_id must be text, found %', column_type;
+    end if;
+    if not exists (
+      select 1 from pg_constraint c
+       where c.conrelid='public.orders'::regclass and c.contype='u'
+         and c.conkey=array[column_number]::smallint[]
+    ) then
+      raise exception 'orders.checkout_session_id must have a unique constraint';
+    end if;
+  end if;
+
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid='public.orders'::regclass and attname='checkout_state' and not attisdropped
+  ) then
+    alter table public.orders add column checkout_state text not null default 'none'
+      check(checkout_state in ('none','creating','open','completed','cancelled','expired','failed'));
+  else
+    select format_type(a.atttypid,a.atttypmod), a.attnotnull, pg_get_expr(d.adbin,d.adrelid), a.attnum
+      into column_type, column_not_null, column_default, column_number
+      from pg_attribute a
+      left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+     where a.attrelid='public.orders'::regclass and a.attname='checkout_state' and not a.attisdropped;
+    if column_type <> 'text' then
+      raise exception 'orders.checkout_state must be text, found %', column_type;
+    end if;
+    if not column_not_null or column_default is distinct from '''none''::text' then
+      raise exception 'orders.checkout_state must be NOT NULL with default none';
+    end if;
+    if not exists (
+      select 1 from pg_constraint c
+       where c.conrelid='public.orders'::regclass and c.contype='c' and column_number=any(c.conkey)
+         and pg_get_constraintdef(c.oid) like '%none%'
+         and pg_get_constraintdef(c.oid) like '%creating%'
+         and pg_get_constraintdef(c.oid) like '%open%'
+         and pg_get_constraintdef(c.oid) like '%completed%'
+         and pg_get_constraintdef(c.oid) like '%cancelled%'
+         and pg_get_constraintdef(c.oid) like '%expired%'
+         and pg_get_constraintdef(c.oid) like '%failed%'
+    ) then
+      raise exception 'orders.checkout_state has an unexpected check constraint';
+    end if;
+  end if;
+
+  if not exists (
+    select 1 from pg_attribute
+     where attrelid='public.orders'::regclass and attname='checkout_expires_at' and not attisdropped
+  ) then
+    alter table public.orders add column checkout_expires_at timestamptz;
+  else
+    select format_type(a.atttypid,a.atttypmod)
+      into column_type
+      from pg_attribute a
+     where a.attrelid='public.orders'::regclass and a.attname='checkout_expires_at' and not a.attisdropped;
+    if column_type <> 'timestamp with time zone' then
+      raise exception 'orders.checkout_expires_at must be timestamptz, found %', column_type;
+    end if;
+  end if;
+end;
+$$;
 
 create table public.stock_reservations (
   id uuid primary key default gen_random_uuid(),

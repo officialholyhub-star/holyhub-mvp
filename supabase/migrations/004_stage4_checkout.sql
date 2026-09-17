@@ -57,3 +57,5 @@ revoke all on table public.checkout_sessions, public.checkout_session_items from
 revoke all on table public.checkout_sessions, public.checkout_session_items from anon, authenticated;
 
 grant select on public.checkout_sessions, public.checkout_session_items to authenticated;
+grant select, insert, update on public.checkout_sessions to service_role;
+grant select, insert on public.checkout_session_items to service_role;

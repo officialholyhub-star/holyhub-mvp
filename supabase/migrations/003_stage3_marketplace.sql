@@ -54,7 +54,7 @@ create policy "products_select_published_or_own"
 on public.products
 for select
 to anon, authenticated
-using (is_published = true or (user_id = auth.uid() and public.has_role('lister')));
+using (is_published = true or (lister_user_id = auth.uid() and public.has_role('lister')));
 
 create policy "products_insert_own_lister"
 on public.products

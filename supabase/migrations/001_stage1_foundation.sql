@@ -4,6 +4,10 @@
 create type public.app_role as enum ('customer', 'lister', 'admin');
 create type public.account_status as enum ('active', 'suspended', 'closed');
 
+create schema if not exists private authorization postgres;
+revoke all on schema private from public, anon, authenticated;
+grant usage on schema private to authenticated;
+
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text check (char_length(full_name) <= 100),
@@ -23,7 +27,7 @@ alter table public.profiles enable row level security;
 alter table public.user_roles enable row level security;
 
 -- Security-definer helper avoids recursive RLS checks while testing roles.
-create or replace function public.has_role(required_role public.app_role)
+create or replace function private.has_role(required_role public.app_role)
 returns boolean
 language sql
 stable
@@ -37,27 +41,27 @@ as $$
   );
 $$;
 
-revoke all on function public.has_role(public.app_role) from public;
-grant execute on function public.has_role(public.app_role) to authenticated;
+revoke all on function private.has_role(public.app_role) from public;
+grant execute on function private.has_role(public.app_role) to authenticated;
 
 create policy "profiles_select_own_or_admin"
 on public.profiles
 for select
 to authenticated
-using (id = auth.uid() or public.has_role('admin'));
+using (id = (select auth.uid()) or (select private.has_role('admin')));
 
 create policy "profiles_update_own_or_admin"
 on public.profiles
 for update
 to authenticated
-using (id = auth.uid() or public.has_role('admin'))
-with check (id = auth.uid() or public.has_role('admin'));
+using (id = (select auth.uid()) or (select private.has_role('admin')))
+with check (id = (select auth.uid()) or (select private.has_role('admin')));
 
 create policy "roles_select_own_or_admin"
 on public.user_roles
 for select
 to authenticated
-using (user_id = auth.uid() or public.has_role('admin'));
+using (user_id = (select auth.uid()) or (select private.has_role('admin')));
 
 -- New accounts always begin as customers. A later admin-controlled process can add lister access.
 create or replace function public.handle_new_user()

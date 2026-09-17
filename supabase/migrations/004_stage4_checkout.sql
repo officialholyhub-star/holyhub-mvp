@@ -34,6 +34,12 @@ on public.checkout_sessions (user_id, created_at desc);
 create index checkout_session_items_session_idx
 on public.checkout_session_items (checkout_session_id);
 
+create index checkout_session_items_product_idx
+on public.checkout_session_items (product_id);
+
+create index checkout_session_items_lister_idx
+on public.checkout_session_items (lister_user_id);
+
 alter table public.checkout_sessions enable row level security;
 alter table public.checkout_session_items enable row level security;
 
@@ -41,7 +47,7 @@ create policy "checkout_sessions_select_own"
 on public.checkout_sessions
 for select
 to authenticated
-using (user_id = auth.uid());
+using (user_id = (select auth.uid()));
 
 create policy "checkout_session_items_select_own"
 on public.checkout_session_items
@@ -50,7 +56,7 @@ to authenticated
 using (exists (
   select 1
   from public.checkout_sessions
-  where id = checkout_session_id and user_id = auth.uid()
+  where id = checkout_session_id and user_id = (select auth.uid())
 ));
 
 revoke all on table public.checkout_sessions, public.checkout_session_items from public;

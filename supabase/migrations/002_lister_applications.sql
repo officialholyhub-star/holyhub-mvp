@@ -41,5 +41,8 @@ to authenticated
 using (public.has_role('admin'))
 with check (public.has_role('admin'));
 
+revoke all on table public.lister_applications from public;
+revoke all on table public.lister_applications from anon, authenticated;
+
 grant select, insert on public.lister_applications to authenticated;
 grant update (status, updated_at) on public.lister_applications to authenticated;

@@ -1,5 +1,6 @@
 import { updateEmail, updateProfile } from "./actions";
 import { requireUser } from "@/lib/auth/require-user";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -7,9 +8,10 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const { supabase, user } = await requireUser();
 
-  const [{ data: profile }, { data: roles }] = await Promise.all([
+  const [{ data: profile }, { data: roles }, { data: listerApplication }] = await Promise.all([
     supabase.from("profiles").select("full_name, account_status, created_at").eq("id", user.id).single(),
     supabase.from("user_roles").select("role").eq("user_id", user.id),
+    supabase.from("lister_applications").select("status").eq("user_id", user.id).in("status", ["pending", "approved"]).maybeSingle(),
   ]);
 
   return (
@@ -54,6 +56,21 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
               <span>{roles?.length ? roles.map(({ role }) => <span className="role-chip" key={role}>{role}</span>) : <span className="role-chip">customer</span>}</span>
             </div>
           </div>
+        </div>
+
+        <div className="card">
+          <h2>Lister access</h2>
+          {listerApplication ? (
+            <>
+              <p>Your application is <strong>{listerApplication.status}</strong>.</p>
+              {roles?.some(({ role }) => role === "lister") && <div className="button-row"><Link className="button button-primary" href="/lister">Lister space</Link></div>}
+            </>
+          ) : (
+            <>
+              <p>Have a Christian business or brand to share on HolyHub?</p>
+              <Link className="button button-primary" href="/lister/apply">Become a Lister</Link>
+            </>
+          )}
         </div>
 
         <div className="card">

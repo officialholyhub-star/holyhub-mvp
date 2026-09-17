@@ -13,8 +13,11 @@ export async function SiteHeader() {
         <Image className="logo-image" src="/holyhub-logo.png" alt="HolyHub" width={328} height={104} priority />
       </Link>
       <nav className="header-actions" aria-label="Account navigation">
+        <Link className="button button-quiet" href="/marketplace">Marketplace</Link>
+            <Link className="button button-quiet" href="/basket">Basket</Link>
         {user ? (
           <>
+            <Link className="button button-primary hide-mobile" href="/lister/apply">Become a Lister</Link>
             <Link className="button button-quiet hide-mobile" href="/account">My account</Link>
             <form action={logout} className="inline-form">
               <button className="button button-secondary" type="submit">Log out</button>

@@ -25,11 +25,22 @@ Lister applications/storefronts, products, marketplace, search, basket, Stripe c
 1. Create a free Supabase project.
 2. Copy `.env.example` to `.env.local` and add the Project URL + Publishable key from Supabase's Connect panel.
 3. In Supabase SQL Editor, run `supabase/migrations/001_stage1_foundation.sql` once.
-4. In Supabase Auth URL settings use `http://localhost:3000` as the local Site URL and add `http://localhost:3000/**` as an allowed redirect while developing.
-5. For the Confirm signup email template, use the SSR token-hash route:
+4. In Supabase SQL Editor, run `supabase/migrations/002_lister_applications.sql` once before testing the Become a Lister flow.
+5. In Supabase SQL Editor, run `supabase/migrations/003_stage3_marketplace.sql` once before testing lister storefronts, products, or the marketplace.
+6. In Supabase SQL Editor, run `supabase/migrations/004_stage4_checkout.sql` once before testing the basket or checkout.
+7. In Supabase Auth URL settings use `http://localhost:3000` as the local Site URL and add `http://localhost:3000/**` as an allowed redirect while developing.
+8. For the Confirm signup email template, use the SSR token-hash route:
    `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`
-6. Install packages with `npm install`.
-7. Start locally with `npm run dev` and visit `http://localhost:3000`.
+9. Install packages with `npm install`.
+10. Start locally with `npm run dev` and visit `http://localhost:3000`.
+
+For Stage 4 Stripe test payments, add these server-only values to `.env.local`:
+
+- `STRIPE_SECRET_KEY`: Stripe Dashboard > Developers > API keys > Secret key in Test mode.
+- `STRIPE_WEBHOOK_SECRET`: the signing secret from the local Stripe CLI listener or Stripe Dashboard webhook endpoint.
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase Project Settings > API > Service role key. Never expose this to the browser.
+
+For local webhook testing, forward Stripe events to `http://localhost:3000/api/stripe/webhook` and copy the generated `whsec_...` signing secret into `.env.local`.
 
 When the app is ready for its subdomain, change `NEXT_PUBLIC_SITE_URL` and Supabase's allowed URLs to `https://app.holyhub.co.uk`.
 

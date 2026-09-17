@@ -26,20 +26,20 @@ create policy "lister_applications_select_own_or_admin"
 on public.lister_applications
 for select
 to authenticated
-using (user_id = auth.uid() or public.has_role('admin'));
+using (user_id = (select auth.uid()) or (select private.has_role('admin')));
 
 create policy "lister_applications_insert_own"
 on public.lister_applications
 for insert
 to authenticated
-with check (user_id = auth.uid());
+with check (user_id = (select auth.uid()));
 
 create policy "lister_applications_update_admin"
 on public.lister_applications
 for update
 to authenticated
-using (public.has_role('admin'))
-with check (public.has_role('admin'));
+using ((select private.has_role('admin')))
+with check ((select private.has_role('admin')));
 
 revoke all on table public.lister_applications from public;
 revoke all on table public.lister_applications from anon, authenticated;

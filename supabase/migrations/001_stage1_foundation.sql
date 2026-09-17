@@ -28,7 +28,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select exists (
     select 1
@@ -64,7 +64,7 @@ create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
   insert into public.profiles (id, full_name)
@@ -81,11 +81,12 @@ create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
 
--- Direct role changes are not allowed from normal browser sessions.
-revoke insert, update, delete on public.user_roles from anon, authenticated;
+-- Browser roles receive only the narrow access required by the app.
+revoke all on table public.profiles, public.user_roles from public;
+revoke all on table public.profiles, public.user_roles from anon, authenticated;
+revoke all on function public.handle_new_user() from public, anon, authenticated;
 
 -- Customers can edit only the profile fields HolyHub intentionally exposes.
-revoke update on public.profiles from authenticated;
 grant update (full_name, updated_at) on public.profiles to authenticated;
 grant select on public.profiles, public.user_roles to authenticated;
 

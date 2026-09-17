@@ -50,11 +50,17 @@ to authenticated
 using (user_id = auth.uid() and public.has_role('lister'))
 with check (user_id = auth.uid() and public.has_role('lister'));
 
-create policy "products_select_published_or_own"
+create policy "products_select_published"
 on public.products
 for select
 to anon, authenticated
-using (is_published = true or (lister_user_id = auth.uid() and public.has_role('lister')));
+using (is_published = true);
+
+create policy "products_select_own_lister"
+on public.products
+for select
+to authenticated
+using (lister_user_id = auth.uid() and public.has_role('lister'));
 
 create policy "products_insert_own_lister"
 on public.products

@@ -28,6 +28,9 @@ create index products_published_category_idx
 on public.products (category_type, created_at desc)
 where is_published = true;
 
+create index products_lister_user_id_idx
+on public.products (lister_user_id);
+
 alter table public.lister_storefronts enable row level security;
 alter table public.products enable row level security;
 
@@ -41,45 +44,48 @@ create policy "storefronts_insert_own_lister"
 on public.lister_storefronts
 for insert
 to authenticated
-with check (user_id = auth.uid() and public.has_role('lister'));
+with check (user_id = (select auth.uid()) and (select private.has_role('lister')));
 
 create policy "storefronts_update_own_lister"
 on public.lister_storefronts
 for update
 to authenticated
-using (user_id = auth.uid() and public.has_role('lister'))
-with check (user_id = auth.uid() and public.has_role('lister'));
+using (user_id = (select auth.uid()) and (select private.has_role('lister')))
+with check (user_id = (select auth.uid()) and (select private.has_role('lister')));
 
-create policy "products_select_published"
+create policy "products_select_published_anon"
 on public.products
 for select
-to anon, authenticated
+to anon
 using (is_published = true);
 
-create policy "products_select_own_lister"
+create policy "products_select_authenticated"
 on public.products
 for select
 to authenticated
-using (lister_user_id = auth.uid() and public.has_role('lister'));
+using (
+  is_published = true
+  or (lister_user_id = (select auth.uid()) and (select private.has_role('lister')))
+);
 
 create policy "products_insert_own_lister"
 on public.products
 for insert
 to authenticated
-with check (lister_user_id = auth.uid() and public.has_role('lister'));
+with check (lister_user_id = (select auth.uid()) and (select private.has_role('lister')));
 
 create policy "products_update_own_lister"
 on public.products
 for update
 to authenticated
-using (lister_user_id = auth.uid() and public.has_role('lister'))
-with check (lister_user_id = auth.uid() and public.has_role('lister'));
+using (lister_user_id = (select auth.uid()) and (select private.has_role('lister')))
+with check (lister_user_id = (select auth.uid()) and (select private.has_role('lister')));
 
 create policy "products_delete_own_lister"
 on public.products
 for delete
 to authenticated
-using (lister_user_id = auth.uid() and public.has_role('lister'));
+using (lister_user_id = (select auth.uid()) and (select private.has_role('lister')));
 
 -- Remove any inherited/default table privileges before granting the API roles only what they need.
 revoke all on table public.lister_storefronts, public.products from public;

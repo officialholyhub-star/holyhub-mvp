@@ -21,30 +21,37 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header">
-      <Link className="logo-wrap" href="/" aria-label="HolyHub home">
-        <Image className="logo-image" src="/holyhub-logo.png" alt="HolyHub" width={328} height={104} priority />
-      </Link>
-      <nav className="header-actions" aria-label="Account navigation">
-        <Link className="button button-quiet" href="/marketplace">Marketplace</Link>
-        <Link className="button button-quiet" href="/events">Events</Link>
-        <Link className="button button-quiet" href="/basket">Basket</Link>
-        {user ? (
-          <>
-            <Link className="button button-primary hide-mobile" href={isLister ? "/lister" : "/lister/apply"}>
-              {isLister ? "Lister space" : "Become a Lister"}
-            </Link>
-            <Link className="button button-quiet hide-mobile" href="/account">My account</Link>
-            <form action={logout} className="inline-form">
-              <button className="button button-secondary" type="submit">Log out</button>
-            </form>
-          </>
-        ) : (
-          <>
-            <Link className="button button-quiet hide-mobile" href="/auth/login">Log in</Link>
-            <Link className="button button-primary" href="/auth/signup">Join HolyHub</Link>
-          </>
-        )}
-      </nav>
+      <div className="site-header-inner">
+        <Link className="logo-wrap" href="/" aria-label="HolyHub home">
+          <Image className="logo-image" src="/holyhub-logo.png" alt="HolyHub" width={328} height={104} priority />
+        </Link>
+
+        <nav className="main-nav" aria-label="Main HolyHub sections">
+          <Link href="/hub">The Hub</Link>
+          <Link href="/marketplace">Marketplace</Link>
+          <Link href="/events">Events</Link>
+        </nav>
+
+        <nav className="utility-nav" aria-label="Account and shopping navigation">
+          <Link className="utility-link" href="/basket">Basket</Link>
+          {user ? (
+            <>
+              <Link className="utility-link utility-hide-mobile" href={isLister ? "/lister" : "/lister/apply"}>
+                {isLister ? "Lister space" : "Become a Lister"}
+              </Link>
+              <Link className="utility-link utility-hide-mobile" href="/account">Account</Link>
+              <form action={logout} className="inline-form">
+                <button className="utility-button" type="submit">Log out</button>
+              </form>
+            </>
+          ) : (
+            <>
+              <Link className="utility-link utility-hide-mobile" href="/auth/login">Log in</Link>
+              <Link className="button button-primary header-join" href="/auth/signup">Join</Link>
+            </>
+          )}
+        </nav>
+      </div>
     </header>
   );
 }

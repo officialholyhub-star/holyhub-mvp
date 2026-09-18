@@ -98,6 +98,23 @@ export async function signup(formData: FormData) {
   redirect("/account");
 }
 
+export async function resendSignupConfirmation(formData: FormData) {
+  const email = clean(formData.get("email")).toLowerCase();
+  if (!isValidEmail(email)) {
+    redirect(messageUrl("/auth/check-email", "error", "Enter a valid email address."));
+  }
+
+  const supabase = await createClient();
+  const siteUrl = await getSiteUrl();
+  await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/account` },
+  });
+
+  redirect(messageUrl("/auth/check-email", "message", "If that account still needs confirmation, a new email is on its way."));
+}
+
 export async function requestPasswordReset(formData: FormData) {
   const email = clean(formData.get("email")).toLowerCase();
   if (!isValidEmail(email)) redirect(messageUrl("/auth/forgot-password", "error", "Enter a valid email address."));

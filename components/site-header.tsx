@@ -7,6 +7,18 @@ export async function SiteHeader() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  let isLister = false;
+  if (user) {
+    const { data: listerRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "lister")
+      .maybeSingle();
+
+    isLister = Boolean(listerRole);
+  }
+
   return (
     <header className="site-header">
       <Link className="logo-wrap" href="/" aria-label="HolyHub home">
@@ -18,7 +30,9 @@ export async function SiteHeader() {
         <Link className="button button-quiet" href="/basket">Basket</Link>
         {user ? (
           <>
-            <Link className="button button-primary hide-mobile" href="/lister/apply">Become a Lister</Link>
+            <Link className="button button-primary hide-mobile" href={isLister ? "/lister" : "/lister/apply"}>
+              {isLister ? "Lister space" : "Become a Lister"}
+            </Link>
             <Link className="button button-quiet hide-mobile" href="/account">My account</Link>
             <form action={logout} className="inline-form">
               <button className="button button-secondary" type="submit">Log out</button>

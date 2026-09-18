@@ -91,7 +91,7 @@ export async function signup(formData: FormData) {
   }
 
   if (!data.session) {
-    redirect(messageUrl("/auth/login", "message", "Account created. Check your email to confirm it, then log in."));
+    redirect("/auth/check-email");
   }
 
   revalidatePath("/", "layout");

@@ -14,6 +14,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     supabase.from("lister_applications").select("status").eq("user_id", user.id).in("status", ["pending", "approved"]).maybeSingle(),
   ]);
 
+  const isLister = roles?.some(({ role }) => role === "lister") ?? false;
+
   return (
     <section>
       <p className="eyebrow">My HolyHub</p>
@@ -60,11 +62,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
         <div className="card">
           <h2>Lister access</h2>
-          {listerApplication ? (
+          {isLister ? (
             <>
-              <p>Your application is <strong>{listerApplication.status}</strong>.</p>
-              {roles?.some(({ role }) => role === "lister") && <div className="button-row"><Link className="button button-primary" href="/lister">Lister space</Link></div>}
+              <p>Your account has approved lister access.</p>
+              <div className="button-row"><Link className="button button-primary" href="/lister">Lister space</Link></div>
             </>
+          ) : listerApplication ? (
+            <p>Your application is <strong>{listerApplication.status}</strong>.</p>
           ) : (
             <>
               <p>Have a Christian business or brand to share on HolyHub?</p>

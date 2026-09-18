@@ -71,6 +71,32 @@ p { line-height: 1.65; color: var(--muted); }
 .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(22px, 5vw, 34px); box-shadow: var(--shadow); }
 .card-header { margin-bottom: 24px; }
 .card-header p { margin-bottom: 0; }
+.check-email-card { text-align: center; }
+.check-email-card h1 { margin-bottom: 12px; font-size: clamp(2.2rem, 8vw, 3.4rem); }
+.check-email-card .lead { margin: 0 auto; }
+.check-email-card .button-row { justify-content: center; }
+.check-email-card .muted-small { margin: 22px 0 0; }
+.check-email-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--holyhub-pink-soft);
+  color: var(--holyhub-blue-strong);
+  font-size: 1.75rem;
+}
+.confirmation-steps {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 0;
+  list-style-position: inside;
+  color: var(--ink);
+  text-align: left;
+}
+.confirmation-steps li { padding: 12px 14px; border-radius: 12px; background: var(--holyhub-blue-soft); }
 .form { display: grid; gap: 16px; }
 .field { display: grid; gap: 7px; }
 .field label { font-weight: 700; font-size: .94rem; }

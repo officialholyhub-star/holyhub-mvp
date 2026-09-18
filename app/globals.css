@@ -97,6 +97,19 @@ p { line-height: 1.65; color: var(--muted); }
   text-align: left;
 }
 .confirmation-steps li { padding: 12px 14px; border-radius: 12px; background: var(--holyhub-blue-soft); }
+.confirmation-resend { display: grid; gap: 8px; margin: 22px 0 8px; text-align: left; }
+.confirmation-resend label { font-weight: 700; }
+.confirmation-resend > div { display: flex; gap: 8px; }
+.confirmation-resend input {
+  min-width: 0;
+  flex: 1;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #cad7df;
+  border-radius: 12px;
+  outline: none;
+}
+.confirmation-resend input:focus { border-color: var(--holyhub-blue-strong); box-shadow: 0 0 0 4px rgba(150, 181, 205, .18); }
 .form { display: grid; gap: 16px; }
 .field { display: grid; gap: 7px; }
 .field label { font-weight: 700; font-size: .94rem; }
@@ -380,6 +393,7 @@ p { line-height: 1.65; color: var(--muted); }
   .marketplace-card-image { border-radius: 10px; }
   .marketplace-card .product-card-body h3 { font-size: .9rem; }
   .marketplace-card .product-card-action .button { min-height: 40px; padding-inline: 8px; font-size: .82rem; }
+  .confirmation-resend > div { align-items: stretch; flex-direction: column; }
 }
 
 @media (min-width: 721px) and (max-width: 1040px) {

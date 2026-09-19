@@ -48,6 +48,10 @@ export default async function HomePage() {
     .order("created_at", { ascending: false })
     .limit(4);
 
+  const realProducts = products ?? [];
+  const demoSlots = Math.max(0, 4 - realProducts.length);
+  const homepageDemoProducts = demoProducts.slice(0, demoSlots);
+
   return (
     <div className="home-page">
       <section className="home-hero home-hero-refresh premium-home-hero">
@@ -100,48 +104,45 @@ export default async function HomePage() {
           <Link className="section-link inline-section-link" href="/marketplace">See all products <span aria-hidden="true">→</span></Link>
         </div>
 
-        {products?.length ? (
-          <div className="home-product-grid">
-            {products.map((product) => {
-              const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
-              return (
-                <Link className="home-product-card" href={`/products/${product.id}`} key={product.id}>
-                  <div className="home-product-image">
-                    {product.image_url ? <img src={product.image_url} alt={product.name} /> : <div className="product-placeholder">HolyHub</div>}
-                    <span>{product.category_type}</span>
-                  </div>
-                  <div className="home-product-copy">
-                    <small>{storefront?.business_name ?? "HolyHub lister"}</small>
-                    <h3>{product.name}</h3>
-                    <strong>£{Number(product.price).toFixed(2)}</strong>
-                  </div>
-                </Link>
-              );
-            })}
+        {homepageDemoProducts.length > 0 && (
+          <div className="demo-preview-banner">
+            <strong>Marketplace preview</strong>
+            <span>Demo products are filling the empty spaces so you can see the finished marketplace vibe.</span>
           </div>
-        ) : (
-          <>
-            <div className="demo-preview-banner">
-              <strong>Marketplace preview</strong>
-              <span>Demo products only — nothing below is for sale.</span>
-            </div>
-            <div className="home-product-grid">
-              {demoProducts.slice(0, 4).map((product) => (
-                <article className="home-product-card demo-product-card" key={product.id}>
-                  <div className="home-product-image">
-                    <img src={product.image_url} alt="" />
-                    <span>{product.category_type}</span>
-                  </div>
-                  <div className="home-product-copy">
-                    <small>{product.listerName}</small>
-                    <h3>{product.name}</h3>
-                    <strong>£{product.price.toFixed(2)}</strong>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
         )}
+
+        <div className="home-product-grid">
+          {realProducts.map((product) => {
+            const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
+            return (
+              <Link className="home-product-card" href={`/products/${product.id}`} key={product.id}>
+                <div className="home-product-image">
+                  {product.image_url ? <img src={product.image_url} alt={product.name} /> : <div className="product-placeholder">HolyHub</div>}
+                  <span>{product.category_type}</span>
+                </div>
+                <div className="home-product-copy">
+                  <small>{storefront?.business_name ?? "HolyHub lister"}</small>
+                  <h3>{product.name}</h3>
+                  <strong>£{Number(product.price).toFixed(2)}</strong>
+                </div>
+              </Link>
+            );
+          })}
+
+          {homepageDemoProducts.map((product) => (
+            <article className="home-product-card demo-product-card" key={product.id}>
+              <div className="home-product-image">
+                <img src={product.image_url} alt="" />
+                <span>{product.category_type}</span>
+              </div>
+              <div className="home-product-copy">
+                <small>{product.listerName} · DEMO</small>
+                <h3>{product.name}</h3>
+                <strong>£{product.price.toFixed(2)}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="home-cta">

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 type HolyHubIconName =
+  | "home"
   | "hub"
   | "marketplace"
   | "events"
@@ -16,7 +17,8 @@ type HolyHubIconName =
   | "basket";
 
 const paths: Record<HolyHubIconName, ReactNode> = {
-  hub: <><circle cx="7" cy="8.5" r="2" /><circle cx="12" cy="7" r="2.2" /><circle cx="17" cy="8.5" r="2" /><path d="M3.8 18c.5-3.4 2.2-5.2 4.8-5.2 1.4 0 2.5.5 3.4 1.4.9-.9 2-1.4 3.4-1.4 2.6 0 4.3 1.8 4.8 5.2" /><path d="M5.8 13.8c1.7 1.7 3.8 2.6 6.2 2.6s4.5-.9 6.2-2.6" /></>,
+  home: <><path d="m3.5 10.5 8.5-7 8.5 7" /><path d="M5.5 9.5V20h13V9.5" /><path d="M9.5 20v-6h5v6" /></>,
+  hub: <><circle cx="5.5" cy="7.5" r="1.7" /><circle cx="12" cy="6.5" r="1.9" /><circle cx="18.5" cy="7.5" r="1.7" /><path d="M2.5 18c.4-3 1.8-4.8 4.3-4.8 1.2 0 2.2.4 3 1.2" /><path d="M9 18c.4-3.3 1.6-5.2 3-5.2s2.6 1.9 3 5.2" /><path d="M14.2 14.4c.8-.8 1.8-1.2 3-1.2 2.5 0 3.9 1.8 4.3 4.8" /></>,
   marketplace: <><path d="M4 8h16l-1.3 11H5.3L4 8Z" /><path d="M8 8a4 4 0 0 1 8 0" /></>,
   events: <><rect x="4" y="5.5" width="16" height="14" rx="3" /><path d="M8 3v5M16 3v5M4 10h16" /><path d="M8 14h3M14 14h2" /></>,
   bible: <><path d="M5 4.5h10a4 4 0 0 1 4 4V20H8a3 3 0 0 1-3-3V4.5Z" /><path d="M8 4.5V20M11 9h5M13.5 6.5v5" /></>,

@@ -1,8 +1,8 @@
-name: Stage 1 CI
+name: HolyHub CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, alea/stage4-payments]
   workflow_dispatch:
 
 jobs:

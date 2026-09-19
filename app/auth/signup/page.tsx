@@ -28,6 +28,10 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             <label htmlFor="confirm_password">Confirm password</label>
             <input id="confirm_password" name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
           </div>
+          <label className="terms-consent">
+            <input type="checkbox" name="accept_terms" required />
+            <span>I agree to the <Link href="/terms">HolyHub Terms</Link> and acknowledge the <Link href="/privacy">Privacy Notice</Link>.</span>
+          </label>
           <button className="button button-primary" type="submit">Create account</button>
         </form>
         <div className="form-footer">

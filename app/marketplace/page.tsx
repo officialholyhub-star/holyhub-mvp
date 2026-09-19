@@ -54,9 +54,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const { data: categories } = await supabase.from("products").select("category_type").eq("is_published", true).order("category_type");
   const uniqueCategories = [...new Set((categories ?? []).map(({ category_type }) => category_type))];
   const categoryOptions = [...new Set([...featuredCategories, ...uniqueCategories])];
-  const useDemoCatalog = !error && uniqueCategories.length === 0;
 
-  const filteredDemoProducts = useDemoCatalog
+  const filteredDemoProducts = !error
     ? demoProducts
         .filter((product) => {
           const matchesSearch = !search || [product.name, product.listerName, product.category_type]
@@ -72,6 +71,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           return 0;
         })
     : [];
+
+  const showDemoPreview = !error && (products?.length ?? 0) < 8 && filteredDemoProducts.length > 0;
 
   return (
     <section className="marketplace-page">
@@ -130,7 +131,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <p className="eyebrow">Curated for you</p>
           <h2>{search ? `Results for “${search}”` : category || "Shop Christian brands"}</h2>
         </div>
-        {!error && <p>{useDemoCatalog ? filteredDemoProducts.length : (products?.length ?? 0)} {(useDemoCatalog ? filteredDemoProducts.length : products?.length) === 1 ? "product" : "products"}</p>}
+        {!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "real product" : "real products"}</p>}
       </div>
 
       {error && (
@@ -139,35 +140,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <p>Please refresh the page in a moment.</p>
         </div>
       )}
-      {useDemoCatalog && (
-        <div className="demo-preview-banner demo-preview-marketplace">
-          <strong>Preview catalogue</strong>
-          <span>These are filler products to preview the HolyHub look. They cannot be purchased.</span>
-        </div>
-      )}
-
-      {!error && useDemoCatalog && filteredDemoProducts.length ? (
-        <div className="product-grid marketplace-grid">
-          {filteredDemoProducts.map((product) => (
-            <article className="product-card marketplace-card demo-product-card" key={product.id}>
-              <div>
-                <div className="marketplace-card-image">
-                  <img src={product.image_url} alt="" />
-                  <span>{product.category_type}</span>
-                </div>
-                <div className="product-card-body">
-                  <p className="marketplace-lister">{product.listerName}</p>
-                  <h3>{product.name}</h3>
-                  <strong>£{product.price.toFixed(2)}</strong>
-                </div>
-              </div>
-              <div className="product-card-action">
-                <span className="demo-preview-action">Preview only</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : !error && products?.length ? (
+      {!error && products?.length ? (
         <div className="product-grid marketplace-grid">
           {products.map((product) => {
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
@@ -189,7 +162,38 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
             );
           })}
         </div>
-      ) : !error ? (
+      ) : null}
+
+      {showDemoPreview && (
+        <>
+          <div className="demo-preview-banner demo-preview-marketplace">
+            <strong>Preview catalogue</strong>
+            <span>Filler products below are only here to preview the HolyHub look. They cannot be purchased.</span>
+          </div>
+          <div className="product-grid marketplace-grid">
+            {filteredDemoProducts.slice(0, Math.max(4, 8 - (products?.length ?? 0))).map((product) => (
+              <article className="product-card marketplace-card demo-product-card" key={product.id}>
+                <div>
+                  <div className="marketplace-card-image">
+                    <img src={product.image_url} alt="" />
+                    <span>{product.category_type}</span>
+                  </div>
+                  <div className="product-card-body">
+                    <p className="marketplace-lister">{product.listerName} · DEMO</p>
+                    <h3>{product.name}</h3>
+                    <strong>£{product.price.toFixed(2)}</strong>
+                  </div>
+                </div>
+                <div className="product-card-action">
+                  <span className="demo-preview-action">Preview only</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!error && !products?.length && !showDemoPreview ? (
         <div className="marketplace-status">
           <strong>No products found</strong>
           <p>Try another search or clear the filters.</p>

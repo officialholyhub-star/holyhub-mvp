@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";\n\ntype HolyHubIconName =
+import type { ReactNode } from "react";
+
+type HolyHubIconName =
   | "hub"
   | "marketplace"
   | "events"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddToBasketButton } from "@/components/add-to-basket-button";
+import { demoProducts } from "@/lib/demo-products";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,24 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const { data: categories } = await supabase.from("products").select("category_type").eq("is_published", true).order("category_type");
   const uniqueCategories = [...new Set((categories ?? []).map(({ category_type }) => category_type))];
   const categoryOptions = [...new Set([...featuredCategories, ...uniqueCategories])];
+  const useDemoCatalog = !error && uniqueCategories.length === 0;
+
+  const filteredDemoProducts = useDemoCatalog
+    ? demoProducts
+        .filter((product) => {
+          const matchesSearch = !search || [product.name, product.listerName, product.category_type]
+            .some((value) => value.toLowerCase().includes(search.toLowerCase()));
+          const matchesCategory = !category || product.category_type === category;
+          const matchesMin = min === null || product.price >= min;
+          const matchesMax = max === null || product.price <= max;
+          return matchesSearch && matchesCategory && matchesMin && matchesMax;
+        })
+        .sort((a, b) => {
+          if (sort === "price-low") return a.price - b.price;
+          if (sort === "price-high") return b.price - a.price;
+          return 0;
+        })
+    : [];
 
   return (
     <section className="marketplace-page">
@@ -111,7 +130,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <p className="eyebrow">Curated for you</p>
           <h2>{search ? `Results for “${search}”` : category || "Shop Christian brands"}</h2>
         </div>
-        {!error && <p>{products?.length ?? 0} {products?.length === 1 ? "product" : "products"}</p>}
+        {!error && <p>{useDemoCatalog ? filteredDemoProducts.length : (products?.length ?? 0)} {(useDemoCatalog ? filteredDemoProducts.length : products?.length) === 1 ? "product" : "products"}</p>}
       </div>
 
       {error && (
@@ -120,7 +139,35 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <p>Please refresh the page in a moment.</p>
         </div>
       )}
-      {!error && products?.length ? (
+      {useDemoCatalog && (
+        <div className="demo-preview-banner demo-preview-marketplace">
+          <strong>Preview catalogue</strong>
+          <span>These are filler products to preview the HolyHub look. They cannot be purchased.</span>
+        </div>
+      )}
+
+      {!error && useDemoCatalog && filteredDemoProducts.length ? (
+        <div className="product-grid marketplace-grid">
+          {filteredDemoProducts.map((product) => (
+            <article className="product-card marketplace-card demo-product-card" key={product.id}>
+              <div>
+                <div className="marketplace-card-image">
+                  <img src={product.image_url} alt="" />
+                  <span>{product.category_type}</span>
+                </div>
+                <div className="product-card-body">
+                  <p className="marketplace-lister">{product.listerName}</p>
+                  <h3>{product.name}</h3>
+                  <strong>£{product.price.toFixed(2)}</strong>
+                </div>
+              </div>
+              <div className="product-card-action">
+                <span className="demo-preview-action">Preview only</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : !error && products?.length ? (
         <div className="product-grid marketplace-grid">
           {products.map((product) => {
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;

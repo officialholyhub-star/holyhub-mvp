@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { HolyHubIcon } from "@/components/holyhub-icon";
+
+export const dynamic = "force-dynamic";
 
 const sections = [
   {
@@ -9,6 +13,7 @@ const sections = [
     href: "/hub",
     action: "Enter The Hub",
     className: "home-section-card hub-card",
+    icon: "hub" as const,
   },
   {
     number: "02",
@@ -18,6 +23,7 @@ const sections = [
     href: "/marketplace",
     action: "Shop Marketplace",
     className: "home-section-card marketplace-card-home featured-section-card",
+    icon: "marketplace" as const,
   },
   {
     number: "03",
@@ -27,10 +33,19 @@ const sections = [
     href: "/events",
     action: "Explore Events",
     className: "home-section-card events-card",
+    icon: "events" as const,
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name, price, image_url, category_type, lister_storefronts(business_name)")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false })
+    .limit(4);
+
   return (
     <div className="home-page">
       <section className="home-hero home-hero-refresh">
@@ -45,27 +60,22 @@ export default function HomePage() {
             <Link className="button button-primary button-large" href="/marketplace">Explore Marketplace <span aria-hidden="true">→</span></Link>
             <Link className="button button-quiet button-large" href="/hub">Enter The Hub</Link>
           </div>
-          <div className="hero-mini-nav" aria-label="HolyHub areas">
-            <span>The Hub</span><i />
-            <span>Marketplace</span><i />
-            <span>Events</span>
-          </div>
         </div>
 
         <div className="hero-visual" aria-hidden="true">
           <div className="hero-orb hero-orb-blue" />
           <div className="hero-orb hero-orb-pink" />
           <div className="hero-stack-card hero-stack-hub">
-            <span className="hero-stack-icon">✦</span>
+            <span className="hero-stack-icon"><HolyHubIcon name="hub" /></span>
             <div><small>CONNECT</small><strong>The Hub</strong></div>
           </div>
           <div className="hero-stack-card hero-stack-market">
-            <span className="hero-stack-icon">♡</span>
+            <span className="hero-stack-icon"><HolyHubIcon name="marketplace" /></span>
             <div><small>DISCOVER</small><strong>Marketplace</strong></div>
             <span className="live-pill">LIVE</span>
           </div>
           <div className="hero-stack-card hero-stack-events">
-            <span className="hero-stack-icon">○</span>
+            <span className="hero-stack-icon"><HolyHubIcon name="events" /></span>
             <div><small>GROW</small><strong>Events</strong></div>
           </div>
         </div>
@@ -87,9 +97,7 @@ export default function HomePage() {
                 <span className="section-number">{section.number}</span>
                 <span className="section-status">{section.status}</span>
               </div>
-              <div className="section-card-icon" aria-hidden="true">
-                {section.name === "The Hub" ? "✦" : section.name === "Marketplace" ? "♡" : "○"}
-              </div>
+              <div className="section-card-icon" aria-hidden="true"><HolyHubIcon name={section.icon} /></div>
               <h3>{section.name}</h3>
               <p>{section.description}</p>
               <Link className="section-link" href={section.href}>{section.action} <span aria-hidden="true">→</span></Link>
@@ -98,13 +106,53 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="home-products" aria-labelledby="home-products-title">
+        <div className="section-heading section-heading-split">
+          <div>
+            <p className="eyebrow">Marketplace</p>
+            <h2 id="home-products-title">Discover what&apos;s on HolyHub.</h2>
+          </div>
+          <Link className="section-link inline-section-link" href="/marketplace">See all products <span aria-hidden="true">→</span></Link>
+        </div>
+
+        {products?.length ? (
+          <div className="home-product-grid">
+            {products.map((product) => {
+              const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
+              return (
+                <Link className="home-product-card" href={`/products/${product.id}`} key={product.id}>
+                  <div className="home-product-image">
+                    {product.image_url ? <img src={product.image_url} alt={product.name} /> : <div className="product-placeholder">HolyHub</div>}
+                    <span>{product.category_type}</span>
+                  </div>
+                  <div className="home-product-copy">
+                    <small>{storefront?.business_name ?? "HolyHub lister"}</small>
+                    <h3>{product.name}</h3>
+                    <strong>£{Number(product.price).toFixed(2)}</strong>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="home-products-empty">
+            <div className="section-card-icon"><HolyHubIcon name="marketplace" /></div>
+            <div>
+              <h3>Christian brands are joining HolyHub.</h3>
+              <p>Explore the Marketplace as the first listers and products are added.</p>
+            </div>
+            <Link className="button button-primary" href="/marketplace">Browse Marketplace</Link>
+          </div>
+        )}
+      </section>
+
       <section className="home-cta">
         <div>
           <p className="eyebrow">Start discovering</p>
-          <h2>Christian brands are already waiting.</h2>
-          <p>Marketplace is the first part of HolyHub available to explore now.</p>
+          <h2>Christian brands, community and events — together.</h2>
+          <p>Marketplace is live now, with The Hub and Events growing alongside it.</p>
         </div>
-        <Link className="button button-primary button-large" href="/marketplace">Browse Marketplace <span aria-hidden="true">→</span></Link>
+        <Link className="button button-primary button-large" href="/auth/signup">Join HolyHub <span aria-hidden="true">→</span></Link>
       </section>
     </div>
   );

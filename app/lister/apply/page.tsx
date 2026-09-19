@@ -57,6 +57,10 @@ export default async function ListerApplicationPage({ searchParams }: { searchPa
               <label htmlFor="category_type">Product/category type</label>
               <input id="category_type" name="category_type" type="text" maxLength={100} required />
             </div>
+            <label className="terms-consent">
+              <input type="checkbox" name="accept_lister_terms" required />
+              <span>I agree to the <Link href="/lister-terms">HolyHub Lister Terms</Link> and <Link href="/privacy">Privacy Notice</Link>.</span>
+            </label>
             <button className="button button-primary" type="submit">Submit application</button>
           </form>
         )}

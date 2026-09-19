@@ -66,7 +66,9 @@ export async function signup(formData: FormData) {
   const email = clean(formData.get("email")).toLowerCase();
   const password = raw(formData.get("password"));
   const confirmPassword = raw(formData.get("confirm_password"));
+  const acceptedTerms = formData.get("accept_terms") === "on";
 
+  if (!acceptedTerms) redirect(messageUrl("/auth/signup", "error", "Please agree to the HolyHub terms to create an account."));
   if (!isValidEmail(email)) redirect(messageUrl("/auth/signup", "error", "Enter a valid email address."));
   if (fullName.length > 100) redirect(messageUrl("/auth/signup", "error", "Name is too long."));
   if (!isValidPasswordLength(password)) {

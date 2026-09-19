@@ -187,3 +187,17 @@ Not yet fully implemented:
 - do not expose Supabase service-role or Stripe secret keys to browser code
 - do not mark planned functionality as live when it is only a placeholder
 - update this master spec whenever a product rule is changed
+\n## 12. Launch legal and trust pages
+
+Before HolyHub accepts real customer payments, the public site should include:
+
+- **Customer Terms & Conditions** — account use, marketplace role, ordering, payment, delivery, cancellations/returns, refunds, prohibited use, liability and complaints
+- **Lister Terms** — eligibility, listing rules, fees, 5% commission, listing charges, fulfilment, shipping, reserves, payouts, refunds/chargebacks, prohibited products, suspension/termination and seller responsibilities
+- **Privacy Notice**
+- **Cookie Notice / consent where required**
+- **Shipping & Delivery Policy**
+- **Returns & Refunds Policy**
+- **Contact page/details**
+
+These documents must match the actual implemented product behaviour. Do not publish legal terms with guessed business identity, postal address, registration/VAT details or other missing legal information.
+

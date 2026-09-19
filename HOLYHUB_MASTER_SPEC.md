@@ -187,9 +187,11 @@ Not yet fully implemented:
 - do not expose Supabase service-role or Stripe secret keys to browser code
 - do not mark planned functionality as live when it is only a placeholder
 - update this master spec whenever a product rule is changed
-\n## 12. Launch legal and trust pages
 
-Before HolyHub accepts real customer payments, the public site should include:
+## 12. Launch legal and trust pages
+
+These pages are now present in the app. Their wording must continue to match the implemented product behaviour, and a one-off legal review is still required before live customer payments:
+
 
 - **Customer Terms & Conditions** — account use, marketplace role, ordering, payment, delivery, cancellations/returns, refunds, prohibited use, liability and complaints
 - **Lister Terms** — eligibility, listing rules, fees, 5% commission, listing charges, fulfilment, shipping, reserves, payouts, refunds/chargebacks, prohibited products, suspension/termination and seller responsibilities
@@ -199,5 +201,5 @@ Before HolyHub accepts real customer payments, the public site should include:
 - **Returns & Refunds Policy**
 - **Contact page/details**
 
-These documents must match the actual implemented product behaviour. Do not publish legal terms with guessed business identity, postal address, registration/VAT details or other missing legal information.
+Full launch blockers and follow-up work are tracked in **LAUNCH_CHECKLIST.md**. The private business address must be supplied through the `HOLYHUB_BUSINESS_ADDRESS` environment variable rather than committed to this public repository.
 

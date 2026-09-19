@@ -1248,3 +1248,119 @@ body {
   .events-signup-card { grid-template-columns: 1fr; border-radius: 22px; }
   .events-signup-card .button { grid-column: auto; }
 }
+
+
+/* Verse of the day */
+.daily-verse {
+  position: relative;
+  overflow: hidden;
+  margin: 12px 0 68px;
+  padding: clamp(28px, 5vw, 46px);
+  border: 1px solid rgba(150, 181, 205, .26);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(252, 208, 205, .42), transparent 13rem),
+    radial-gradient(circle at 8% 90%, rgba(150, 181, 205, .22), transparent 15rem),
+    rgba(255, 255, 255, .88);
+  box-shadow: 0 18px 50px rgba(65, 92, 109, .08);
+}
+.daily-verse::after {
+  content: "“";
+  position: absolute;
+  right: 34px;
+  top: 18px;
+  color: rgba(150, 181, 205, .12);
+  font-family: Georgia, serif;
+  font-size: clamp(8rem, 18vw, 14rem);
+  line-height: 1;
+  pointer-events: none;
+}
+.daily-verse-top,
+.daily-verse-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.daily-verse-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.daily-verse-label .eyebrow { margin: 0 0 1px; }
+.daily-verse-label > div > span {
+  color: #8a989f;
+  font-size: .76rem;
+  font-weight: 700;
+}
+.daily-verse-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: var(--holyhub-blue-soft);
+  color: var(--holyhub-blue-strong);
+}
+.daily-verse-icon svg { width: 22px; height: 22px; }
+.daily-verse blockquote {
+  position: relative;
+  z-index: 1;
+  max-width: 940px;
+  margin: clamp(28px, 5vw, 46px) 0;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.75rem, 4vw, 3.3rem);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -.025em;
+}
+.daily-verse-footer > div {
+  display: grid;
+  gap: 2px;
+}
+.daily-verse-footer strong { font-size: .95rem; }
+.daily-verse-footer > div span {
+  color: #8a989f;
+  font-size: .72rem;
+}
+.daily-verse-footer > a {
+  color: var(--ink);
+  font-size: .88rem;
+  font-weight: 800;
+}
+.daily-verse-footer > a > span {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--holyhub-blue-strong);
+  transition: transform .2s ease;
+}
+.daily-verse-footer > a:hover > span { transform: translateX(4px); }
+
+.daily-verse-compact {
+  margin: 0 0 74px;
+  padding: clamp(24px, 4vw, 36px);
+  border-radius: 24px;
+}
+.daily-verse-compact blockquote {
+  max-width: 830px;
+  margin: 24px 0 28px;
+  font-size: clamp(1.45rem, 3vw, 2.35rem);
+}
+.daily-verse-compact::after {
+  right: 24px;
+  top: 8px;
+  font-size: clamp(7rem, 15vw, 10rem);
+}
+
+@media (max-width: 560px) {
+  .daily-verse {
+    margin-bottom: 50px;
+    padding: 24px 21px;
+    border-radius: 22px;
+  }
+  .daily-verse blockquote { font-size: clamp(1.55rem, 8vw, 2.25rem); }
+  .daily-verse-footer { align-items: flex-start; flex-direction: column; }
+}

@@ -41,6 +41,7 @@ function parseBasket(value: string) {
 }
 
 export async function startCheckout(formData: FormData) {
+  if (formData.get("accept_terms") !== "on") checkoutError("Please agree to the HolyHub terms before checkout.");
   const basket = parseBasket(typeof formData.get("basket") === "string" ? formData.get("basket") as string : "");
   if (!basket) checkoutError("Your basket is invalid. Please review it and try again.");
 

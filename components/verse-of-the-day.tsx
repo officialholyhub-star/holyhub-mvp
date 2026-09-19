@@ -2,11 +2,22 @@ import Link from "next/link";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 import { getVerseOfTheDay } from "@/lib/verse-of-day";
 
-export function VerseOfTheDay({ compact = false }: { compact?: boolean }) {
+type VerseOfTheDayProps = {
+  compact?: boolean;
+  hero?: boolean;
+};
+
+export function VerseOfTheDay({ compact = false, hero = false }: VerseOfTheDayProps) {
   const verse = getVerseOfTheDay();
+  const className = hero
+    ? "daily-verse daily-verse-hero"
+    : compact
+      ? "daily-verse daily-verse-compact"
+      : "daily-verse";
+  const headingId = hero ? "hero-daily-verse" : compact ? "home-daily-verse" : "hub-daily-verse";
 
   return (
-    <section className={compact ? "daily-verse daily-verse-compact" : "daily-verse"} aria-labelledby={compact ? "home-daily-verse" : "hub-daily-verse"}>
+    <section className={className} aria-labelledby={headingId}>
       <div className="daily-verse-top">
         <div className="daily-verse-label">
           <span className="daily-verse-icon"><HolyHubIcon name="bible" /></span>
@@ -15,10 +26,10 @@ export function VerseOfTheDay({ compact = false }: { compact?: boolean }) {
             <span>Changes daily</span>
           </div>
         </div>
-        {!compact && <span className="soft-pill">TODAY</span>}
+        {!compact && !hero && <span className="soft-pill">TODAY</span>}
       </div>
 
-      <blockquote id={compact ? "home-daily-verse" : "hub-daily-verse"}>
+      <blockquote id={headingId}>
         “{verse.text}”
       </blockquote>
 
@@ -27,7 +38,7 @@ export function VerseOfTheDay({ compact = false }: { compact?: boolean }) {
           <strong>{verse.reference}</strong>
           <span>{verse.translation}</span>
         </div>
-        <Link href="/hub/bible">{compact ? "Visit The Hub" : "Explore Bible"} <span aria-hidden="true">→</span></Link>
+        <Link href="/hub/bible">{hero || compact ? "The Hub" : "Explore Bible"} <span aria-hidden="true">→</span></Link>
       </div>
     </section>
   );

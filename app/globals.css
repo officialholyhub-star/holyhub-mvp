@@ -1364,3 +1364,163 @@ body {
   .daily-verse blockquote { font-size: clamp(1.55rem, 8vw, 2.25rem); }
   .daily-verse-footer { align-items: flex-start; flex-direction: column; }
 }
+
+
+/* Premium homepage refinement */
+body {
+  background:
+    radial-gradient(circle at 8% 2%, rgba(150, 181, 205, .28), transparent 34rem),
+    radial-gradient(circle at 94% 12%, rgba(252, 208, 205, .22), transparent 28rem),
+    linear-gradient(180deg, #eef3f5 0%, #f4f1ed 48%, #edf2f3 100%);
+}
+.site-header {
+  background: rgba(241, 245, 246, .86);
+  border-bottom-color: rgba(111, 148, 176, .18);
+}
+.premium-home-hero {
+  min-height: 650px;
+  margin-top: 10px;
+  padding: clamp(46px, 6vw, 78px);
+  border: 1px solid rgba(111, 148, 176, .2);
+  border-radius: 36px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.55), transparent 21rem),
+    linear-gradient(135deg, rgba(229, 239, 244, .96) 0%, rgba(243, 240, 235, .96) 58%, rgba(241, 226, 224, .72) 100%);
+  box-shadow: 0 28px 80px rgba(57, 78, 91, .11);
+}
+.premium-home-hero .home-hero-copy { max-width: 650px; }
+.premium-home-hero .lead { max-width: 560px; color: #55656d; }
+.premium-home-hero .eyebrow {
+  margin-bottom: 18px;
+  font-size: .82rem;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.premium-home-hero h1 {
+  font-size: clamp(3.45rem, 6.8vw, 6.3rem);
+  letter-spacing: -.06em;
+}
+.premium-home-hero .button-quiet {
+  background: rgba(255,255,255,.56);
+  border-color: rgba(111,148,176,.24);
+  backdrop-filter: blur(10px);
+}
+
+.daily-verse-hero {
+  align-self: stretch;
+  justify-self: end;
+  width: min(390px, 100%);
+  min-height: 470px;
+  margin: 0;
+  padding: 34px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(255,255,255,.74);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.82) 0%, rgba(246,248,248,.72) 100%);
+  box-shadow:
+    0 30px 70px rgba(57, 78, 91, .14),
+    inset 0 1px 0 rgba(255,255,255,.85);
+  backdrop-filter: blur(18px);
+}
+.daily-verse-hero::after {
+  right: 24px;
+  top: 38px;
+  color: rgba(111,148,176,.09);
+  font-size: 9rem;
+}
+.daily-verse-hero .daily-verse-top { align-items: flex-start; }
+.daily-verse-hero .daily-verse-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 17px;
+  background: #e9f1f5;
+}
+.daily-verse-hero blockquote {
+  margin: 42px 0 34px;
+  font-size: clamp(1.72rem, 2.6vw, 2.35rem);
+  line-height: 1.2;
+}
+.daily-verse-hero .daily-verse-footer {
+  padding-top: 22px;
+  border-top: 1px solid rgba(111,148,176,.18);
+}
+.daily-verse-hero .daily-verse-footer > a {
+  padding: 9px 0;
+  font-size: .82rem;
+}
+
+.home-sections { padding-top: 84px; }
+.home-sections .section-heading-split > p {
+  max-width: 240px;
+  color: #6d7a80;
+}
+.home-section-card {
+  background: rgba(247, 248, 247, .72);
+  border-color: rgba(111,148,176,.18);
+  box-shadow: 0 18px 50px rgba(57,78,91,.08);
+  backdrop-filter: blur(8px);
+}
+.hub-card {
+  background: linear-gradient(145deg, rgba(225,236,242,.88), rgba(244,246,244,.78));
+}
+.marketplace-card-home {
+  background: linear-gradient(145deg, rgba(217,231,239,.94), rgba(241,244,243,.8));
+}
+.events-card {
+  background: linear-gradient(145deg, rgba(244,226,224,.82), rgba(244,243,240,.8));
+}
+.section-card-icon {
+  background: rgba(255,255,255,.54);
+  border-color: rgba(111,148,176,.2);
+}
+.section-card-icon svg { width: 29px; height: 29px; }
+
+.home-products-empty,
+.home-cta,
+.preview-card {
+  background-color: rgba(246,248,247,.76);
+}
+.home-cta {
+  background:
+    radial-gradient(circle at 86% 15%, rgba(252,208,205,.42), transparent 14rem),
+    linear-gradient(120deg, rgba(225,236,242,.85), rgba(244,242,237,.9));
+}
+
+@media (max-width: 900px) {
+  .premium-home-hero {
+    min-height: 0;
+    padding: 42px 32px;
+    border-radius: 28px;
+  }
+  .daily-verse-hero {
+    justify-self: stretch;
+    width: 100%;
+    min-height: 390px;
+  }
+}
+
+@media (max-width: 560px) {
+  body {
+    background:
+      radial-gradient(circle at 5% 2%, rgba(150,181,205,.24), transparent 22rem),
+      linear-gradient(180deg, #eef3f5 0%, #f4f1ed 58%, #edf2f3 100%);
+  }
+  .premium-home-hero {
+    margin-top: 0;
+    padding: 34px 22px 28px;
+    border-radius: 24px;
+  }
+  .daily-verse-hero {
+    min-height: 360px;
+    padding: 26px 22px;
+    border-radius: 24px;
+  }
+  .daily-verse-hero blockquote {
+    margin: 30px 0 28px;
+    font-size: clamp(1.55rem, 7.6vw, 2.05rem);
+  }
+  .home-sections { padding-top: 58px; }
+}

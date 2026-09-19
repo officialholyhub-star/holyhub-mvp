@@ -16,7 +16,7 @@ type HolyHubIconName =
   | "basket";
 
 const paths: Record<HolyHubIconName, ReactNode> = {
-  hub: <><circle cx="12" cy="12" r="2.5" /><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" /></>,
+  hub: <><circle cx="7" cy="8.5" r="2" /><circle cx="12" cy="7" r="2.2" /><circle cx="17" cy="8.5" r="2" /><path d="M3.8 18c.5-3.4 2.2-5.2 4.8-5.2 1.4 0 2.5.5 3.4 1.4.9-.9 2-1.4 3.4-1.4 2.6 0 4.3 1.8 4.8 5.2" /><path d="M5.8 13.8c1.7 1.7 3.8 2.6 6.2 2.6s4.5-.9 6.2-2.6" /></>,
   marketplace: <><path d="M4 8h16l-1.3 11H5.3L4 8Z" /><path d="M8 8a4 4 0 0 1 8 0" /></>,
   events: <><rect x="4" y="5.5" width="16" height="14" rx="3" /><path d="M8 3v5M16 3v5M4 10h16" /><path d="M8 14h3M14 14h2" /></>,
   bible: <><path d="M5 4.5h10a4 4 0 0 1 4 4V20H8a3 3 0 0 1-3-3V4.5Z" /><path d="M8 4.5V20M11 9h5M13.5 6.5v5" /></>,

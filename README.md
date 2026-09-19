@@ -1,49 +1,48 @@
-# HolyHub Platform — Stage 1 Foundation
+# HolyHub Platform
 
-This is the separate HolyHub application intended to sit behind `app.holyhub.co.uk` later. It does not modify the existing `holyhub.co.uk` landing page.
+HolyHub is a Christian platform built around three clear areas: **The Hub, Marketplace and Events**.
 
-## Included in Stage 1
+> **Current product source of truth:** see [HOLYHUB_MASTER_SPEC.md](./HOLYHUB_MASTER_SPEC.md). Older stage documents are historical and should not override the master spec.
 
-- Next.js + TypeScript application shell
+The application is intended to sit at `app.holyhub.co.uk` later. It remains separate from the existing `holyhub.co.uk` landing page.
+
+## Current build
+
+The current working branch includes:
+
+- Next.js + TypeScript
 - Supabase Auth/database foundation
-- One account can hold multiple roles (customer now; lister/admin access added separately)
-- Sign up, email/password login, logout
-- Email confirmation route
-- Forgot/reset password flow
-- Basic profile and email management
-- Protected account route
-- PostgreSQL roles/profile schema
-- Row Level Security policies
-- Baby blue + pink HolyHub styling and supplied logo
+- customer/lister role model
+- signup, login, logout, confirmation and password reset
+- lister applications and lister access
+- storefront and product management
+- Marketplace search/filter/product pages
+- basket and Stripe Checkout
+- Stripe webhook payment status tracking
+- three-section navigation: The Hub | Marketplace | Events
+- Verse of the Day on The Hub and homepage
+- responsive HolyHub styling
 
-## Deliberately NOT included yet
+See the master spec for features that are decided but not yet implemented.
 
-Lister applications/storefronts, products, marketplace, search, basket, Stripe checkout, orders, payouts, commissions, reserves, refunds, admin dashboard, events and Bible functionality. Those belong to later approved stages.
+## Local/Codespaces setup
 
-## Free local setup
+1. Copy `.env.example` to `.env.local` and add the required Supabase/Stripe values.
+2. Apply migrations in `supabase/migrations` in numerical order for a fresh database.
+3. Install packages with `npm install`.
+4. Start locally with `npm run dev`, or in Codespaces with `npm run dev:codespace`.
+5. Open port 3000.
 
-1. Create a free Supabase project.
-2. Copy `.env.example` to `.env.local` and add the Project URL + Publishable key from Supabase's Connect panel.
-3. In Supabase SQL Editor, run `supabase/migrations/001_stage1_foundation.sql` once.
-4. In Supabase SQL Editor, run `supabase/migrations/002_lister_applications.sql` once before testing the Become a Lister flow.
-5. In Supabase SQL Editor, run `supabase/migrations/003_stage3_marketplace.sql` once before testing lister storefronts, products, or the marketplace.
-6. In Supabase SQL Editor, run `supabase/migrations/004_stage4_checkout.sql` once before testing the basket or checkout.
-7. In Supabase Auth URL settings use `http://localhost:3000` as the local Site URL and add `http://localhost:3000/**` as an allowed redirect while developing.
-8. For the Confirm signup email template, use the SSR token-hash route:
-   `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`
-9. Install packages with `npm install`.
-10. Start locally with `npm run dev` and visit `http://localhost:3000`.
+For Stripe testing you need:
 
-For Stage 4 Stripe test payments, add these server-only values to `.env.local`:
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-- `STRIPE_SECRET_KEY`: Stripe Dashboard > Developers > API keys > Secret key in Test mode.
-- `STRIPE_WEBHOOK_SECRET`: the signing secret from the local Stripe CLI listener or Stripe Dashboard webhook endpoint.
-- `SUPABASE_SERVICE_ROLE_KEY`: Supabase Project Settings > API > Service role key. Never expose this to the browser.
+Never expose server-only secrets to browser code.
 
-For local webhook testing, forward Stripe events to `http://localhost:3000/api/stripe/webhook` and copy the generated `whsec_...` signing secret into `.env.local`.
+When the app is ready for its subdomain, update `NEXT_PUBLIC_SITE_URL` and the Supabase allowed URLs to `https://app.holyhub.co.uk`.
 
-When the app is ready for its subdomain, change `NEXT_PUBLIC_SITE_URL` and Supabase's allowed URLs to `https://app.holyhub.co.uk`.
+## Historical files
 
-## Stage boundary
-
-Do not begin Stage 2 until Stage 1 has been reviewed and approved.
+`STAGE_1_DECISIONS.md` and older stage-labelled notes are retained for history. They are not the current product source of truth.

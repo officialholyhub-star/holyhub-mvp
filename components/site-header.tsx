@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/auth/actions";
@@ -23,8 +22,9 @@ export async function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <Link className="logo-wrap" href="/" aria-label="HolyHub home">
-          <Image className="logo-image" src="/holyhub-logo.png" alt="HolyHub" width={328} height={104} priority />
+        <Link className="home-nav-button" href="/" aria-label="Home">
+          <HolyHubIcon name="home" />
+          <span>Home</span>
         </Link>
 
         <nav className="main-nav" aria-label="Main HolyHub sections">

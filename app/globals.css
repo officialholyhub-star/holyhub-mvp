@@ -1672,3 +1672,67 @@ body {
   letter-spacing: .035em;
   text-transform: uppercase;
 }
+
+
+/* Header home button + roomier Hub icon */
+.home-nav-button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid rgba(111, 148, 176, .24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .82);
+  color: #41515c;
+  font-size: .9rem;
+  font-weight: 800;
+  box-shadow: 0 8px 22px rgba(74, 101, 120, .05);
+  transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+.home-nav-button svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+}
+.home-nav-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(111, 148, 176, .4);
+  background: var(--holyhub-blue-soft);
+}
+.section-card-icon svg {
+  width: 38px;
+  height: 38px;
+}
+.hub-card .section-card-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+}
+.hub-card .section-card-icon svg {
+  width: 42px;
+  height: 42px;
+}
+
+@media (max-width: 560px) {
+  .home-nav-button {
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+  .home-nav-button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}

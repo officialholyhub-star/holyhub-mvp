@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { HolyHubIcon } from "@/components/holyhub-icon";
+import { HolyHubIcon } from "@/components/holyhub-icon";\nimport { VerseOfTheDay } from "@/components/verse-of-the-day";
 
-const hubAreas = [
+export const dynamic = "force-dynamic";\n\nconst hubAreas = [
   {
     title: "Bible",
     description: "The Bible reader is being moved into The Hub so faith content stays in one clear place.",
@@ -63,7 +63,7 @@ export default function HubPage() {
         </div>
       </section>
 
-      <section className="preview-section">
+      <VerseOfTheDay />\n\n      <section className="preview-section">
         <div className="section-heading section-heading-split">
           <div>
             <p className="eyebrow">Inside The Hub</p>

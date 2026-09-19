@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { HolyHubIcon } from "@/components/holyhub-icon";\nimport { VerseOfTheDay } from "@/components/verse-of-the-day";
+import { HolyHubIcon } from "@/components/holyhub-icon";
+import { VerseOfTheDay } from "@/components/verse-of-the-day";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <VerseOfTheDay compact />\n\n      <section className="home-sections" aria-labelledby="holyhub-sections-title">
+      <VerseOfTheDay compact />
+
+      <section className="home-sections" aria-labelledby="holyhub-sections-title">
         <div className="section-heading section-heading-split">
           <div>
             <p className="eyebrow">Explore HolyHub</p>

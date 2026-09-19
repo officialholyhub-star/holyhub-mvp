@@ -1736,3 +1736,123 @@ body {
     border: 0;
   }
 }
+
+
+/* Homepage hero polish — seamless Verse of the Day */
+.daily-verse-hero {
+  position: relative;
+  align-self: center;
+  justify-self: end;
+  width: min(430px, 100%);
+  min-height: 420px;
+  margin: 0;
+  padding: 24px 0 18px 42px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.daily-verse-hero::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(111,148,176,0),
+    rgba(111,148,176,.34) 18%,
+    rgba(252,208,205,.46) 80%,
+    rgba(252,208,205,0)
+  );
+}
+.daily-verse-hero::after {
+  right: -8px;
+  top: -22px;
+  color: rgba(111,148,176,.10);
+  font-size: 10.5rem;
+}
+.daily-verse-hero .daily-verse-top {
+  align-items: center;
+}
+.daily-verse-hero .daily-verse-icon {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(111,148,176,.2);
+  border-radius: 50%;
+  background: rgba(255,255,255,.18);
+}
+.daily-verse-hero .daily-verse-icon svg {
+  width: 19px;
+  height: 19px;
+}
+.daily-verse-hero .daily-verse-label > div > span {
+  color: #79888f;
+}
+.daily-verse-hero blockquote {
+  max-width: 405px;
+  margin: 38px 0 36px;
+  font-size: clamp(1.8rem, 2.7vw, 2.45rem);
+  line-height: 1.22;
+}
+.daily-verse-hero .daily-verse-footer {
+  padding-top: 18px;
+  border-top: 1px solid rgba(111,148,176,.16);
+}
+.daily-verse-hero .daily-verse-footer > a {
+  padding: 7px 0;
+}
+
+/* Keep the original logo artwork, but let it sit naturally on tinted surfaces. */
+.logo-wrap {
+  background: transparent;
+}
+.logo-image {
+  border-radius: 0;
+  background: transparent;
+  mix-blend-mode: multiply;
+  filter: saturate(.96) contrast(1.02);
+}
+
+@media (max-width: 900px) {
+  .daily-verse-hero {
+    min-height: 0;
+    width: 100%;
+    padding: 30px 0 6px;
+  }
+  .daily-verse-hero::before {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: auto;
+    width: auto;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      rgba(111,148,176,0),
+      rgba(111,148,176,.32) 18%,
+      rgba(252,208,205,.42) 82%,
+      rgba(252,208,205,0)
+    );
+  }
+}
+
+@media (max-width: 560px) {
+  .daily-verse-hero {
+    min-height: 0;
+    padding: 28px 0 0;
+    border-radius: 0;
+  }
+  .daily-verse-hero blockquote {
+    margin: 28px 0 26px;
+    font-size: clamp(1.55rem, 7.6vw, 2.05rem);
+  }
+  .daily-verse-hero::after {
+    right: 0;
+    top: 3px;
+    font-size: 7rem;
+  }
+}

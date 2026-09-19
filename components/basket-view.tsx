@@ -83,6 +83,10 @@ export function BasketView({ error }: BasketViewProps) {
             <div className="meta-row"><span className="meta-label">Total</span><strong>£{total.toFixed(2)}</strong></div>
             <form action={startCheckout} onSubmit={() => setCheckoutError(undefined)}>
               <input type="hidden" name="basket" value={basketPayload} />
+              <label className="terms-consent">
+                <input type="checkbox" name="accept_terms" required />
+                <span>I agree to the <Link href="/terms">Customer Terms</Link>, <Link href="/shipping">Shipping Policy</Link> and <Link href="/returns">Returns Policy</Link>.</span>
+              </label>
               <button className="button button-primary checkout-button" type="submit">Proceed to secure checkout</button>
             </form>
             <p className="muted-small">Prices are rechecked securely before payment.</p>

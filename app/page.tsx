@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 import { VerseOfTheDay } from "@/components/verse-of-the-day";
+import { demoProducts } from "@/lib/demo-products";
 
 export const dynamic = "force-dynamic";
 
@@ -119,14 +120,27 @@ export default async function HomePage() {
             })}
           </div>
         ) : (
-          <div className="home-products-empty">
-            <div className="section-card-icon"><HolyHubIcon name="marketplace" /></div>
-            <div>
-              <h3>Christian brands are joining HolyHub.</h3>
-              <p>Explore the Marketplace as the first listers and products are added.</p>
+          <>
+            <div className="demo-preview-banner">
+              <strong>Marketplace preview</strong>
+              <span>Demo products only — nothing below is for sale.</span>
             </div>
-            <Link className="button button-primary" href="/marketplace">Browse Marketplace</Link>
-          </div>
+            <div className="home-product-grid">
+              {demoProducts.slice(0, 4).map((product) => (
+                <article className="home-product-card demo-product-card" key={product.id}>
+                  <div className="home-product-image">
+                    <img src={product.image_url} alt="" />
+                    <span>{product.category_type}</span>
+                  </div>
+                  <div className="home-product-copy">
+                    <small>{product.listerName}</small>
+                    <h3>{product.name}</h3>
+                    <strong>£{product.price.toFixed(2)}</strong>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </section>
 

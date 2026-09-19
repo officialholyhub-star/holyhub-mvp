@@ -1057,3 +1057,194 @@ body {
   .event-ticket-back { right: 30px; }
   .event-ticket-front { right: 0; }
 }
+
+
+/* refinement pass */
+.hero-stack-icon svg,
+.section-card-icon svg,
+.preview-icon svg,
+.hub-verse-mark svg,
+.events-signup-icon svg,
+.bible-page-icon svg,
+.mobile-icon-link svg,
+.mobile-account-menu summary svg {
+  width: 1.35em;
+  height: 1.35em;
+}
+.utility-mobile { display: none; }
+
+.home-products { padding: 26px 0 78px; }
+.inline-section-link { margin-top: 0; padding-top: 0; white-space: nowrap; }
+.home-product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.home-product-card {
+  display: block;
+  min-width: 0;
+  transition: transform .22s ease;
+}
+.home-product-card:hover { transform: translateY(-5px); }
+.home-product-image {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  background: var(--holyhub-blue-soft);
+  box-shadow: 0 10px 30px rgba(65, 92, 109, .07);
+}
+.home-product-image img,
+.home-product-image .product-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.home-product-image img { transition: transform .3s ease; }
+.home-product-card:hover .home-product-image img { transform: scale(1.025); }
+.home-product-image > span {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  padding: 6px 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.9);
+  color: #53616a;
+  font-size: .68rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+.home-product-copy { padding: 13px 2px 0; }
+.home-product-copy small {
+  color: var(--holyhub-blue-strong);
+  font-weight: 800;
+}
+.home-product-copy h3 {
+  margin: 5px 0 7px;
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home-product-copy strong { font-size: 1.04rem; }
+.home-products-empty {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid rgba(150,181,205,.25);
+  border-radius: 22px;
+  background: rgba(255,255,255,.8);
+}
+.home-products-empty .section-card-icon { margin-top: 0; }
+.home-products-empty h3 { margin: 0 0 4px; }
+.home-products-empty p { margin: 0; }
+
+.events-signup-card {
+  margin: 56px 0 12px;
+  padding: clamp(26px, 5vw, 44px);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  border: 1px solid rgba(252,208,205,.72);
+  border-radius: 28px;
+  background: linear-gradient(130deg, #fff9f8 0%, #fff 54%, #eef7fb 100%);
+  box-shadow: 0 15px 42px rgba(65,92,109,.07);
+}
+.events-signup-icon,
+.bible-page-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 20px;
+  background: var(--holyhub-pink-soft);
+  color: #a97572;
+}
+.events-signup-card h2 { margin-bottom: 6px; }
+.events-signup-card p { margin: 0; }
+
+.hub-bible-hero {
+  min-height: 520px;
+  background:
+    radial-gradient(circle at 86% 20%, rgba(252,208,205,.55) 0 9%, transparent 9.5%),
+    linear-gradient(120deg, #edf6fb 0%, #f7fbfd 58%, #fff4f3 100%);
+}
+.hub-bible-hero .bible-page-icon { margin: 28px 0 22px; background: rgba(255,255,255,.72); color: var(--holyhub-blue-strong); }
+.hub-bible-hero .section-status { margin-bottom: 0; }
+
+.mobile-account-menu { position: relative; }
+.mobile-account-menu summary {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.mobile-account-menu summary::-webkit-details-marker { display: none; }
+.mobile-icon-link {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+}
+.mobile-account-panel {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  z-index: 40;
+  width: 210px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 18px 48px rgba(65,92,109,.16);
+}
+.mobile-account-panel a,
+.mobile-account-panel button {
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 700;
+}
+.mobile-account-panel a:hover,
+.mobile-account-panel button:hover { background: var(--holyhub-blue-soft); }
+
+@media (max-width: 900px) {
+  .utility-desktop { display: none; }
+  .utility-mobile { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  .home-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .events-signup-card { grid-template-columns: auto 1fr; }
+  .events-signup-card .button { grid-column: 1 / -1; justify-self: start; }
+}
+
+@media (max-width: 560px) {
+  .home-products { padding-bottom: 56px; }
+  .home-product-grid { gap: 22px 10px; }
+  .home-product-image { border-radius: 13px; }
+  .home-products-empty { grid-template-columns: 1fr; }
+  .home-products-empty .section-card-icon { width: 50px; height: 50px; }
+  .events-signup-card { grid-template-columns: 1fr; border-radius: 22px; }
+  .events-signup-card .button { grid-column: auto; }
+}

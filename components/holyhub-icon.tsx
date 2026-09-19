@@ -1,4 +1,4 @@
-type HolyHubIconName =
+import type { ReactNode } from "react";\n\ntype HolyHubIconName =
   | "hub"
   | "marketplace"
   | "events"
@@ -13,7 +13,7 @@ type HolyHubIconName =
   | "menu"
   | "basket";
 
-const paths: Record<HolyHubIconName, React.ReactNode> = {
+const paths: Record<HolyHubIconName, ReactNode> = {
   hub: <><circle cx="12" cy="12" r="2.5" /><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8" /></>,
   marketplace: <><path d="M4 8h16l-1.3 11H5.3L4 8Z" /><path d="M8 8a4 4 0 0 1 8 0" /></>,
   events: <><rect x="4" y="5.5" width="16" height="14" rx="3" /><path d="M8 3v5M16 3v5M4 10h16" /><path d="M8 14h3M14 14h2" /></>,

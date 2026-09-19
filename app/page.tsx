@@ -49,13 +49,12 @@ export default async function HomePage() {
 
   return (
     <div className="home-page">
-      <section className="home-hero home-hero-refresh">
+      <section className="home-hero home-hero-refresh premium-home-hero">
         <div className="home-hero-copy">
-          <div className="hero-kicker"><span className="hero-kicker-dot" /> One place. Three ways to connect.</div>
           <p className="eyebrow">HolyHub</p>
           <h1>Connect. Discover. <span>Grow.</span></h1>
           <p className="lead">
-            A Christian platform bringing community, brands and events together in one simple place.
+            A Christian platform for community, independent brands and events.
           </p>
           <div className="button-row">
             <Link className="button button-primary button-large" href="/marketplace">Explore Marketplace <span aria-hidden="true">→</span></Link>
@@ -63,34 +62,16 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="hero-visual" aria-hidden="true">
-          <div className="hero-orb hero-orb-blue" />
-          <div className="hero-orb hero-orb-pink" />
-          <div className="hero-stack-card hero-stack-hub">
-            <span className="hero-stack-icon"><HolyHubIcon name="hub" /></span>
-            <div><small>CONNECT</small><strong>The Hub</strong></div>
-          </div>
-          <div className="hero-stack-card hero-stack-market">
-            <span className="hero-stack-icon"><HolyHubIcon name="marketplace" /></span>
-            <div><small>DISCOVER</small><strong>Marketplace</strong></div>
-            <span className="live-pill">LIVE</span>
-          </div>
-          <div className="hero-stack-card hero-stack-events">
-            <span className="hero-stack-icon"><HolyHubIcon name="events" /></span>
-            <div><small>GROW</small><strong>Events</strong></div>
-          </div>
-        </div>
+        <VerseOfTheDay hero />
       </section>
-
-      <VerseOfTheDay compact />
 
       <section className="home-sections" aria-labelledby="holyhub-sections-title">
         <div className="section-heading section-heading-split">
           <div>
             <p className="eyebrow">Explore HolyHub</p>
-            <h2 id="holyhub-sections-title">Everything has its place.</h2>
+            <h2 id="holyhub-sections-title">One platform. Three experiences.</h2>
           </div>
-          <p>Move between faith, shopping and experiences without leaving HolyHub.</p>
+          <p>Choose where you want to start.</p>
         </div>
 
         <div className="home-section-grid">

@@ -1,7 +1,9 @@
-name: Stage 1 CI
+name: HolyHub MVP checks
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -9,8 +11,8 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_SUPABASE_URL: https://mgzsxzixobyfdlutxtgs.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dUuixDq0gSBE6dReO_R0oA_BC7czWE3
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-public-placeholder
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
     steps:
       - name: Check out repository
@@ -22,10 +24,22 @@ jobs:
           node-version: 24
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
 
       - name: Build
         run: npm run build
+
+      - name: Database and validation tests
+        run: npm test
+
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium --only-shell
+
+      - name: Browser journeys
+        run: npm run test:e2e
+
+      - name: Marketplace browser journeys
+        run: npm run test:marketplace

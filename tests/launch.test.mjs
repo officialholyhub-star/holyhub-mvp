@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { marketplaceDatabase } from './helpers/database.mjs';
+
+test('empty production migrations support the first real listing without sample data or payments', async t => {
+  const {db,as}=await marketplaceDatabase();t.after(()=>db.close());
+  for(const table of ['businesses','products','orders','events']) assert.equal((await db.query('select count(*)::int as n from '+table)).rows[0].n,0);
+  const health=async()=>(await as(null,tx=>tx.query('select launch_readiness() as result'))).rows[0].result;
+  assert.deepEqual(await health(),{schema_version:8,schema_ready:true,storage_ready:true,admin_ready:false});
+  const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',admin='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  await db.query("insert into auth.users(id,raw_user_meta_data) values($1,'{\"role\":\"admin\"}'),($2,'{}')",[owner,admin]);
+  assert.equal((await as(owner,tx=>tx.query("select has_role('admin') as allowed"))).rows[0].allowed,false);
+  await db.query("insert into user_roles(user_id,role) values($1,'admin')",[admin]);
+  assert.equal((await health()).admin_ready,true);
+  const business=(await as(owner,tx=>tx.query("insert into businesses(owner_id,name,category,location,summary,description,website_url,faith_confirmed) values($1,'First real business','Art & Creators','Online','Thoughtful art inspired by faith.','We create artwork inspired by faith for people to enjoy in their homes.','https://example.com',true) returning *",[owner]))).rows[0];
+  assert.equal((await as(null,tx=>tx.query('select * from businesses'))).rows.length,0);
+  assert.equal((await as(admin,tx=>tx.query('select * from notifications'))).rows.length,1);
+  assert.equal((await as(owner,tx=>tx.query('select * from notifications'))).rows.length,0);
+  const product=(await as(owner,tx=>tx.query('select save_product($1) as id',[{name:'First uploaded product',category:'Art & Prints',description:'An original artwork created by our new business.',price_pence:1200,stock:5,delivery_info:'Contact our business directly for delivery details.'}]))).rows[0].id;
+  await assert.rejects(as(owner,tx=>tx.query("select set_product_status($1,'published')",[product])),/approved/i);
+  const path=owner+'/'+product+'/cccccccc-cccc-4ccc-8ccc-cccccccccccc.webp';
+  await as(owner,tx=>tx.query("insert into storage.objects(bucket_id,name) values('product-images',$1)",[path]));
+  await as(owner,tx=>tx.query("select register_image('product',$1,$2)",[product,path]));
+  await as(admin,tx=>tx.query("select review_business($1,'approved',$2)",[business.id,business.updated_at]));
+  await as(owner,tx=>tx.query("select set_product_status($1,'published')",[product]));
+  assert.equal((await as(null,tx=>tx.query('select * from products'))).rows.length,1);
+  assert.equal((await db.query('select count(*)::int as n from orders')).rows[0].n,0);
+  await as(owner,tx=>tx.query("update businesses set summary='An updated description for a fresh review.' where id=$1",[business.id]));
+  assert.equal((await as(null,tx=>tx.query('select * from products'))).rows.length,0);
+  await db.exec('alter table public.products disable row level security');
+  assert.equal((await health()).schema_ready,false);
+});

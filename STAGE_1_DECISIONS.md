@@ -1,3 +1,7 @@
+# MVP scope update
+
+The owner has approved accounts **plus business discovery** for this repository. The Stage 1 notes below are historical. Current scope and setup are in README.md; product checkout, fees, commissions and payouts remain out of scope.
+
 # HolyHub Stage 1 — Agreed decisions
 
 - Build the product separately from the existing HolyHub landing page.

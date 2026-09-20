@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { isUuid } from "@/lib/businesses";
+export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params;if(!isUuid(id))return new NextResponse("Not found",{status:404});const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return new NextResponse("Sign in required",{status:401});const {data}=await supabase.from("refund_evidence").select("path").eq("id",id).maybeSingle();if(!data)return new NextResponse("Not found",{status:404});const {data:signed,error}=await supabase.storage.from("refund-evidence").createSignedUrl(data.path,60,{download:"holyhub-evidence.webp"});if(error||!signed)return new NextResponse("Unavailable",{status:503});return NextResponse.redirect(signed.signedUrl,{headers:{"Cache-Control":"private, no-store"}});}

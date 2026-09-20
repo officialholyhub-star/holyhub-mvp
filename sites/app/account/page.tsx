@@ -1,0 +1,11 @@
+import Link from "@/components/site-link";
+import { member, one, all, isAdmin, type Business } from "@/lib/data";
+import { ActionForm } from "@/components/action-form";
+import { Field } from "@/components/forms";
+import { AccountNav, Saved } from "@/components/page-ui";
+export const dynamic="force-dynamic";
+export default async function AccountPage({searchParams}:{searchParams:Promise<{saved?:string}>}){const params=await searchParams;return <AccountContent saved={params.saved}/>;}
+async function AccountContent({saved}:{saved?:string}) {
+ const user=await member(),business=await one<Business>("SELECT * FROM hh_businesses WHERE owner_id=?",user.id),updates=await all<{id:string;message:string}>("SELECT id,message FROM hh_notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 3",user.id);
+ return <><AccountNav/><Saved value={saved}/><div className="section-heading"><p className="eyebrow">Your HolyHub</p><h1 className="page-title">Hello, {user.name==="HolyHub member"?"welcome in":user.name}.</h1><p>Discover something meaningful. Share something of your own.</p></div><div className="account-grid"><section className="card"><h2>Your profile</h2><p className="muted-small">{user.email} · Managed through ChatGPT</p><ActionForm action="profile.save"><Field name="name" label="Your name" value={user.name} max={100}/><button className="button button-primary">Save profile</button></ActionForm></section><section className="card"><p className="editorial-kicker">For business owners</p><h2>{business?business.name:"Your next chapter starts here."}</h2><p>{business?`Application status: ${business.status}. ${business.review_note}`:"Apply to introduce your Christian brand to the HolyHub community."}</p><Link className="button button-primary" href="/account/business">{business?"Manage your business":"Become a Lister"} →</Link>{business&&<div className="top-space"><Link className="text-link" href="/seller/products">Manage your products →</Link></div>}</section></div>{updates.length>0&&<section className="card top-space"><h2>Latest updates</h2>{updates.map(update=><p key={update.id}>{update.message}</p>)}</section>}{isAdmin(user.email)&&<p className="top-space"><Link className="button button-quiet" href="/admin">Open administration →</Link></p>}</>;
+}

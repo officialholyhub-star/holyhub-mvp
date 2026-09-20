@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddToBasketButton } from "@/components/add-to-basket-button";
@@ -42,7 +43,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const max = parseOptionalPrice(params.max);
   const sort = params.sort ?? "newest";
   const supabase = await createClient();
-  let query = supabase.from("products").select("id, name, description, category_type, price, image_url, lister_storefronts(business_name)").eq("is_published", true);
+  let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
   if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
   if (category) query = query.eq("category_type", category);
   if (min !== null) query = query.gte("price", min);
@@ -148,7 +149,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
               <article className="product-card marketplace-card" key={product.id}>
                 <Link href={`/products/${product.id}`}>
                   <div className="marketplace-card-image">
-                    {product.image_url ? <img src={product.image_url} alt={product.name} /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
+                    {product.image_url ? <Image src={product.image_url} alt={product.name} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
                     <span>{product.category_type}</span>
                   </div>
                   <div className="product-card-body">
@@ -157,7 +158,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                     <strong>£{Number(product.price).toFixed(2)}</strong>
                   </div>
                 </Link>
-                <div className="product-card-action"><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerName={storefront?.business_name ?? "HolyHub lister"} /></div>
+                <div className="product-card-action"><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} /></div>
               </article>
             );
           })}
@@ -175,7 +176,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
               <article className="product-card marketplace-card demo-product-card" key={product.id}>
                 <div>
                   <div className="marketplace-card-image">
-                    <img src={product.image_url} alt="" />
+                    <Image src={product.image_url} alt="" width={600} height={600} unoptimized />
                     <span>{product.category_type}</span>
                   </div>
                   <div className="product-card-body">

@@ -9,6 +9,7 @@ type ProductFormProps = {
     category_type: string;
     price: number | string;
     image_url: string | null;
+    stock_quantity: number | string;
     is_published: boolean;
   };
   error?: string;
@@ -38,6 +39,10 @@ export function ProductForm({ action, product, error, children }: ProductFormPro
             <label htmlFor="price">Price (GBP)</label>
             <input id="price" name="price" type="number" min="0" step="0.01" defaultValue={product?.price ?? ""} required />
           </div>
+        </div>
+        <div className="field">
+          <label htmlFor="stock_quantity">Stock quantity</label>
+          <input id="stock_quantity" name="stock_quantity" type="number" min="0" step="1" defaultValue={product?.stock_quantity ?? 0} required />
         </div>
         <div className="field">
           <label htmlFor="image_url">Product image URL <span className="muted-small">(optional)</span></label>

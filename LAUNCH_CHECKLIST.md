@@ -46,17 +46,17 @@ This file should be updated whenever a launch task is completed or a new depende
 - [ ] Make fee waivers/pilot pricing clear to listers before paid fees are activated.
 
 ### Shipping and basket
-- [ ] Limit live checkout to UK delivery addresses.
-- [ ] Add delivery charge to basket and Stripe checkout.
-- [ ] Charge delivery once per lister/seller in an order, not once per item.
-- [ ] Show delivery charges and delivery information before the customer commits to payment.
-- [ ] Support multi-lister baskets as separate seller fulfilment groups.
-- [ ] Ensure customers can review/correct basket and delivery information before payment.
+- [x] Limit live checkout to UK delivery addresses.
+- [x] Add delivery charge to basket and Stripe checkout.
+- [x] Charge delivery once per lister/seller in an order, not once per item.
+- [x] Show delivery charges and delivery information before the customer commits to payment.
+- [x] Support multi-lister baskets as separate seller fulfilment groups.
+- [x] Ensure customers can review/correct basket and delivery information before payment.
 
 ### Orders, payments and payouts
 - [ ] Confirm final Stripe marketplace architecture for paying independent listers (for example Stripe Connect) with Stripe/accountant/legal review.
-- [ ] Create proper order records after successful payment, not only checkout-session records.
-- [ ] Create seller-order records for multi-lister orders.
+- [x] Create proper order records after successful payment, not only checkout-session records.
+- [x] Create seller-order records for multi-lister orders.
 - [ ] Give customers an order history/status page.
 - [ ] Give listers an order/fulfilment dashboard.
 - [ ] Add dispatch status and dispatch date.

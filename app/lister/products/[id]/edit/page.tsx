@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function EditProductPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const { supabase, user } = await requireRole("lister");
-  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, is_published").eq("id", id).eq("lister_user_id", user.id).maybeSingle();
+  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, is_published").eq("id", id).eq("lister_user_id", user.id).maybeSingle();
   if (!product) notFound();
 
   return (

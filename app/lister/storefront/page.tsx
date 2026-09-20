@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function StorefrontPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
   const params = await searchParams;
   const { supabase, user } = await requireRole("lister");
-  const { data: storefront } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_or_social").eq("user_id", user.id).maybeSingle();
+  const { data: storefront } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_or_social, delivery_option, delivery_charge").eq("user_id", user.id).maybeSingle();
 
   return (
     <section className="auth-wrap">
@@ -35,6 +35,19 @@ export default async function StorefrontPage({ searchParams }: { searchParams: P
           <div className="field">
             <label htmlFor="website_or_social">Website or social media link <span className="muted-small">(optional)</span></label>
             <input id="website_or_social" name="website_or_social" type="url" defaultValue={storefront?.website_or_social ?? ""} maxLength={500} placeholder="https://" />
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label htmlFor="delivery_option">Delivery option</label>
+              <select id="delivery_option" name="delivery_option" defaultValue={storefront?.delivery_option ?? "free"}>
+                <option value="free">Free delivery</option>
+                <option value="flat">Flat delivery fee</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="delivery_charge">Delivery charge (GBP)</label>
+              <input id="delivery_charge" name="delivery_charge" type="number" min="0" step="0.01" defaultValue={storefront?.delivery_charge ?? 0} />
+            </div>
           </div>
           <button className="button button-primary" type="submit">Save storefront</button>
         </form>

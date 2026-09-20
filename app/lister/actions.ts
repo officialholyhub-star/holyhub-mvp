@@ -18,6 +18,18 @@ function parsePrice(value: string) {
   return Number.isFinite(price) && price >= 0 ? price : null;
 }
 
+function parseDeliveryCharge(value: string) {
+  if (!/^\d{1,8}(\.\d{1,2})?$/.test(value)) return null;
+  const charge = Number(value);
+  return Number.isFinite(charge) && charge >= 0 ? charge : null;
+}
+
+function parseStockQuantity(value: string) {
+  if (!/^\d+$/.test(value)) return null;
+  const quantity = Number(value);
+  return Number.isInteger(quantity) && quantity >= 0 ? quantity : null;
+}
+
 function isValidHttpUrl(value: string) {
   if (!value) return true;
   try {
@@ -33,10 +45,13 @@ export async function saveStorefront(formData: FormData) {
   const description = clean(formData.get("description"));
   const categoryType = clean(formData.get("category_type"));
   const websiteOrSocial = clean(formData.get("website_or_social"));
+  const deliveryOption = clean(formData.get("delivery_option"));
+  const deliveryChargeValue = clean(formData.get("delivery_charge"));
+  const deliveryCharge = parseDeliveryCharge(deliveryChargeValue);
   const { supabase, user } = await requireRole("lister");
 
-  if (!businessName || businessName.length > 150 || !description || description.length > 500 || !categoryType || categoryType.length > 100 || websiteOrSocial.length > 500 || !isValidHttpUrl(websiteOrSocial)) {
-    redirect(messageUrl("/lister/storefront", "error", "Complete the storefront fields within the limits shown."));
+  if (!businessName || businessName.length > 150 || !description || description.length > 500 || !categoryType || categoryType.length > 100 || websiteOrSocial.length > 500 || !isValidHttpUrl(websiteOrSocial) || !["free", "flat"].includes(deliveryOption) || deliveryCharge === null || (deliveryOption === "free" && deliveryCharge !== 0) || (deliveryOption === "flat" && deliveryCharge < 0)) {
+    redirect(messageUrl("/lister/storefront", "error", "Complete the storefront and delivery settings with valid values."));
   }
 
   const { data: existingStorefront, error: lookupError } = await supabase
@@ -60,6 +75,9 @@ export async function saveStorefront(formData: FormData) {
     description,
     category_type: categoryType,
     website_or_social: websiteOrSocial || null,
+    delivery_option: deliveryOption,
+    delivery_charge: deliveryOption === "free" ? 0 : deliveryCharge,
+    delivery_country: "GB",
     updated_at: new Date().toISOString(),
   };
   const saveResult = existingStorefront
@@ -87,14 +105,16 @@ function productValues(formData: FormData) {
   const categoryType = clean(formData.get("category_type"));
   const priceValue = clean(formData.get("price"));
   const imageUrl = clean(formData.get("image_url"));
+  const stockQuantityValue = clean(formData.get("stock_quantity"));
   const price = parsePrice(priceValue);
+  const stockQuantity = parseStockQuantity(stockQuantityValue);
   const isPublished = formData.get("is_published") === "on";
 
-  if (!name || name.length > 150 || !description || description.length > 1000 || !categoryType || categoryType.length > 100 || price === null || imageUrl.length > 500 || !isValidHttpUrl(imageUrl)) {
+  if (!name || name.length > 150 || !description || description.length > 1000 || !categoryType || categoryType.length > 100 || price === null || stockQuantity === null || imageUrl.length > 500 || !isValidHttpUrl(imageUrl)) {
     return null;
   }
 
-  return { name, description, category_type: categoryType, price, currency: "GBP", image_url: imageUrl || null, is_published: isPublished };
+  return { name, description, category_type: categoryType, price, currency: "GBP", image_url: imageUrl || null, stock_quantity: stockQuantity, is_published: isPublished };
 }
 
 export async function createProduct(formData: FormData) {

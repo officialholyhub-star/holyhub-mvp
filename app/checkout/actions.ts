@@ -8,7 +8,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSiteUrl, getStripe } from "@/lib/stripe";
 import { MAX_BASKET_ITEMS, MAX_BASKET_QUANTITY } from "@/lib/basket";
 
-type SubmittedItem = { id: unknown; quantity: unknown };
+type SubmittedItem = {
+  id: unknown;
+  quantity: unknown;
+  listerId?: unknown;
+  listerName?: unknown;
+  deliveryOption?: unknown;
+  deliveryCharge?: unknown;
+};
 
 function checkoutError(message: string): never {
   redirect(`/basket?error=${encodeURIComponent(message)}`);
@@ -32,12 +39,22 @@ function parseBasket(value: string) {
   if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > MAX_BASKET_ITEMS) return null;
   const items = parsed.map((item: SubmittedItem) => {
     const id = typeof item?.id === "string" ? item.id : "";
+    const listerId = typeof item?.listerId === "string" ? item.listerId : "";
+    const listerName = typeof item?.listerName === "string" ? item.listerName.trim() : "";
+    const deliveryOption = item?.deliveryOption === "flat" ? "flat" : "free";
+    const deliveryCharge = Number(item?.deliveryCharge ?? 0);
     const quantity = Number(item?.quantity);
-    return /^[0-9a-f-]{36}$/i.test(id) && Number.isInteger(quantity) && quantity >= 1 && quantity <= MAX_BASKET_QUANTITY
-      ? { id, quantity }
-      : null;
+    const isValidItem = /^[0-9a-f-]{36}$/i.test(id)
+      && /^[0-9a-f-]{36}$/i.test(listerId)
+      && listerName.length > 0
+      && Number.isInteger(quantity)
+      && quantity >= 1
+      && quantity <= MAX_BASKET_QUANTITY
+      && Number.isFinite(deliveryCharge)
+      && deliveryCharge >= 0;
+    return isValidItem ? { id, quantity, listerId, listerName, deliveryOption, deliveryCharge } : null;
   });
-  return items.every(Boolean) ? items as { id: string; quantity: number }[] : null;
+  return items.every(Boolean) ? items as { id: string; quantity: number; listerId: string; listerName: string; deliveryOption: "free" | "flat"; deliveryCharge: number }[] : null;
 }
 
 export async function startCheckout(formData: FormData) {
@@ -47,28 +64,51 @@ export async function startCheckout(formData: FormData) {
 
   const { supabase, user } = await requireUser();
   const productIds = [...new Set(basket.map(({ id }) => id))];
-  const { data: products, error: productError } = await supabase
-    .from("products")
-    .select("id, name, price, currency, lister_user_id, is_published")
-    .in("id", productIds)
-    .eq("is_published", true);
+  const listerIds = [...new Set(basket.map(({ listerId }) => listerId))];
+  const [{ data: products, error: productError }, { data: listerStorefronts, error: storefrontError }] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id, name, price, currency, lister_user_id, is_published, stock_quantity")
+      .in("id", productIds)
+      .eq("is_published", true),
+    supabase
+      .from("lister_storefronts")
+      .select("user_id, business_name, delivery_option, delivery_charge, delivery_country")
+      .in("user_id", listerIds),
+  ]);
 
-  if (productError || !products || products.length !== productIds.length) {
-    checkoutError("One or more products are no longer available. Please review your basket.");
+  if (productError || storefrontError || !products || products.length !== productIds.length || !listerStorefronts || listerStorefronts.length !== listerIds.length) {
+    checkoutError("One or more products or seller settings are no longer available. Please review your basket.");
   }
 
   const productMap = new Map(products.map((product) => [product.id, product]));
-  const lines = basket.map(({ id, quantity }) => {
+  const storefrontMap = new Map(listerStorefronts.map((storefront) => [storefront.user_id, storefront]));
+  const lines = basket.map(({ id, quantity, listerId, deliveryOption, deliveryCharge }) => {
     const product = productMap.get(id);
+    const storefront = storefrontMap.get(listerId);
     const unitAmount = product ? toPence(product.price) : null;
     if (!product || product.currency !== "GBP" || unitAmount === null) return null;
-    return { product, quantity, unitAmount, lineTotal: unitAmount * quantity };
+    if (product.stock_quantity < quantity) return null;
+    if ((storefront?.delivery_country ?? "GB") !== "GB") return null;
+    if (deliveryOption === "flat" && Number(storefront?.delivery_charge ?? deliveryCharge) !== Number(deliveryCharge)) return null;
+    if (deliveryOption === "free" && Number(storefront?.delivery_charge ?? 0) !== 0) return null;
+    return { product, quantity, unitAmount, lineTotal: unitAmount * quantity, listerId, deliveryOption, deliveryCharge: Number(storefront?.delivery_charge ?? deliveryCharge) };
   });
-  if (lines.some((line) => !line)) checkoutError("One or more products have invalid pricing. Please review your basket.");
+  if (lines.some((line) => !line)) checkoutError("One or more products are unavailable, out of stock, or have changed. Please review your basket.");
 
-  const trustedLines = lines as { product: (typeof products)[number]; quantity: number; unitAmount: number; lineTotal: number }[];
-  const amountTotal = trustedLines.reduce((total, line) => total + line.lineTotal, 0);
-  if (!Number.isSafeInteger(amountTotal)) checkoutError("Your basket total is too large to process.");
+  const trustedLines = lines as { product: (typeof products)[number]; quantity: number; unitAmount: number; lineTotal: number; listerId: string; deliveryOption: "free" | "flat"; deliveryCharge: number }[];
+  const productSubtotal = trustedLines.reduce((total, line) => total + line.lineTotal, 0);
+  const deliveryGroups = new Map<string, number>();
+  for (const line of trustedLines) {
+    const charge = line.deliveryOption === "flat" ? line.deliveryCharge : 0;
+    deliveryGroups.set(line.listerId, (deliveryGroups.get(line.listerId) ?? 0) + charge);
+  }
+  const deliveryTotal = Array.from(deliveryGroups.values()).reduce((sum, amount) => sum + amount, 0);
+  const total = productSubtotal + deliveryTotal;
+  if (!Number.isSafeInteger(productSubtotal) || !Number.isSafeInteger(deliveryTotal) || !Number.isSafeInteger(total)) checkoutError("Your basket total is too large to process.");
+
+  const holyhubCommission = Math.round(productSubtotal * 0.05);
+  const sellerAmount = productSubtotal - holyhubCommission;
 
   const stripe = getStripe();
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
@@ -79,20 +119,40 @@ export async function startCheckout(formData: FormData) {
       throw new Error("Invalid checkout site origin.");
     }
 
-    session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: trustedLines.map(({ product, quantity, unitAmount }) => ({
-        quantity,
+    const lineItems = trustedLines.map(({ product, quantity, unitAmount }) => ({
+      quantity,
+      price_data: {
+        currency: "gbp",
+        unit_amount: unitAmount,
+        product_data: { name: product.name },
+      },
+    }));
+    const deliveryItems = Array.from(deliveryGroups.entries()).map(([listerId, charge]) => {
+      const storefront = storefrontMap.get(listerId);
+      const sellerName = storefront?.business_name ?? "HolyHub seller";
+      return {
+        quantity: 1,
         price_data: {
           currency: "gbp",
-          unit_amount: unitAmount,
-          product_data: { name: product.name },
+          unit_amount: charge,
+          product_data: { name: `${sellerName} delivery` },
         },
-      })),
+      };
+    }).filter((item) => item.price_data.unit_amount > 0);
+
+    session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [...lineItems, ...deliveryItems],
       customer_email: user.email ?? undefined,
       success_url: `${siteUrl.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl.origin}/checkout/cancelled`,
-      metadata: { holyhub_user_id: user.id },
+      metadata: {
+        holyhub_user_id: user.id,
+        holyhub_product_subtotal: String(productSubtotal),
+        holyhub_delivery_total: String(deliveryTotal),
+        holyhub_commission: String(holyhubCommission),
+        holyhub_seller_amount: String(sellerAmount),
+      },
     });
   } catch (error) {
     console.error("Stripe Checkout Session creation failed", error);
@@ -107,8 +167,12 @@ export async function startCheckout(formData: FormData) {
     .insert({
       user_id: user.id,
       stripe_checkout_session_id: session.id,
-      amount_total: amountTotal,
+      amount_total: total,
       currency: "GBP",
+      product_subtotal: productSubtotal,
+      delivery_total: deliveryTotal,
+      holyhub_commission: holyhubCommission,
+      seller_amount_total: sellerAmount,
     })
     .select("id")
     .single();

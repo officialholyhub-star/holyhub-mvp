@@ -148,10 +148,14 @@ Implemented or substantially present:
 - roles and lister approval foundations
 - storefront management
 - product listing management
+- product stock/inventory tracking
+- delivery setting per lister (free or flat UK-only)
 - marketplace browsing/search/filtering
-- basket
-- Stripe Checkout session creation
+- basket with lister grouping and delivery display
+- Stripe Checkout session creation with per-lister delivery included
 - Stripe webhook payment status updates
+- order and seller-order accounting records after successful checkout
+- order status fields ready for later dispatch/tracking work
 - Hub/Marketplace/Events top-level structure
 - responsive HolyHub design
 - Verse of the Day rotation/display

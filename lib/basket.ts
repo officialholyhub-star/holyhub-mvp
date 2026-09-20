@@ -8,6 +8,9 @@ export type BasketItem = {
   price: number;
   currency: "GBP";
   imageUrl: string | null;
+  listerId: string;
   listerName: string;
+  deliveryOption: "free" | "flat";
+  deliveryCharge: number;
   quantity: number;
 };

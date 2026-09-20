@@ -1,5 +1,13 @@
 # Full MVP build status
 
+## Public Sites release — 20 September 2026
+
+[HolyHub Marketplace](https://holyhub-marketplace.matthewjeanty6.chatgpt.site) is deployed using the separate `sites/` application. The owner approved replacing an old Deepgrids Site, using Sites D1/R2 and ChatGPT sign-in instead of Supabase. Root/www HolyHub remain unchanged. The Sites release includes persistent accounts, lister applications, human review, product drafts/photos/public discovery, events and moderation. No sample listings are deployed. It intentionally does not contain checkout, payment/commission/refund execution, Bible or community conversations. See [the current handoff](sites/SITES_HANDOFF.md).
+
+Verification: the Sites Worker built and typechecked; application lint passed; 30 local workflow checks plus cross-owner/forged-identity checks passed; phone/tablet/desktop layouts and browser form submission passed. Hosted publication succeeded, and live ChatGPT owner sign-in and administration visibility were verified. Original Next.js checks also passed (40 database/validation, 4 account/discovery browser, 8 marketplace browser checks). The original ten-stage scope has **not** suddenly become ten completed stages: money-related stages remain incomplete and outside this release.
+
+The sections below document the retained Supabase version and its earlier readiness status.
+
 ## Real-listing launch pass
 
 Final release safeguard: `build:production` now runs online, read-only service readiness checks before compilation. A missing backend, unsafe configuration, unavailable provider, missing verified admin, unready private image storage or disabled email confirmation stops deployment. Two added gate/failure tests bring the suite to 51 checks. No paid features have been activated and no new dependencies added.

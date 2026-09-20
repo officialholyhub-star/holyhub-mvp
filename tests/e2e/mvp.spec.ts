@@ -13,7 +13,7 @@ test("home, account links and discovery work at mobile and desktop sizes", async
   for (const width of [320, 375, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Where Christian brands");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("One HolyHub.");
     await expect(page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Log in", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
@@ -24,6 +24,20 @@ test("home, account links and discovery work at mobile and desktop sizes", async
   await expect(page).toHaveURL(/\/businesses/);
   await expect(page.getByRole("heading", { name: "Be part of the beginning." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Contact", exact: true })).toHaveAttribute("href", "mailto:Official.holyhub@gmail.com");
+});
+
+test("editorial homepage search and Hub lead to working discovery routes", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("search", { name: "Search the marketplace" }).getByRole("searchbox").fill("ceramics");
+  await page.getByRole("button", { name: "Search products", exact: true }).click();
+  await expect(page).toHaveURL(/\/products\?q=ceramics$/);
+  await expect(page.getByLabel("Search products", { exact: true })).toHaveValue("ceramics");
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "The Hub", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("People make it real.");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("link", { name: /01 \/ Discover/ }).click();
+  await expect(page).toHaveURL(/\/businesses$/);
 });
 
 test("signup, guarded routes, confirmation and reset flows", async ({ page }) => {

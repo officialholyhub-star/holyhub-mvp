@@ -1,0 +1,6 @@
+import { member, one, type Business } from "@/lib/data";
+import { BusinessForm } from "@/components/forms";
+import { AccountNav, Saved } from "@/components/page-ui";
+export const dynamic="force-dynamic";
+export default async function BusinessPage({searchParams}:{searchParams:Promise<{saved?:string}>}){const params=await searchParams;return <Content saved={params.saved}/>;}
+async function Content({saved}:{saved?:string}){const user=await member("/account/business"),business=await one<Business>("SELECT * FROM hh_businesses WHERE owner_id=?",user.id);return <><AccountNav/><div className="content-narrow"><Saved value={saved}/><div className="section-heading"><p className="eyebrow">Made for your next chapter</p><h1 className="page-title">{business?"Your business, your story.":"Let’s introduce your business."}</h1><p>Create a profile for your Christian business. Our team reviews every application before it appears publicly.</p></div>{business&&<div className="notice notice-info"><strong className="status-pill">{business.status}</strong><p>{business.review_note||"Your application is awaiting review."}</p></div>}{business?.status==="suspended"?<p>Please contact HolyHub about your business status.</p>:<section className="card"><BusinessForm business={business}/></section>}</div></>;}

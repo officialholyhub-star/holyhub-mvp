@@ -1,5 +1,7 @@
 # HolyHub developer handoff
 
+> **20 September 2026 update:** The public Sites-backed non-payment MVP is now deployed at [HolyHub Marketplace](https://holyhub-marketplace.matthewjeanty6.chatgpt.site). Its complete source is in `sites/`; use [SITES_HANDOFF.md](sites/SITES_HANDOFF.md) and [ALEA_START_HERE.md](ALEA_START_HERE.md) for the current deployment. It uses ChatGPT sign-in and Sites storage, explicitly approved by the owner. The original Next.js/Supabase implementation below is retained for reference and is **not** the backend serving that public URL. Its older access/deployment statements do not describe the new Sites release.
+
 Prepared 12 September 2026; updated after the GitHub collaboration invitation was accepted. Alea can start with [ALEA_START_HERE.md](ALEA_START_HERE.md). Then read [PRODUCTION_LAUNCH.md](PRODUCTION_LAUNCH.md) for deployment and [BUILD_STATUS.md](BUILD_STATUS.md) for feature boundaries.
 
 ## 1. What you are taking over

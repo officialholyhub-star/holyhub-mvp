@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 import { VerseOfTheDay } from "@/components/verse-of-the-day";
 
@@ -44,16 +43,12 @@ export default function HubPage() {
     <div className="section-landing hub-landing">
       <section className="section-hero section-hero-refresh">
         <div className="section-hero-copy">
-          <div className="hero-kicker"><span className="hero-kicker-dot" /> Faith lives here</div>
+          <div className="hero-kicker hero-kicker-soon"><span className="hero-kicker-dot" /> Coming soon</div>
           <p className="eyebrow">The Hub</p>
           <h1>Your space to connect, reflect and grow.</h1>
           <p className="lead">
-            Bible, community, opportunities and conversations — brought together in one calm Christian space.
+            We made The Hub for the community — a place to read the Bible, connect with other Christians, discover opportunities and grow in faith.
           </p>
-          <div className="button-row">
-            <Link className="button button-primary button-large" href="/marketplace">Explore Marketplace <span aria-hidden="true">→</span></Link>
-            <Link className="button button-quiet button-large" href="/hub/bible">Preview Bible</Link>
-          </div>
         </div>
 
         <div className="hub-hero-card" aria-hidden="true">
@@ -74,7 +69,7 @@ export default function HubPage() {
             <p className="eyebrow">Inside The Hub</p>
             <h2>Made for faith, community and growth.</h2>
           </div>
-          <p>The structure is here now. Each feature will open as it is ready, starting with the Bible reader.</p>
+          <p>We&apos;re building each space with care. The Hub will open when it&apos;s ready.</p>
         </div>
         <div className="preview-grid hub-preview-grid">
           {hubAreas.map((area) => (
@@ -85,11 +80,7 @@ export default function HubPage() {
               </div>
               <h3>{area.title}</h3>
               <p>{area.description}</p>
-              {area.href ? (
-                <Link className="section-link" href={area.href}>{area.action} <span aria-hidden="true">→</span></Link>
-              ) : (
-                <span className="section-link section-link-muted">{area.action}</span>
-              )}
+              <span className="section-link section-link-muted">Coming soon</span>
             </article>
           ))}
         </div>

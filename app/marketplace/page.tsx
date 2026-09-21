@@ -2,7 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddToBasketButton } from "@/components/add-to-basket-button";
+import { FavouriteButton } from "@/components/favourite-button";
 import { demoProducts } from "@/lib/demo-products";
+import { getFavouriteIds } from "@/lib/favourites";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const max = parseOptionalPrice(params.max);
   const sort = params.sort ?? "newest";
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const favouriteIds = await getFavouriteIds(supabase, user?.id);
   let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
   if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
   if (category) query = query.eq("category_type", category);
@@ -147,11 +151,16 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
             return (
               <article className="product-card marketplace-card" key={product.id}>
-                <Link href={`/products/${product.id}`}>
-                  <div className="marketplace-card-image">
+                <div className="marketplace-card-media">
+                  <Link href={`/products/${product.id}`}>
+                    <div className="marketplace-card-image">
                     {product.image_url ? <Image src={product.image_url} alt={product.name} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
                     <span>{product.category_type}</span>
-                  </div>
+                    </div>
+                  </Link>
+                  <FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} />
+                </div>
+                <Link href={`/products/${product.id}`}>
                   <div className="product-card-body">
                     <p className="marketplace-lister">{storefront?.business_name ?? "HolyHub lister"}</p>
                     <h3>{product.name}</h3>

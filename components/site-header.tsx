@@ -40,6 +40,7 @@ export async function SiteHeader() {
               <Link className="utility-link" href={isLister ? "/lister" : "/lister/apply"}>
                 {isLister ? "Lister space" : "Become a Lister"}
               </Link>
+              <Link className="utility-link utility-favourites-link" href="/account/favourites">Favourites</Link>
               <Link className="utility-link" href="/account">Account</Link>
               <form action={logout} className="inline-form">
                 <button className="utility-button" type="submit">Log out</button>
@@ -54,13 +55,13 @@ export async function SiteHeader() {
         </nav>
 
         <div className="utility-mobile">
-          <Link className="mobile-icon-link" href="/basket" aria-label="Basket"><HolyHubIcon name="basket" /></Link>
           <details className="mobile-account-menu">
             <summary aria-label="Open account menu"><HolyHubIcon name="menu" /></summary>
             <div className="mobile-account-panel">
               {user ? (
                 <>
                   <Link href="/account">Account</Link>
+                  <Link href="/account/favourites"><span aria-hidden="true">♥</span> Favourites</Link>
                   <Link href={isLister ? "/lister" : "/lister/apply"}>{isLister ? "Lister space" : "Become a Lister"}</Link>
                   <Link href="/basket">Basket</Link>
                   <form action={logout}><button type="submit">Log out</button></form>

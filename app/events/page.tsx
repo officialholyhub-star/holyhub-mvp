@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 
 const eventTypes = [
@@ -13,16 +12,12 @@ export default function EventsPage() {
     <div className="section-landing events-landing">
       <section className="section-hero section-hero-refresh">
         <div className="section-hero-copy">
-          <div className="hero-kicker"><span className="hero-kicker-dot hero-kicker-dot-pink" /> Something to look forward to</div>
+          <div className="hero-kicker hero-kicker-soon"><span className="hero-kicker-dot hero-kicker-dot-pink" /> Coming soon</div>
           <p className="eyebrow">HolyHub Events</p>
           <h1>Find the moments that bring people together.</h1>
           <p className="lead">
             A simpler way to discover Christian events, activities and opportunities — all in one place.
           </p>
-          <div className="button-row">
-            <Link className="button button-primary button-large" href="/marketplace">Explore Marketplace</Link>
-            <Link className="button button-quiet button-large" href="/auth/signup">Join HolyHub</Link>
-          </div>
         </div>
 
         <div className="event-ticket-stack" aria-hidden="true">
@@ -64,15 +59,6 @@ export default function EventsPage() {
         </div>
       </section>
 
-      <section className="events-signup-card">
-        <div className="events-signup-icon"><HolyHubIcon name="events" /></div>
-        <div>
-          <p className="eyebrow">Events is growing</p>
-          <h2>Join HolyHub while we build it.</h2>
-          <p>Create an account now and you&apos;ll already be part of HolyHub when the Events section opens.</p>
-        </div>
-        <Link className="button button-primary button-large" href="/auth/signup">Join HolyHub <span aria-hidden="true">→</span></Link>
-      </section>
     </div>
   );
 }

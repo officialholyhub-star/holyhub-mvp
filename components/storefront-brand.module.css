@@ -1,0 +1,59 @@
+.summary {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.brandTitle {
+  min-width: 0;
+}
+
+.brandTitle h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.brandTitle a {
+  color: inherit;
+}
+
+.brandTitle a:hover {
+  text-decoration: underline;
+  text-decoration-color: #b7c9d4;
+  text-underline-offset: 3px;
+}
+
+.summary > p {
+  margin: 12px 0 0;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: .85rem;
+}
+
+.links a {
+  color: #667782;
+  text-decoration: underline;
+  text-decoration-color: #b7c9d4;
+  text-underline-offset: 3px;
+}

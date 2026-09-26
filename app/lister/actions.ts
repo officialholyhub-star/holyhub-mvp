@@ -41,6 +41,7 @@ function isValidHttpUrl(value: string) {
 }
 
 const PRODUCT_IMAGE_BUCKET = "product-images";
+const LISTER_LOGO_BUCKET = "lister-logos";
 
 function ownedProductImagePath(imageUrl: string, userId: string) {
   try {
@@ -73,23 +74,55 @@ async function removeOwnedProductImage(supabase: Awaited<ReturnType<typeof requi
   }
 }
 
-export async function saveStorefront(formData: FormData) {
+function ownedListerLogoPath(imageUrl: string, userId: string) {
+  try {
+    const image = new URL(imageUrl);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || image.origin !== new URL(supabaseUrl).origin) return null;
+
+    const prefix = `/storage/v1/object/public/${LISTER_LOGO_BUCKET}/${userId}/`;
+    if (!image.pathname.startsWith(prefix)) return null;
+
+    const filename = decodeURIComponent(image.pathname.slice(prefix.length));
+    if (!filename || filename.includes("/") || filename.includes("\\")) return null;
+    return `${userId}/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
+async function removeOwnedListerLogo(supabase: Awaited<ReturnType<typeof requireRole>>["supabase"], imageUrl: string, userId: string) {
+  const path = ownedListerLogoPath(imageUrl, userId);
+  if (!path) return;
+
+  try {
+    const { error } = await supabase.storage.from(LISTER_LOGO_BUCKET).remove([path]);
+    if (error) console.error("Lister logo cleanup failed", { code: error.name, message: error.message });
+  } catch (error) {
+    console.error("Lister logo cleanup failed", error);
+  }
+}
+
+export type StorefrontFormState = { error: string };
+
+export async function saveStorefront(_previousState: StorefrontFormState, formData: FormData): Promise<StorefrontFormState> {
   const businessName = clean(formData.get("business_name"));
   const description = clean(formData.get("description"));
   const categoryType = clean(formData.get("category_type"));
-  const websiteOrSocial = clean(formData.get("website_or_social"));
-  const deliveryOption = clean(formData.get("delivery_option"));
+  const websiteUrl = clean(formData.get("website_url"));
+  const instagramUrl = clean(formData.get("instagram_url"));
+  const logoUrl = clean(formData.get("logo_url"));
   const deliveryChargeValue = clean(formData.get("delivery_charge"));
   const deliveryCharge = parseDeliveryCharge(deliveryChargeValue);
   const { supabase, user } = await requireRole("lister");
 
-  if (!businessName || businessName.length > 150 || !description || description.length > 500 || !categoryType || categoryType.length > 100 || websiteOrSocial.length > 500 || !isValidHttpUrl(websiteOrSocial) || !["free", "flat"].includes(deliveryOption) || deliveryCharge === null || (deliveryOption === "free" && deliveryCharge !== 0) || (deliveryOption === "flat" && deliveryCharge < 0)) {
-    redirect(messageUrl("/lister/storefront", "error", "Complete the storefront and delivery settings with valid values."));
+  if (!businessName || businessName.length > 150 || !description || description.length > 500 || !categoryType || categoryType.length > 100 || websiteUrl.length > 500 || instagramUrl.length > 500 || !isValidHttpUrl(websiteUrl) || !isValidHttpUrl(instagramUrl) || deliveryCharge === null || !deliveryChargeValue || logoUrl.length > 500) {
+    return { error: "Complete the storefront and delivery settings with valid values." };
   }
 
   const { data: existingStorefront, error: lookupError } = await supabase
     .from("lister_storefronts")
-    .select("user_id")
+    .select("user_id, logo_url")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -100,16 +133,23 @@ export async function saveStorefront(formData: FormData) {
       details: lookupError.details,
       hint: lookupError.hint,
     });
-    redirect(messageUrl("/lister/storefront", "error", "We couldn't load your storefront."));
+    return { error: "We couldn't load your storefront." };
+  }
+
+  const logoIsAllowed = !logoUrl || logoUrl === existingStorefront?.logo_url || ownedListerLogoPath(logoUrl, user.id) !== null;
+  if (!logoIsAllowed) {
+    return { error: "Choose a logo uploaded to your storefront." };
   }
 
   const storefrontValues = {
     business_name: businessName,
     description,
     category_type: categoryType,
-    website_or_social: websiteOrSocial || null,
-    delivery_option: deliveryOption,
-    delivery_charge: deliveryOption === "free" ? 0 : deliveryCharge,
+    website_url: websiteUrl || null,
+    instagram_url: instagramUrl || null,
+    logo_url: logoUrl || null,
+    delivery_option: deliveryCharge === 0 ? "free" : "flat",
+    delivery_charge: deliveryCharge,
     delivery_country: "GB",
     updated_at: new Date().toISOString(),
   };
@@ -124,12 +164,16 @@ export async function saveStorefront(formData: FormData) {
       details: saveResult.error.details,
       hint: saveResult.error.hint,
     });
-    redirect(messageUrl("/lister/storefront", "error", "We couldn't save your storefront."));
+    return { error: "We couldn't save your storefront." };
+  }
+  if (existingStorefront?.logo_url && existingStorefront.logo_url !== logoUrl) {
+    await removeOwnedListerLogo(supabase, existingStorefront.logo_url, user.id);
   }
   revalidatePath("/lister/storefront");
   revalidatePath("/marketplace");
   revalidatePath(`/lister/storefront/${user.id}`);
-  redirect(messageUrl("/lister/storefront", "message", "Storefront saved."));
+  revalidatePath("/account");
+  redirect("/account?message=Storefront%20saved.");
 }
 
 function productValues(formData: FormData, userId: string, existingImageUrl: string | null = null) {

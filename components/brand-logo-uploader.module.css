@@ -1,0 +1,114 @@
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.label {
+  font-size: .94rem;
+  font-weight: 700;
+}
+
+.label span,
+.help {
+  color: var(--muted);
+  font-size: .84rem;
+  font-weight: 400;
+}
+
+.dropZone {
+  min-height: 140px;
+  display: grid;
+  align-items: center;
+  padding: 14px;
+  border: 1px dashed #9bb3c2;
+  border-radius: 14px;
+  background: #f8fbfd;
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.dragging {
+  border-color: var(--holyhub-blue-strong);
+  background: var(--holyhub-blue-soft);
+}
+
+.emptyState {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.emptyState p,
+.help,
+.status,
+.error {
+  margin: 0;
+}
+
+.emptyState p {
+  font-size: .92rem;
+}
+
+.preview {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.logo {
+  width: 92px;
+  height: 92px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.actions strong {
+  flex-basis: 100%;
+}
+
+.removeButton {
+  min-height: 42px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.help,
+.status,
+.error {
+  font-size: .84rem;
+}
+
+.status {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+}
+
+@media (max-width: 420px) {
+  .preview {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .logo {
+    width: 72px;
+    height: 72px;
+  }
+}

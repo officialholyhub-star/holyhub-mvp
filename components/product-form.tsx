@@ -52,6 +52,7 @@ export function ProductForm({ action, product, error, children }: ProductFormPro
           <input name="is_published" type="checkbox" defaultChecked={product?.is_published ?? false} />
           <span>Publish this product in the marketplace</span>
         </label>
+        <p className="muted-small form-help">Published listings are sent to HolyHub for a quick review before they appear in the marketplace.</p>
         <button className="button button-primary" type="submit">{product ? "Save product" : "Create product"}</button>
       </form>
       {children}

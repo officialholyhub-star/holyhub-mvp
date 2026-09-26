@@ -9,7 +9,7 @@ export default async function ListerApplicationPage({ searchParams }: { searchPa
   const { supabase, user } = await requireUser();
   const [{ data: profile }, { data: application }] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).single(),
-    supabase.from("lister_applications").select("status, created_at").eq("user_id", user.id).in("status", ["pending", "approved"]).maybeSingle(),
+    supabase.from("lister_applications").select("status, rejection_reason, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   return (
@@ -24,15 +24,19 @@ export default async function ListerApplicationPage({ searchParams }: { searchPa
         {params.error && <p className="notice notice-error">{params.error}</p>}
         {params.message && <p className="notice notice-success">{params.message}</p>}
 
-        {application ? (
+        {application?.status === "approved" ? (
           <div>
-            <p className="notice notice-info">
-              {application.status === "approved" ? "Your lister application has been approved." : "Your lister application is under review."}
-            </p>
+            <p className="notice notice-success">Your lister application has been approved.</p>
+            <Link className="button button-quiet" href="/account">Back to account</Link>
+          </div>
+        ) : application?.status === "pending" ? (
+          <div>
+            <p className="notice notice-info">Your lister application is under review. We&apos;ll be in touch when there&apos;s an update.</p>
             <Link className="button button-quiet" href="/account">Back to account</Link>
           </div>
         ) : (
           <form className="form" action={submitListerApplication}>
+            {application?.status === "rejected" && <p className="notice notice-error"><strong>Changes requested.</strong> {application.rejection_reason ?? "Please review your details and submit again."}</p>}
             <div className="field">
               <label htmlFor="business_name">Business/brand name</label>
               <input id="business_name" name="business_name" type="text" maxLength={150} required />

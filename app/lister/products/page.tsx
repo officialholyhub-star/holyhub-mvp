@@ -8,7 +8,7 @@ export default async function ListerProductsPage({ searchParams }: { searchParam
   const params = await searchParams;
   const { supabase, user } = await requireRole("lister");
   const [{ data: products }, { count: productCount }] = await Promise.all([
-    supabase.from("products").select("id, name, category_type, price, stock_quantity, is_published, created_at").eq("lister_user_id", user.id).order("created_at", { ascending: false }),
+    supabase.from("products").select("id, name, category_type, price, stock_quantity, is_published, review_status, review_reason, created_at").eq("lister_user_id", user.id).order("created_at", { ascending: false }),
     supabase.from("products").select("id", { count: "exact", head: true }).eq("lister_user_id", user.id),
   ]);
 
@@ -33,7 +33,9 @@ export default async function ListerProductsPage({ searchParams }: { searchParam
             <article className="product-row" key={product.id}>
               <div>
                 <h3>{product.name}</h3>
-                <p className="muted-small">{product.category_type} · £{Number(product.price).toFixed(2)} · Stock: {product.stock_quantity} · {product.is_published ? "Published" : "Draft"}</p>
+                <p className="muted-small">{product.category_type} · £{Number(product.price).toFixed(2)} · Stock: {product.stock_quantity} · {product.is_published ? "Submitted" : "Draft"}</p>
+                {product.review_status !== "draft" && <span className={`status-pill status-${product.review_status}`}>{product.review_status === "rejected" ? "Changes requested" : product.review_status}</span>}
+                {product.review_status === "rejected" && product.review_reason && <p className="review-reason">{product.review_reason}</p>}
               </div>
               <div className="row-actions">
                 <Link className="button button-quiet" href={`/lister/products/${product.id}/edit`}>Edit</Link>

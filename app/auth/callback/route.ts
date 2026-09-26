@@ -1,18 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { safeInternalPath } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/server";
 
-function safeNextPath(value: string | null) {
-  if (
-    !value ||
-    !value.startsWith("/") ||
-    value.startsWith("//") ||
-    value.includes("\\")
-  ) {
-    return "/account";
-  }
-
-  return value;
-}
+const INVALID_RECOVERY_LINK = "This password reset link is invalid or has expired. Please request a new one.";
+const INVALID_SIGN_IN_LINK = "The sign-in link is invalid or has expired.";
 
 function getRedirectOrigin(request: NextRequest) {
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
@@ -39,19 +30,36 @@ function getRedirectOrigin(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = safeNextPath(url.searchParams.get("next"));
+  const tokenHash = url.searchParams.get("token_hash");
+  const type = url.searchParams.get("type");
+  const requestedNext = safeInternalPath(url.searchParams.get("next"), "/account");
+  const isRecovery = requestedNext === "/auth/reset-password" || type === "recovery";
+  const next = isRecovery ? "/auth/reset-password" : requestedNext;
   const redirectOrigin = getRedirectOrigin(request);
 
-  if (code) {
+  if (
+    url.searchParams.has("error") ||
+    url.searchParams.has("error_code") ||
+    url.searchParams.has("error_description")
+  ) {
+    return recoveryError(redirectOrigin, isRecovery);
+  }
+
+  if (code || (tokenHash && type === "recovery")) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { error } = code
+      ? await supabase.auth.exchangeCodeForSession(code)
+      : await supabase.auth.verifyOtp({ type: "recovery", token_hash: tokenHash! });
     if (!error) return NextResponse.redirect(new URL(next, redirectOrigin));
   }
 
+  return recoveryError(redirectOrigin, isRecovery);
+}
+
+function recoveryError(origin: string, isRecovery: boolean) {
+  const path = isRecovery ? "/auth/forgot-password" : "/auth/login";
+  const message = isRecovery ? INVALID_RECOVERY_LINK : INVALID_SIGN_IN_LINK;
   return NextResponse.redirect(
-    new URL(
-      "/auth/login?error=The%20sign-in%20link%20is%20invalid%20or%20has%20expired.",
-      redirectOrigin,
-    ),
+    new URL(`${path}?error=${encodeURIComponent(message)}`, origin),
   );
 }

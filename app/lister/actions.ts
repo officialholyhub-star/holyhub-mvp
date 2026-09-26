@@ -40,6 +40,39 @@ function isValidHttpUrl(value: string) {
   }
 }
 
+const PRODUCT_IMAGE_BUCKET = "product-images";
+
+function ownedProductImagePath(imageUrl: string, userId: string) {
+  try {
+    const image = new URL(imageUrl);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl || image.origin !== new URL(supabaseUrl).origin) return null;
+
+    const prefix = `/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/${userId}/`;
+    if (!image.pathname.startsWith(prefix)) return null;
+
+    const filename = decodeURIComponent(image.pathname.slice(prefix.length));
+    if (!filename || filename.includes("/") || filename.includes("\\")) return null;
+    return `${userId}/${filename}`;
+  } catch {
+    return null;
+  }
+}
+
+async function removeOwnedProductImage(supabase: Awaited<ReturnType<typeof requireRole>>["supabase"], imageUrl: string, userId: string) {
+  const path = ownedProductImagePath(imageUrl, userId);
+  if (!path) return;
+
+  try {
+    const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);
+    if (error) {
+      console.error("Product image cleanup failed", { code: error.name, message: error.message });
+    }
+  } catch (error) {
+    console.error("Product image cleanup failed", error);
+  }
+}
+
 export async function saveStorefront(formData: FormData) {
   const businessName = clean(formData.get("business_name"));
   const description = clean(formData.get("description"));
@@ -99,7 +132,7 @@ export async function saveStorefront(formData: FormData) {
   redirect(messageUrl("/lister/storefront", "message", "Storefront saved."));
 }
 
-function productValues(formData: FormData) {
+function productValues(formData: FormData, userId: string, existingImageUrl: string | null = null) {
   const name = clean(formData.get("name"));
   const description = clean(formData.get("description"));
   const categoryType = clean(formData.get("category_type"));
@@ -110,7 +143,8 @@ function productValues(formData: FormData) {
   const stockQuantity = parseStockQuantity(stockQuantityValue);
   const isPublished = formData.get("is_published") === "on";
 
-  if (!name || name.length > 150 || !description || description.length > 1000 || !categoryType || categoryType.length > 100 || price === null || stockQuantity === null || imageUrl.length > 500 || !isValidHttpUrl(imageUrl)) {
+  const imageIsAllowed = !imageUrl || imageUrl === existingImageUrl || ownedProductImagePath(imageUrl, userId) !== null;
+  if (!name || name.length > 150 || !description || description.length > 1000 || !categoryType || categoryType.length > 100 || price === null || stockQuantity === null || imageUrl.length > 500 || !imageIsAllowed) {
     return null;
   }
 
@@ -118,9 +152,9 @@ function productValues(formData: FormData) {
 }
 
 export async function createProduct(formData: FormData) {
-  const values = productValues(formData);
-  if (!values) redirect(messageUrl("/lister/products/new", "error", "Complete the product fields with valid values."));
   const { supabase, user } = await requireRole("lister");
+  const values = productValues(formData, user.id);
+  if (!values) redirect(messageUrl("/lister/products/new", "error", "Complete the product fields with valid values."));
   const { error } = await supabase.from("products").insert({ ...values, lister_user_id: user.id });
   if (error) redirect(messageUrl("/lister/products/new", "error", "We couldn't create that product."));
   revalidatePath("/lister/products");
@@ -130,11 +164,24 @@ export async function createProduct(formData: FormData) {
 
 export async function updateProduct(formData: FormData) {
   const productId = clean(formData.get("product_id"));
-  const values = productValues(formData);
-  if (!productId || !values) redirect(messageUrl("/lister/products", "error", "Complete the product fields with valid values."));
   const { supabase, user } = await requireRole("lister");
+  if (!productId) redirect(messageUrl("/lister/products", "error", "Complete the product fields with valid values."));
+
+  const { data: existingProduct, error: lookupError } = await supabase
+    .from("products")
+    .select("image_url")
+    .eq("id", productId)
+    .eq("lister_user_id", user.id)
+    .maybeSingle();
+  if (lookupError || !existingProduct) redirect(messageUrl("/lister/products", "error", "We couldn't update that product."));
+
+  const values = productValues(formData, user.id, existingProduct.image_url);
+  if (!values) redirect(messageUrl("/lister/products", "error", "Complete the product fields with valid values."));
   const { error } = await supabase.from("products").update({ ...values, updated_at: new Date().toISOString() }).eq("id", productId).eq("lister_user_id", user.id);
   if (error) redirect(messageUrl("/lister/products", "error", "We couldn't update that product."));
+  if (existingProduct.image_url && existingProduct.image_url !== values.image_url) {
+    await removeOwnedProductImage(supabase, existingProduct.image_url, user.id);
+  }
   revalidatePath("/lister/products");
   revalidatePath(`/products/${productId}`);
   revalidatePath("/marketplace");

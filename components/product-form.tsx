@@ -1,7 +1,12 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useState } from "react";
+import { ProductImageUploader } from "@/components/product-image-uploader";
 
 type ProductFormProps = {
   action: (formData: FormData) => void | Promise<void>;
+  userId: string;
   product?: {
     id: string;
     name: string;
@@ -16,7 +21,9 @@ type ProductFormProps = {
   children?: ReactNode;
 };
 
-export function ProductForm({ action, product, error, children }: ProductFormProps) {
+export function ProductForm({ action, userId, product, error, children }: ProductFormProps) {
+  const [isUploading, setIsUploading] = useState(false);
+
   return (
     <div className="card">
       {error && <p className="notice notice-error">{error}</p>}
@@ -44,16 +51,17 @@ export function ProductForm({ action, product, error, children }: ProductFormPro
           <label htmlFor="stock_quantity">Stock quantity</label>
           <input id="stock_quantity" name="stock_quantity" type="number" min="0" step="1" defaultValue={product?.stock_quantity ?? 0} required />
         </div>
-        <div className="field">
-          <label htmlFor="image_url">Product image URL <span className="muted-small">(optional)</span></label>
-          <input id="image_url" name="image_url" type="url" defaultValue={product?.image_url ?? ""} maxLength={500} placeholder="https://" />
-        </div>
+        <ProductImageUploader
+          userId={userId}
+          initialImageUrl={product?.image_url ?? null}
+          onUploadingChange={setIsUploading}
+        />
         <label className="checkbox-field">
           <input name="is_published" type="checkbox" defaultChecked={product?.is_published ?? false} />
           <span>Publish this product in the marketplace</span>
         </label>
         <p className="muted-small form-help">Published listings are sent to HolyHub for a quick review before they appear in the marketplace.</p>
-        <button className="button button-primary" type="submit">{product ? "Save product" : "Create product"}</button>
+        <button className="button button-primary" type="submit" disabled={isUploading}>{isUploading ? "Uploading image..." : product ? "Save product" : "Create product"}</button>
       </form>
       {children}
     </div>

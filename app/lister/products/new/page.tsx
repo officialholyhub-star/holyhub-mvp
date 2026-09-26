@@ -10,7 +10,7 @@ export default async function NewProductPage({ searchParams }: { searchParams: P
   return (
     <section className="auth-wrap">
       {storefront ? (
-        <ProductForm action={createProduct} error={params.error}>
+        <ProductForm action={createProduct} userId={user.id} error={params.error}>
           <Link className="button button-quiet form-back" href="/lister/products">Back to products</Link>
         </ProductForm>
       ) : (

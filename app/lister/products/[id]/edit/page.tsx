@@ -14,7 +14,7 @@ export default async function EditProductPage({ params, searchParams }: { params
 
   return (
     <section className="auth-wrap">
-      <ProductForm action={updateProduct} product={product} error={query.error}>
+      <ProductForm action={updateProduct} userId={user.id} product={product} error={query.error}>
         <Link className="button button-quiet form-back" href="/lister/products">Back to products</Link>
         <Link className="button button-quiet form-back" href="/lister/storefront">Back to storefront</Link>
       </ProductForm>

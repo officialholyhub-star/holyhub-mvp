@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/require-user";
+import { isProductCategory } from "@/lib/product-categories";
 
 function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
@@ -188,7 +189,7 @@ function productValues(formData: FormData, userId: string, existingImageUrl: str
   const isPublished = formData.get("is_published") === "on";
 
   const imageIsAllowed = !imageUrl || imageUrl === existingImageUrl || ownedProductImagePath(imageUrl, userId) !== null;
-  if (!name || name.length > 150 || !description || description.length > 1000 || !categoryType || categoryType.length > 100 || price === null || stockQuantity === null || imageUrl.length > 500 || !imageIsAllowed) {
+  if (!name || name.length > 150 || !description || description.length > 1000 || !isProductCategory(categoryType) || price === null || stockQuantity === null || imageUrl.length > 500 || !imageIsAllowed) {
     return null;
   }
 

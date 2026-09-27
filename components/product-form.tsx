@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useRef, useState } from "react";
 import { ProductImageUploader } from "@/components/product-image-uploader";
+import { isProductCategory, PRODUCT_CATEGORIES } from "@/lib/product-categories";
 import styles from "./product-form.module.css";
 
 type ProductFormProps = {
@@ -30,6 +31,7 @@ export function ProductForm({ action, userId, product, error, children }: Produc
   const publishStockInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [publishStock, setPublishStock] = useState(String(product?.stock_quantity ?? 0));
+  const hasSupportedCategory = isProductCategory(product?.category_type ?? "");
 
   function openPublishConfirmation() {
     setPublishStock(stockInputRef.current?.value ?? "0");
@@ -70,7 +72,11 @@ export function ProductForm({ action, userId, product, error, children }: Produc
         <div className="field-row">
           <div className="field">
             <label htmlFor="category_type">Category</label>
-            <input id="category_type" name="category_type" type="text" defaultValue={product?.category_type ?? ""} maxLength={100} required />
+            <select id="category_type" name="category_type" defaultValue={hasSupportedCategory ? product?.category_type : ""} required>
+              <option value="" disabled>Choose a category</option>
+              {PRODUCT_CATEGORIES.map((category) => <option value={category} key={category}>{category}</option>)}
+            </select>
+            {product && !hasSupportedCategory && <p className="muted-small form-help">Current saved category: {product.category_type}. Choose a category from the list to continue.</p>}
           </div>
           <div className="field">
             <label htmlFor="price">Price (GBP)</label>

@@ -142,7 +142,7 @@ export function ProductImageUploader({ userId, initialImageUrl, onUploadingChang
           </div>
         )}
       </div>
-      <p className={styles.help}>JPG, PNG, WebP or AVIF. Maximum file size: 5 MB.</p>
+      <p className={styles.help}>Recommended: 1200 × 1500 px (4:5). Use a clear, well-lit product image. JPG, PNG, WebP or AVIF. Maximum file size: 5 MB.</p>
       {isUploading && <p className={styles.status} role="status">Uploading image...</p>}
       {error && <p className={styles.error} role="alert">{error}</p>}
       <input type="hidden" name="image_url" value={imageUrl} />

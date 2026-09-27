@@ -31,6 +31,7 @@ export function ProductForm({ action, userId, product, error, children }: Produc
   const publishStockInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [publishStock, setPublishStock] = useState(String(product?.stock_quantity ?? 0));
+  const [publishError, setPublishError] = useState("");
   const hasSupportedCategory = isProductCategory(product?.category_type ?? "");
 
   function openPublishConfirmation() {
@@ -47,11 +48,19 @@ export function ProductForm({ action, userId, product, error, children }: Produc
     const modalStockInput = publishStockInputRef.current;
     const stockInput = stockInputRef.current;
     const publishCheckbox = publishCheckboxRef.current;
+    const imageInput = formRef.current?.elements.namedItem("image_url") as HTMLInputElement | null;
 
     if (!modalStockInput?.reportValidity() || !stockInput || !publishCheckbox) return;
+    if (!imageInput?.value.trim()) {
+      setPublishError("Add at least one product image before submitting this product for review.");
+      publishCheckbox.checked = false;
+      publishDialogRef.current?.close();
+      return;
+    }
 
     stockInput.value = modalStockInput.value;
     publishCheckbox.checked = true;
+    setPublishError("");
     publishDialogRef.current?.close();
     formRef.current?.requestSubmit();
   }
@@ -102,12 +111,19 @@ export function ProductForm({ action, userId, product, error, children }: Produc
             onChange={(event) => {
               if (event.currentTarget.checked) {
                 event.currentTarget.checked = false;
+                const imageInput = formRef.current?.elements.namedItem("image_url") as HTMLInputElement | null;
+                if (!imageInput?.value.trim()) {
+                  setPublishError("Add at least one product image before submitting this product for review.");
+                  return;
+                }
+                setPublishError("");
                 openPublishConfirmation();
               }
             }}
           />
           <span>Publish this product in the marketplace</span>
         </label>
+        {publishError && <p className="notice notice-error" role="alert">{publishError}</p>}
         <p className="muted-small form-help">Published listings are sent to HolyHub for a quick review before they appear in the marketplace.</p>
         <button className="button button-primary" type="submit" disabled={isUploading}>{isUploading ? "Uploading image..." : product ? "Save product" : "Create product"}</button>
       </form>

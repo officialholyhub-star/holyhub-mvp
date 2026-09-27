@@ -198,6 +198,9 @@ function productValues(formData: FormData, userId: string, existingImageUrl: str
 
 export async function createProduct(formData: FormData) {
   const { supabase, user } = await requireRole("lister");
+  if (formData.get("is_published") === "on" && !clean(formData.get("image_url"))) {
+    redirect(messageUrl("/lister/products/new", "error", "Add at least one product image before submitting this product for review."));
+  }
   const values = productValues(formData, user.id);
   if (!values) redirect(messageUrl("/lister/products/new", "error", "Complete the product fields with valid values."));
   const { error } = await supabase.from("products").insert({ ...values, lister_user_id: user.id });
@@ -219,6 +222,10 @@ export async function updateProduct(formData: FormData) {
     .eq("lister_user_id", user.id)
     .maybeSingle();
   if (lookupError || !existingProduct) redirect(messageUrl("/lister/products", "error", "We couldn't update that product."));
+
+  if (formData.get("is_published") === "on" && !clean(formData.get("image_url"))) {
+    redirect(messageUrl(`/lister/products/${productId}/edit`, "error", "Add at least one product image before submitting this product for review."));
+  }
 
   const values = productValues(formData, user.id, existingProduct.image_url);
   if (!values) redirect(messageUrl("/lister/products", "error", "Complete the product fields with valid values."));

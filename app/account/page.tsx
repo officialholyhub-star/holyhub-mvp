@@ -1,6 +1,7 @@
 import { updateEmail, updateProfile } from "./actions";
 import { requireUser } from "@/lib/auth/require-user";
 import Image from "next/image";
+import { AccountListerBrand } from "@/components/account-lister-brand";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +17,16 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
   ]);
 
   const isLister = roles?.some(({ role }) => role === "lister") ?? false;
+  const { data: storefront } = isLister
+    ? await supabase.from("lister_storefronts").select("business_name, logo_url").eq("user_id", user.id).maybeSingle()
+    : { data: null };
 
   return (
     <section className="customer-space">
       <div className="customer-welcome">
         <div className="customer-welcome-copy">
           <p className="eyebrow">Your HolyHub space</p>
+          {storefront && <AccountListerBrand businessName={storefront.business_name} logoUrl={storefront.logo_url} />}
           <h1>Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.</h1>
           <p className="lead">A place to find good things, from people and brands you can believe in.</p>
           <div className="button-row">

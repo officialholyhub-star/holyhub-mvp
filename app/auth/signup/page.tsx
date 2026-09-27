@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signup } from "@/app/auth/actions";
+import { PasswordInput } from "@/components/password-input";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -22,11 +23,11 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput id="password" name="password" autoComplete="new-password" minLength={8} required />
           </div>
           <div className="field">
             <label htmlFor="confirm_password">Confirm password</label>
-            <input id="confirm_password" name="confirm_password" type="password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={8} required />
           </div>
           <label className="terms-consent">
             <input type="checkbox" name="accept_terms" required />

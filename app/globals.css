@@ -1786,6 +1786,46 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; transform: non
   }
 }
 
+/* Prompt D customer-facing polish. */
+.home-page a.button-large[href="/marketplace"] { min-height: 56px; padding-inline: 28px; box-shadow: 0 10px 24px rgba(111,148,176,.2); }
+.events-minimal { min-height: 620px; }
+.events-options { padding: clamp(42px, 7vw, 78px) 0 88px; }
+.events-options .section-heading-split { margin-bottom: 34px; }
+.events-options .preview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.events-options .preview-card { min-height: 210px; }
+.marketplace-categories { gap: 12px; padding: 8px 0 14px; }
+.marketplace-categories a { display: inline-flex; align-items: center; gap: 9px; min-height: 52px; padding: 12px 17px; border-radius: 14px; font-size: .92rem; }
+.marketplace-categories a svg { width: 22px; height: 22px; color: var(--holyhub-blue-strong); }
+.marketplace-categories a.active svg { color: var(--ink); }
+.basket-row { padding: 24px; border-radius: 18px; }
+.basket-row-main img, .basket-row-main .product-placeholder { width: 104px; flex-basis: 104px; border-radius: 14px; }
+.basket-row-main h2 { font-size: 1.28rem; }
+.basket-row-actions { gap: 16px; }
+.basket-row-actions strong { min-width: 74px; text-align: right; font-size: 1.05rem; }
+.basket-summary { padding: 26px; }
+.basket-summary h2 { margin-bottom: 20px; }
+.basket-summary .meta-row { min-height: 44px; padding: 9px 0; }
+.basket-summary .meta-row:last-of-type { margin-top: 8px; padding-top: 17px; border-top: 1px solid var(--line); font-size: 1.18rem; }
+.basket-summary .meta-row:last-of-type .meta-label { color: var(--ink); font-weight: 800; }
+.basket-summary .meta-row:last-of-type strong { font-size: 1.3rem; }
+
+@media (max-width: 900px) {
+  .events-options .preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .home-page a.button-large[href="/marketplace"] { width: 100%; padding-inline: 22px; }
+  .events-minimal { min-height: 0; }
+  .events-options { padding-bottom: 58px; }
+  .events-options .preview-grid { grid-template-columns: 1fr; gap: 12px; }
+  .events-options .preview-card { min-height: 0; }
+  .basket-row { padding: 18px; }
+  .basket-row-main img, .basket-row-main .product-placeholder { width: 88px; flex-basis: 88px; }
+  .basket-row-actions { justify-content: space-between; gap: 10px; }
+  .basket-row-actions strong { min-width: 0; }
+  .basket-summary { padding: 22px; }
+}
+
 @media (max-width: 560px) {
   body {
     background:

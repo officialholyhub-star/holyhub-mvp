@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddToBasketButton } from "@/components/add-to-basket-button";
+import { HolyHubIcon } from "@/components/holyhub-icon";
 import { FavouriteButton } from "@/components/favourite-button";
 import { demoProducts } from "@/lib/demo-products";
 import { getFavouriteIds } from "@/lib/favourites";
@@ -11,12 +12,12 @@ export const dynamic = "force-dynamic";
 type MarketplaceParams = { q?: string; category?: string; min?: string; max?: string; sort?: string };
 
 const featuredCategories = [
-  "Clothing & accessories",
-  "Jewellery",
-  "Books & stationery",
-  "Gifts",
-  "Home & living",
-  "Art & prints",
+  { label: "Clothing & accessories", value: "Apparel", demoValue: "Clothing & accessories", icon: "activity" as const },
+  { label: "Jewellery", value: "Jewellery", demoValue: "Jewellery", icon: "community" as const },
+  { label: "Books & stationery", value: "Books", demoValue: "Books & stationery", icon: "bible" as const },
+  { label: "Gifts", value: "Gifts", demoValue: "Gifts", icon: "festival" as const },
+  { label: "Home & living", value: "Home & Living", demoValue: "Home & living", icon: "home" as const },
+  { label: "Art & prints", value: "Art", demoValue: "Art & prints", icon: "opportunities" as const },
 ];
 
 function parseOptionalPrice(value?: string) {
@@ -44,12 +45,14 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const min = parseOptionalPrice(params.min);
   const max = parseOptionalPrice(params.max);
   const sort = params.sort ?? "newest";
+  const categoryShortcut = featuredCategories.find((item) => item.value === category);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
-  let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
+  let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, product_variants(id, size, stock_quantity), lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
   if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-  if (category) query = query.eq("category_type", category);
+  if (categoryShortcut) query = query.eq("category_type", categoryShortcut.value);
+  else if (category) query = query.eq("category_type", category);
   if (min !== null) query = query.gte("price", min);
   if (max !== null) query = query.lte("price", max);
   if (sort === "price-low") query = query.order("price", { ascending: true });
@@ -58,14 +61,14 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const { data: products, error } = await query;
   const { data: categories } = await supabase.from("products").select("category_type").eq("is_published", true).order("category_type");
   const uniqueCategories = [...new Set((categories ?? []).map(({ category_type }) => category_type))];
-  const categoryOptions = [...new Set([...featuredCategories, ...uniqueCategories])];
+  const categoryOptions = [...new Set([...featuredCategories.map((item) => item.value), ...uniqueCategories])];
 
   const filteredDemoProducts = !error
     ? demoProducts
         .filter((product) => {
           const matchesSearch = !search || [product.name, product.listerName, product.category_type]
             .some((value) => value.toLowerCase().includes(search.toLowerCase()));
-          const matchesCategory = !category || product.category_type === category;
+          const matchesCategory = !category || product.category_type === category || categoryShortcut?.demoValue === product.category_type;
           const matchesMin = min === null || product.price >= min;
           const matchesMax = max === null || product.price <= max;
           return matchesSearch && matchesCategory && matchesMin && matchesMax;
@@ -125,16 +128,16 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
       </form>
 
       <div className="marketplace-categories" aria-label="Browse categories">
-        <Link className={!category ? "active" : ""} href={marketplaceHref(params, "")}>All</Link>
+        <Link className={!category ? "active" : ""} href={marketplaceHref(params, "")}><HolyHubIcon name="marketplace" /><span>All</span></Link>
         {featuredCategories.map((item) => (
-          <Link className={category === item ? "active" : ""} href={marketplaceHref(params, item)} key={item}>{item}</Link>
+          <Link className={category === item.value ? "active" : ""} href={marketplaceHref(params, item.value)} key={item.value}><HolyHubIcon name={item.icon} /><span>{item.label}</span></Link>
         ))}
       </div>
 
       <div className="marketplace-results-heading">
         <div>
           <p className="eyebrow">Curated for you</p>
-          <h2>{search ? `Results for “${search}”` : category || "Shop Christian brands"}</h2>
+          <h2>{search ? `Results for “${search}”` : categoryShortcut?.label ?? (category || "Shop Christian brands")}</h2>
         </div>
         {!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "real product" : "real products"}</p>}
       </div>
@@ -167,7 +170,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                     <strong>£{Number(product.price).toFixed(2)}</strong>
                   </div>
                 </Link>
-                <div className="product-card-action"><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} /></div>
+                <div className="product-card-action"><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} /></div>
               </article>
             );
           })}

@@ -51,6 +51,7 @@ export function AddToBasketButton(product: AddToBasketButtonProps) {
       window.localStorage.setItem(BASKET_STORAGE_KEY, JSON.stringify(basket));
       window.dispatchEvent(new Event("holyhub-basket-updated"));
       setAdded(true);
+      window.setTimeout(() => setAdded(false), 1800);
     } catch {
       setAdded(false);
     }
@@ -73,7 +74,7 @@ export function AddToBasketButton(product: AddToBasketButtonProps) {
         <output>{quantity}</output>
         <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((current) => Math.min(maximum, current + 1))} disabled={quantity >= maximum}>+</button>
       </div>
-      <button className="button button-primary" type="button" onClick={addToBasket} disabled={isOutOfStock || (hasVariants && !selectedVariant)}>{isOutOfStock ? "Out of stock" : added ? "Added to basket" : "Add to basket"}</button>
+      <button className="button button-primary" type="button" onClick={addToBasket} disabled={isOutOfStock || (hasVariants && !selectedVariant)}>{isOutOfStock ? "Out of stock" : added ? "Added ✓" : "Add to basket"}</button>
     </div>
   );
 }

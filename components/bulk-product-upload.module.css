@@ -1,0 +1,6 @@
+.upload { margin: 28px 0; }
+.rows { list-style: none; padding: 0; display: grid; gap: 12px; }
+.rows li { padding: 14px; border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
+.rows p { margin: 6px 0; }
+.upload input[type="file"] { max-width: 100%; }
+@media (max-width: 640px) { .upload button { width: 100%; } }

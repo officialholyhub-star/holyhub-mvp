@@ -32,6 +32,11 @@ export default async function ListerDashboardPage() {
           <span><strong>Products</strong><small>Add and manage your listings</small></span>
           <span className="lister-action-arrow" aria-hidden="true">→</span>
         </Link>
+        <Link className="lister-action-card" href="/lister/products/bulk">
+          <span className="lister-action-index">CSV</span>
+          <span><strong>Bulk Upload Products</strong><small>Import listings from a spreadsheet</small></span>
+          <span className="lister-action-arrow" aria-hidden="true">→</span>
+        </Link>
         <Link className="lister-action-card" href="/lister/storefront">
           <span className="lister-action-index">03</span>
           <span><strong>Storefront</strong><small>Shape how your brand appears</small></span>

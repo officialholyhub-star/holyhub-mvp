@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/require-user";
+import { parsePrice, parseStockQuantity, isValidHttpUrl } from "@/lib/product-validation";
 import { isProductCategory } from "@/lib/product-categories";
 import { APPAREL_SIZES, hasAvailableApparelStock, hasValidApparelStock } from "@/lib/product-variants";
 
@@ -14,32 +15,10 @@ function messageUrl(path: string, kind: "error" | "message", message: string) {
   return `${path}?${kind}=${encodeURIComponent(message)}`;
 }
 
-function parsePrice(value: string) {
-  if (!/^\d{1,8}(\.\d{1,2})?$/.test(value)) return null;
-  const price = Number(value);
-  return Number.isFinite(price) && price >= 0 ? price : null;
-}
-
 function parseDeliveryCharge(value: string) {
   if (!/^\d{1,8}(\.\d{1,2})?$/.test(value)) return null;
   const charge = Number(value);
   return Number.isFinite(charge) && charge >= 0 ? charge : null;
-}
-
-function parseStockQuantity(value: string) {
-  if (!/^\d+$/.test(value)) return null;
-  const quantity = Number(value);
-  return Number.isInteger(quantity) && quantity >= 0 ? quantity : null;
-}
-
-function isValidHttpUrl(value: string) {
-  if (!value) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
 }
 
 const PRODUCT_IMAGE_BUCKET = "product-images";

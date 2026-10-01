@@ -12,6 +12,9 @@ create table public.product_review_snapshots (
 alter table public.product_review_snapshots enable row level security;
 revoke all on table public.product_review_snapshots from public, anon, authenticated;
 grant select on public.product_review_snapshots to authenticated;
+-- Server-only approval cleanup filters by product_id before deleting snapshots.
+grant select (product_id) on public.product_review_snapshots to service_role;
+grant delete on public.product_review_snapshots to service_role;
 
 create policy "product_review_snapshots_select_admin"
 on public.product_review_snapshots

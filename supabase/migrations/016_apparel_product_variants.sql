@@ -108,6 +108,30 @@ using (
   )
 );
 
+-- Checkout RLS hides customers' reservations from listers. Expose only an
+-- owner-scoped boolean, never customer rows, to protect size removal correctly.
+create function private.has_reserved_product_sizes(p_product_id uuid, p_sizes text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.checkout_session_items item
+    join public.product_variants variant on variant.id = item.variant_id
+    join public.products product on product.id = variant.product_id
+    where product.id = p_product_id
+      and product.lister_user_id = (select auth.uid())
+      and (select private.has_role('lister'))
+      and item.variant_reserved and not item.stock_decremented
+      and not (variant.size = any(p_sizes))
+  );
+$$;
+revoke all on function private.has_reserved_product_sizes(uuid, text[]) from public, anon;
+grant execute on function private.has_reserved_product_sizes(uuid, text[]) to authenticated;
+
 create or replace function public.save_product_variants(
   p_product_id uuid,
   p_sizes text[],
@@ -151,13 +175,7 @@ begin
     raise exception 'Size inventory is only available for apparel.';
   end if;
 
-  if exists (
-    select 1
-    from public.checkout_session_items item
-    join public.product_variants variant on variant.id = item.variant_id
-    where variant.product_id = p_product_id and item.variant_reserved
-      and not (variant.size = any(p_sizes))
-  ) then
+  if private.has_reserved_product_sizes(p_product_id, p_sizes) then
     raise exception 'A size with an active checkout cannot be removed.';
   end if;
 
@@ -199,7 +217,7 @@ begin
   end if;
 
   for item_row in
-    select item.id, item.product_id, item.variant_id, item.quantity, item.stock_decremented
+    select item.id, item.product_id, item.variant_id, item.quantity, item.variant_reserved, item.stock_decremented
     from public.checkout_session_items item
     join public.checkout_sessions checkout on checkout.id = item.checkout_session_id
     where item.checkout_session_id = p_checkout_session_id and checkout.status = 'paid'
@@ -210,16 +228,19 @@ begin
     end if;
 
     if item_row.variant_id is not null then
-      update public.product_variants variant
-      set stock_quantity = variant.stock_quantity - item_row.quantity,
-          updated_at = now()
-      where variant.id = item_row.variant_id
-        and variant.stock_quantity >= item_row.quantity;
-      if not found then
-        raise exception 'Insufficient variant stock.';
+      -- Reserved inventory was deducted at reservation time. Consume it once.
+      if not item_row.variant_reserved then
+        update public.product_variants variant
+        set stock_quantity = variant.stock_quantity - item_row.quantity,
+            updated_at = now()
+        where variant.id = item_row.variant_id
+          and variant.stock_quantity >= item_row.quantity;
+        if not found then
+          raise exception 'Insufficient variant stock.';
+        end if;
       end if;
       update public.checkout_session_items
-      set variant_reserved = true, stock_decremented = true
+      set variant_reserved = false, stock_decremented = true
       where id = item_row.id;
       update public.products product
       set stock_quantity = coalesce((
@@ -316,8 +337,11 @@ begin
   for reservation in
     select item.id, item.variant_id, item.quantity
     from public.checkout_session_items item
-    where item.checkout_session_id = p_checkout_session_id and item.variant_reserved
-    for update
+    join public.checkout_sessions session on session.id = item.checkout_session_id
+    where item.checkout_session_id = p_checkout_session_id
+      and session.status in ('cancelled', 'failed')
+      and item.variant_reserved and not item.stock_decremented
+    for update of item
   loop
     update public.product_variants variant
     set stock_quantity = variant.stock_quantity + reservation.quantity,
@@ -345,9 +369,12 @@ begin
   if (select auth.role()) <> 'service_role' then
     raise exception 'Service access is required.';
   end if;
-  update public.checkout_session_items
+  update public.checkout_session_items item
   set variant_reserved = false
-  where checkout_session_id = p_checkout_session_id and variant_reserved;
+  from public.checkout_sessions session
+  where item.checkout_session_id = p_checkout_session_id
+    and session.id = item.checkout_session_id and session.status = 'paid'
+    and item.variant_reserved and item.stock_decremented;
 end;
 $$;
 

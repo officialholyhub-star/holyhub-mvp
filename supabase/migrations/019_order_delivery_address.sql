@@ -43,3 +43,8 @@ using (
   or private.is_order_seller(id)
   or (select private.has_role('admin'))
 );
+
+-- Service-role bypass of RLS does not provide SQL privileges. Paid-order
+-- idempotency checks and fulfilment customer-name lookups need these reads.
+grant select on public.orders to service_role;
+grant select (id, full_name) on public.profiles to service_role;

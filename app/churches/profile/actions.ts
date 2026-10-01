@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { mapManualChurchLocation } from "@/lib/church-places";
+import { requireChurchProfilesEnabled } from "@/lib/church-profile-availability";
 import { requireUser } from "@/lib/auth/require-user";
 
 export type ChurchProfileFormState = { error: string };
@@ -18,6 +19,7 @@ function coordinate(value: string, minimum: number, maximum: number) {
 }
 
 export async function saveChurchProfile(_previousState: ChurchProfileFormState, formData: FormData): Promise<ChurchProfileFormState> {
+  requireChurchProfilesEnabled();
   const churchName = clean(formData.get("church_name"));
   const formattedAddress = clean(formData.get("formatted_address"));
   const postcode = clean(formData.get("postcode"));

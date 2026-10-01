@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { ChurchLocationForm } from "@/components/church-location-form";
 import { saveChurchProfile } from "@/app/churches/profile/actions";
+import { requireChurchProfilesEnabled } from "@/lib/church-profile-availability";
 import { requireUser } from "@/lib/auth/require-user";
 import { isPlacesConfigured } from "@/lib/church-places";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChurchProfilePage() {
+  requireChurchProfilesEnabled();
   const { supabase, user } = await requireUser();
   const { data: profile, error } = await supabase
     .from("church_profiles")

@@ -23,7 +23,7 @@ function row(values = {}) {
   return CSV_COLUMNS.map(column => product[column] ?? '');
 }
 const csv = rows => buildCsv(CSV_COLUMNS, rows);
-function fixture({ existing = [], failAt = -1, loseResponseAt = -1 } = {}) {
+function fixture({ existing = [], failAt = -1, loseResponseAt = -1, skuLookupError = false } = {}) {
   const products = new Map(existing.map(product => [product.id, product]));
   const calls = []; let failures = 0; let lostResponses = 0;
   const supabase = { from(table) {
@@ -32,7 +32,7 @@ function fixture({ existing = [], failAt = -1, loseResponseAt = -1 } = {}) {
       select() { return query; }, eq(key, value) { assert.equal(key, table === 'products' ? 'lister_user_id' : 'user_id'); owner = value; return query; },
       not() { return query; }, order() { return query; }, range(a, b) { begin = a; end = b; return query; },
       maybeSingle: async () => ({ data: owner === 'lister-a' ? { user_id: owner } : null, error: null }),
-      then(resolve, reject) { assert.equal(owner, 'lister-a'); return Promise.resolve({ data: [...products.values()].filter(product => product.lister_user_id === owner && product.sku).slice(begin, end + 1), error: null }).then(resolve, reject); },
+      then(resolve, reject) { assert.equal(owner, 'lister-a'); return Promise.resolve({ data: [...products.values()].filter(product => product.lister_user_id === owner && product.sku).slice(begin, end + 1), error: skuLookupError ? { code: '42501', message: 'internal schema detail' } : null }).then(resolve, reject); },
     }; return query;
   }, async rpc(name, args) {
     assert.equal(name, 'import_product_csv_row'); calls.push(args);
@@ -117,4 +117,12 @@ test('CSV handles quoted commas, newlines, escaped quotes and BOM; refuses ambig
   assert.throws(() => validateProductCsv('Wrong headings\nrow'), /template/);
   assert.throws(() => validateProductCsv(csv(Array.from({ length: 101 }, () => row()))), /100/);
   assert.throws(() => validateProductCsv('x'.repeat(256 * 1024 + 1)), /256 KB/);
+});
+
+test('SKU lookup failure gives normal lister wording and never imports rows', async () => {
+  const f = fixture({ skuLookupError: true });
+  const result = await f.run(csv([row()]), true);
+  assert.equal(result.error, "We couldn't check your existing product SKUs. Please try again.");
+  assert.equal(f.calls.length, 0);
+  assert.ok(!/migration|schema|database|42501/i.test(result.error));
 });

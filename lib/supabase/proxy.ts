@@ -27,7 +27,8 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const isSignedIn = Boolean(data?.claims?.sub);
-  const needsAuth = protectedPrefixes.some((prefix) =>
+  const isPublicStorefront = /^\/lister\/storefront\/[^/]+\/?$/.test(request.nextUrl.pathname);
+  const needsAuth = !isPublicStorefront && protectedPrefixes.some((prefix) =>
     request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`)
   );
 

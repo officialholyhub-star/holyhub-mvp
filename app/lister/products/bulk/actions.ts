@@ -25,7 +25,7 @@ export async function processProductCsv(_previous: BulkState, formData: FormData
   const existing = new Map<string, string>();
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabase.from("products").select("id, sku").eq("lister_user_id", user.id).not("sku", "is", null).order("id").range(offset, offset + 999);
-    if (error) return { error: "We couldn't check existing SKUs. Please try again once the bulk-upload migration is available." };
+    if (error) return { error: "We couldn't check your existing product SKUs. Please try again." };
     for (const product of data ?? []) existing.set(String(product.sku).trim().toUpperCase(), product.id);
     if (!data || data.length < 1000) break;
   }

@@ -22,18 +22,23 @@ export default async function ListerDashboardPage() {
         <Image src="/images/creator-studio.jpg" alt="A creator meeting a customer in a bright studio" width={1200} height={800} priority />
       </div>
       <div className="lister-actions">
-        <Link className="lister-action-card lister-action-primary" href="/lister/products">
+        <Link className="lister-action-card" href="/lister/orders">
           <span className="lister-action-index">01</span>
+          <span><strong>Orders</strong><small>Prepare and export fulfilment</small></span>
+          <span className="lister-action-arrow" aria-hidden="true">→</span>
+        </Link>
+        <Link className="lister-action-card lister-action-primary" href="/lister/products">
+          <span className="lister-action-index">02</span>
           <span><strong>Products</strong><small>Add and manage your listings</small></span>
           <span className="lister-action-arrow" aria-hidden="true">→</span>
         </Link>
         <Link className="lister-action-card" href="/lister/storefront">
-          <span className="lister-action-index">02</span>
+          <span className="lister-action-index">03</span>
           <span><strong>Storefront</strong><small>Shape how your brand appears</small></span>
           <span className="lister-action-arrow" aria-hidden="true">→</span>
         </Link>
         <Link className="lister-action-card" href="/account">
-          <span className="lister-action-index">03</span>
+          <span className="lister-action-index">04</span>
           <span><strong>Account</strong><small>Manage your personal details</small></span>
           <span className="lister-action-arrow" aria-hidden="true">→</span>
         </Link>

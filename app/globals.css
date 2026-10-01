@@ -2180,3 +2180,45 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; transform: non
     font-size: 7rem;
   }
 }
+
+.lister-orders-page,
+.customer-orders-page { max-width: 1120px; margin: 0 auto; }
+.lister-order-list,
+.customer-order-list { display: grid; gap: 16px; }
+.lister-order-card,
+.customer-order-card { padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.86); box-shadow: var(--shadow); }
+.lister-order-header,
+.customer-order-header,
+.customer-seller-order-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
+.lister-order-header h2,
+.customer-seller-order-heading h2 { margin: 0 0 5px; font-size: 1.25rem; }
+.lister-order-header p,
+.customer-order-header p { margin: 0; font-size: .86rem; }
+.lister-order-items { display: grid; gap: 8px; margin: 20px 0; padding: 15px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.lister-order-item { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); font-size: .92rem; }
+.fulfilment-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.fulfilment-form label { display: grid; gap: 6px; color: var(--muted); font-size: .8rem; font-weight: 700; }
+.fulfilment-form input,
+.fulfilment-form select,
+.fulfilment-form textarea { width: 100%; min-height: 44px; border: 1px solid #cad7df; border-radius: 10px; padding: 9px 11px; background: #fff; color: var(--ink); }
+.fulfilment-note-field { grid-column: 1 / -1; }
+.fulfilment-form .button { grid-column: 1 / -1; justify-self: start; }
+.customer-order-header { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.customer-order-header > strong { font-size: 1.15rem; }
+.customer-seller-order { padding-top: 18px; }
+.customer-order-items { display: grid; gap: 4px; margin-top: 12px; }
+.customer-order-items p { margin: 0; color: var(--ink); font-size: .9rem; }
+.customer-tracking { display: grid; gap: 4px; margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--holyhub-blue-soft); color: var(--ink); font-size: .86rem; }
+.customer-tracking a { color: var(--holyhub-blue-strong); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .lister-order-card,
+  .customer-order-card { padding: 18px; }
+  .lister-order-header,
+  .customer-order-header,
+  .customer-seller-order-heading { flex-direction: column; gap: 8px; }
+  .fulfilment-form { grid-template-columns: 1fr; }
+  .fulfilment-note-field,
+  .fulfilment-form .button { grid-column: auto; }
+  .fulfilment-form .button { width: 100%; }
+}

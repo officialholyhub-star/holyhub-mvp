@@ -82,6 +82,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
           <Link className="button button-quiet" href="/account/favourites">View favourites</Link>
         </div>
 
+        <div className="card customer-settings-card">
+          <h2>Orders</h2>
+          <p>Track purchases and fulfilment updates.</p>
+          <Link className="button button-quiet" href="/account/orders">View orders</Link>
+        </div>
+
         <div className="card lister-option-card">
           <h2>Lister access</h2>
           {isLister ? (

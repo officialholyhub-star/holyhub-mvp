@@ -13,5 +13,7 @@ export type BasketItem = {
   deliveryOption: "free" | "flat";
   deliveryCharge: number;
   stockQuantity?: number;
+  variantId?: string;
+  variantSize?: "XS" | "S" | "M" | "L" | "XL" | "XXL";
   quantity: number;
 };

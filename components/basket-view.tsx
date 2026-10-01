@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { startCheckout } from "@/app/checkout/actions";
 import { BASKET_STORAGE_KEY, MAX_BASKET_QUANTITY, type BasketItem } from "@/lib/basket";
+import { variantLineKey } from "@/lib/product-variants";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
 type BasketViewProps = { error?: string };
@@ -67,12 +68,19 @@ export function BasketView({ error }: BasketViewProps) {
     window.dispatchEvent(new Event("holyhub-basket-updated"));
   }
 
-  function changeQuantity(id: string, quantity: number) {
-    saveItems(items.map((item) => item.id === id ? { ...item, quantity: Math.max(1, Math.min(MAX_BASKET_QUANTITY, quantity)) } : item));
+  function lineKey(item: BasketItem) {
+    return variantLineKey(item.id, item.variantId);
   }
 
-  function remove(id: string) {
-    saveItems(items.filter((item) => item.id !== id));
+  function changeQuantity(item: BasketItem, quantity: number) {
+    const key = lineKey(item);
+    const maximum = typeof item.stockQuantity === "number" ? Math.min(MAX_BASKET_QUANTITY, item.stockQuantity) : MAX_BASKET_QUANTITY;
+    saveItems(items.map((entry) => lineKey(entry) === key ? { ...entry, quantity: Math.max(1, Math.min(maximum, quantity)) } : entry));
+  }
+
+  function remove(item: BasketItem) {
+    const key = lineKey(item);
+    saveItems(items.filter((entry) => lineKey(entry) !== key));
   }
 
   return (
@@ -97,15 +105,15 @@ export function BasketView({ error }: BasketViewProps) {
                   <strong>{group.deliveryOption === "flat" ? `Delivery £${group.deliveryCharge.toFixed(2)}` : "Delivery free"}</strong>
                 </div>
                 {group.items.map((item, itemIndex) => (
-                  <article className="basket-row" key={item.id || `${group.listerId || "lister"}-item-${itemIndex}`}>
+                  <article className="basket-row" key={lineKey(item) || `${group.listerId || "lister"}-item-${itemIndex}`}>
                     <div className="basket-row-main">
                       {item.imageUrl ? <Image src={item.imageUrl} alt="" width={300} height={300} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
-                      <div><p className="eyebrow">{item.listerName}</p><h2>{item.name}</h2><p>£{item.price.toFixed(2)} each</p></div>
+                      <div><p className="eyebrow">{item.listerName}</p><h2>{item.name}</h2>{item.variantSize && <p>Size: {item.variantSize}</p>}<p>£{item.price.toFixed(2)} each</p></div>
                     </div>
                     <div className="basket-row-actions">
-                      <label className="quantity-control">Qty <input type="number" min="1" max={MAX_BASKET_QUANTITY} value={item.quantity} onChange={(event) => changeQuantity(item.id, Number(event.target.value))} /></label>
+                      <label className="quantity-control">Qty <input type="number" min="1" max={typeof item.stockQuantity === "number" ? Math.min(MAX_BASKET_QUANTITY, item.stockQuantity) : MAX_BASKET_QUANTITY} value={item.quantity} onChange={(event) => changeQuantity(item, Number(event.target.value))} /></label>
                       <strong>£{(item.price * item.quantity).toFixed(2)}</strong>
-                      <button className="button button-quiet" type="button" onClick={() => remove(item.id)}>Remove</button>
+                      <button className="button button-quiet" type="button" onClick={() => remove(item)}>Remove</button>
                     </div>
                   </article>
                 ))}

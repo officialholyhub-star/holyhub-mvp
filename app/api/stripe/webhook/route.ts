@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { calculateHolyHubCommission } from "@/lib/checkout-pricing";
 import Stripe from "stripe";
 
 function toSafeInteger(value: unknown, fallback: number) {
@@ -74,6 +75,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payment amount did not match the checkout record." }, { status: 500 });
     }
 
+    const { error: inventoryError } = await admin.rpc("process_paid_checkout_stock", {
+      p_checkout_session_id: checkoutSessionRecord.data.id,
+    });
+    if (inventoryError) {
+      console.error("Paid checkout stock update failed", inventoryError);
+      return NextResponse.json({ error: "Could not confirm current stock for this order." }, { status: 500 });
+    }
+
     const { data: existingOrder, error: orderLookupError } = await admin
       .from("orders")
       .select("id")
@@ -112,7 +121,7 @@ export async function POST(request: Request) {
 
       const { data: sessionItems, error: sessionItemsError } = await admin
         .from("checkout_session_items")
-        .select("product_id, lister_user_id, product_name, unit_amount, quantity, line_total")
+        .select("product_id, lister_user_id, product_name, unit_amount, quantity, line_total, variant_id, variant_size")
         .eq("checkout_session_id", checkoutSessionRecord.data.id);
 
       if (sessionItemsError) {
@@ -128,6 +137,8 @@ export async function POST(request: Request) {
         unit_amount: item.unit_amount,
         quantity: item.quantity,
         line_total: item.line_total,
+        variant_id: item.variant_id,
+        variant_size: item.variant_size,
       })));
 
       if (itemInsertError) {
@@ -176,13 +187,13 @@ export async function POST(request: Request) {
         const sellerDelivery = sellerDeliveryById.get(sellerId)?.delivery_total ?? 0;
         seller.deliveryTotal = toSafeInteger(sellerDelivery, 0);
         seller.totalAmount = seller.productSubtotal + seller.deliveryTotal;
-        seller.sellerAmount = seller.productSubtotal - Math.round(seller.productSubtotal * 0.05);
+        seller.sellerAmount = seller.productSubtotal - (calculateHolyHubCommission(seller.productSubtotal) ?? 0);
       }
 
       for (const seller of Array.from(groupedSellerRows.values())) {
         const sellerDeliveryTotal = seller.deliveryTotal;
         const sellerTotal = seller.productSubtotal + sellerDeliveryTotal;
-        const sellerCommission = Math.round(seller.productSubtotal * 0.05);
+        const sellerCommission = calculateHolyHubCommission(seller.productSubtotal) ?? 0;
         const sellerNet = seller.productSubtotal - sellerCommission;
         const { error: sellerOrderInsertError } = await admin.from("seller_orders").insert({
           order_id: orderRecord.id,

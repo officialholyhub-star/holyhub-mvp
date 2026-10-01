@@ -14,7 +14,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, lister_storefronts(user_id, business_name, description, category_type, logo_url, website_url, instagram_url, website_or_social, delivery_option, delivery_charge, delivery_country)").eq("id", id).eq("is_published", true).maybeSingle();
+  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, lister_user_id, product_variants(id, size, stock_quantity), lister_storefronts(user_id, business_name, description, category_type, logo_url, website_url, instagram_url, website_or_social, delivery_option, delivery_charge, delivery_country)").eq("id", id).eq("is_published", true).maybeSingle();
   if (!product) notFound();
   const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
@@ -37,12 +37,13 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
           <p className={styles.category}>{product.category_type}</p>
           <p className={styles.description}>{product.description}</p>
+          {product.size_guide_url && <p><a className="text-link" href={product.size_guide_url} target="_blank" rel="noopener noreferrer">View size guide</a></p>}
           <div className={styles.productFacts} aria-label="Product information">
             <p><span>Availability</span><strong>{product.stock_quantity > 0 ? `${product.stock_quantity} in stock` : "Out of stock"}</strong></p>
             <p><span>Delivery</span><strong>{storefront?.delivery_option === "flat" ? `£${Number(storefront.delivery_charge ?? 0).toFixed(2)}` : "Free"}</strong></p>
           </div>
           <div className={styles.purchaseAction}>
-            <AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} />
+            <AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} />
           </div>
           <p className={styles.secureNote}>Secure checkout</p>
           <p className={styles.returnsNote}>See our <Link className="text-link" href="/returns">returns policy</Link> for refund information.</p>

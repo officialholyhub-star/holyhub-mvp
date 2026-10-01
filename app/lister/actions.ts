@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/require-user";
 import { isProductCategory } from "@/lib/product-categories";
+import { APPAREL_SIZES, hasAvailableApparelStock, hasValidApparelStock } from "@/lib/product-variants";
 
 function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
@@ -177,6 +178,16 @@ export async function saveStorefront(_previousState: StorefrontFormState, formDa
   redirect("/account?message=Storefront%20saved.");
 }
 
+function variantValues(formData: FormData, categoryType: string, isPublished: boolean) {
+  if (categoryType !== "Apparel") return { sizes: [], stockQuantities: [] };
+  const stockQuantities = APPAREL_SIZES.map((size) => parseStockQuantity(clean(formData.get(`variant_${size}`))));
+  return stockQuantities.some((quantity) => quantity === null)
+    || !hasValidApparelStock(stockQuantities as number[])
+    || (isPublished && !hasAvailableApparelStock(stockQuantities as number[]))
+    ? null
+    : { sizes: [...APPAREL_SIZES], stockQuantities: stockQuantities as number[] };
+}
+
 function productValues(formData: FormData, userId: string, existingImageUrl: string | null = null) {
   const name = clean(formData.get("name"));
   const description = clean(formData.get("description"));
@@ -186,14 +197,26 @@ function productValues(formData: FormData, userId: string, existingImageUrl: str
   const stockQuantityValue = clean(formData.get("stock_quantity"));
   const price = parsePrice(priceValue);
   const stockQuantity = parseStockQuantity(stockQuantityValue);
+  const sizeGuideUrl = clean(formData.get("size_guide_url"));
   const isPublished = formData.get("is_published") === "on";
 
   const imageIsAllowed = !imageUrl || imageUrl === existingImageUrl || ownedProductImagePath(imageUrl, userId) !== null;
-  if (!name || name.length > 150 || !description || description.length > 1000 || !isProductCategory(categoryType) || price === null || stockQuantity === null || imageUrl.length > 500 || !imageIsAllowed) {
+  if (!name || name.length > 150 || !description || description.length > 1000 || !isProductCategory(categoryType) || price === null || stockQuantity === null || imageUrl.length > 500 || sizeGuideUrl.length > 500 || !isValidHttpUrl(sizeGuideUrl) || !imageIsAllowed) {
     return null;
   }
 
-  return { name, description, category_type: categoryType, price, currency: "GBP", image_url: imageUrl || null, stock_quantity: stockQuantity, is_published: isPublished };
+  return { name, description, category_type: categoryType, price, currency: "GBP", image_url: imageUrl || null, size_guide_url: sizeGuideUrl || null, stock_quantity: stockQuantity, is_published: isPublished };
+}
+
+async function saveProductVariants(supabase: Awaited<ReturnType<typeof requireRole>>["supabase"], productId: string, categoryType: string, isPublished: boolean, formData: FormData) {
+  const values = variantValues(formData, categoryType, isPublished);
+  if (!values) return false;
+  const { error } = await supabase.rpc("save_product_variants", {
+    p_product_id: productId,
+    p_sizes: values.sizes,
+    p_stock_quantities: values.stockQuantities,
+  });
+  return !error;
 }
 
 export async function createProduct(formData: FormData) {
@@ -203,8 +226,11 @@ export async function createProduct(formData: FormData) {
   }
   const values = productValues(formData, user.id);
   if (!values) redirect(messageUrl("/lister/products/new", "error", "Complete the product fields with valid values."));
-  const { error } = await supabase.from("products").insert({ ...values, lister_user_id: user.id });
-  if (error) redirect(messageUrl("/lister/products/new", "error", "We couldn't create that product."));
+  const { data: product, error } = await supabase.from("products").insert({ ...values, lister_user_id: user.id }).select("id").single();
+  if (error || !product || !(await saveProductVariants(supabase, product.id, values.category_type, values.is_published, formData))) {
+    if (product) await supabase.from("products").delete().eq("id", product.id).eq("lister_user_id", user.id);
+    redirect(messageUrl("/lister/products/new", "error", "Add valid stock for every apparel size before creating the listing."));
+  }
   revalidatePath("/lister/products");
   revalidatePath("/marketplace");
   redirect("/lister/products?message=Product%20created.");
@@ -231,6 +257,9 @@ export async function updateProduct(formData: FormData) {
   if (!values) redirect(messageUrl("/lister/products", "error", "Complete the product fields with valid values."));
   const { error } = await supabase.from("products").update({ ...values, updated_at: new Date().toISOString() }).eq("id", productId).eq("lister_user_id", user.id);
   if (error) redirect(messageUrl("/lister/products", "error", "We couldn't update that product."));
+  if (!(await saveProductVariants(supabase, productId, values.category_type, values.is_published, formData))) {
+    redirect(messageUrl(`/lister/products/${productId}/edit`, "error", "Add valid stock for every apparel size before saving the product."));
+  }
   if (existingProduct.image_url && existingProduct.image_url !== values.image_url) {
     await removeOwnedProductImage(supabase, existingProduct.image_url, user.id);
   }

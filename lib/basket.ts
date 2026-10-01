@@ -12,5 +12,6 @@ export type BasketItem = {
   listerName: string;
   deliveryOption: "free" | "flat";
   deliveryCharge: number;
+  stockQuantity?: number;
   quantity: number;
 };

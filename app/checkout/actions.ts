@@ -7,26 +7,15 @@ import { requireUser } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSiteUrl, getStripe } from "@/lib/stripe";
 import { MAX_BASKET_ITEMS, MAX_BASKET_QUANTITY } from "@/lib/basket";
+import { calculateCheckoutTotals, calculateHolyHubCommission, toPence } from "@/lib/checkout-pricing";
 
 type SubmittedItem = {
   id: unknown;
   quantity: unknown;
-  listerId?: unknown;
-  listerName?: unknown;
-  deliveryOption?: unknown;
-  deliveryCharge?: unknown;
 };
 
 function checkoutError(message: string): never {
   redirect(`/basket?error=${encodeURIComponent(message)}`);
-}
-
-function toPence(value: string | number) {
-  const normalized = String(value);
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
-  const [pounds, pennies = ""] = normalized.split(".");
-  const amount = Number(pounds) * 100 + Number(pennies.padEnd(2, "0"));
-  return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
 }
 
 function parseBasket(value: string) {
@@ -39,22 +28,14 @@ function parseBasket(value: string) {
   if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > MAX_BASKET_ITEMS) return null;
   const items = parsed.map((item: SubmittedItem) => {
     const id = typeof item?.id === "string" ? item.id : "";
-    const listerId = typeof item?.listerId === "string" ? item.listerId : "";
-    const listerName = typeof item?.listerName === "string" ? item.listerName.trim() : "";
-    const deliveryOption = item?.deliveryOption === "flat" ? "flat" : "free";
-    const deliveryCharge = Number(item?.deliveryCharge ?? 0);
     const quantity = Number(item?.quantity);
     const isValidItem = /^[0-9a-f-]{36}$/i.test(id)
-      && /^[0-9a-f-]{36}$/i.test(listerId)
-      && listerName.length > 0
       && Number.isInteger(quantity)
       && quantity >= 1
-      && quantity <= MAX_BASKET_QUANTITY
-      && Number.isFinite(deliveryCharge)
-      && deliveryCharge >= 0;
-    return isValidItem ? { id, quantity, listerId, listerName, deliveryOption, deliveryCharge } : null;
+      && quantity <= MAX_BASKET_QUANTITY;
+    return isValidItem ? { id, quantity } : null;
   });
-  return items.every(Boolean) ? items as { id: string; quantity: number; listerId: string; listerName: string; deliveryOption: "free" | "flat"; deliveryCharge: number }[] : null;
+  return items.every(Boolean) ? items as { id: string; quantity: number }[] : null;
 }
 
 export async function startCheckout(formData: FormData) {
@@ -63,51 +44,56 @@ export async function startCheckout(formData: FormData) {
   if (!basket) checkoutError("Your basket is invalid. Please review it and try again.");
 
   const { supabase, user } = await requireUser();
-  const productIds = [...new Set(basket.map(({ id }) => id))];
-  const listerIds = [...new Set(basket.map(({ listerId }) => listerId))];
-  const [{ data: products, error: productError }, { data: listerStorefronts, error: storefrontError }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, price, currency, lister_user_id, is_published, stock_quantity")
-      .in("id", productIds)
-      .eq("is_published", true),
-    supabase
-      .from("lister_storefronts")
-      .select("user_id, business_name, delivery_option, delivery_charge, delivery_country")
-      .in("user_id", listerIds),
-  ]);
+  const requestedQuantities = new Map<string, number>();
+  for (const item of basket) {
+    const quantity = (requestedQuantities.get(item.id) ?? 0) + item.quantity;
+    if (!Number.isSafeInteger(quantity) || quantity > MAX_BASKET_QUANTITY) checkoutError("Your basket quantity is invalid. Please review it and try again.");
+    requestedQuantities.set(item.id, quantity);
+  }
+  const normalizedBasket = Array.from(requestedQuantities, ([id, quantity]) => ({ id, quantity }));
+  const productIds = normalizedBasket.map(({ id }) => id);
+  const { data: products, error: productError } = await supabase
+    .from("products")
+    .select("id, name, price, currency, lister_user_id, is_published, review_status, stock_quantity")
+    .in("id", productIds)
+    .eq("is_published", true)
+    .eq("review_status", "approved");
 
-  if (productError || storefrontError || !products || products.length !== productIds.length || !listerStorefronts || listerStorefronts.length !== listerIds.length) {
+  if (productError || !products || products.length !== productIds.length) {
     checkoutError("One or more products or seller settings are no longer available. Please review your basket.");
   }
 
   const productMap = new Map(products.map((product) => [product.id, product]));
+  const listerIds = [...new Set(products.map(({ lister_user_id }) => lister_user_id))];
+  const { data: listerStorefronts, error: storefrontError } = await supabase
+    .from("lister_storefronts")
+    .select("user_id, business_name, delivery_option, delivery_charge, delivery_country")
+    .in("user_id", listerIds);
+  if (storefrontError || !listerStorefronts || listerStorefronts.length !== listerIds.length) checkoutError("One or more products or seller settings are no longer available. Please review your basket.");
   const storefrontMap = new Map(listerStorefronts.map((storefront) => [storefront.user_id, storefront]));
-  const lines = basket.map(({ id, quantity, listerId, deliveryOption, deliveryCharge }) => {
+  const lines = normalizedBasket.map(({ id, quantity }) => {
     const product = productMap.get(id);
+    const listerId = product?.lister_user_id ?? "";
     const storefront = storefrontMap.get(listerId);
     const unitAmount = product ? toPence(product.price) : null;
     if (!product || product.currency !== "GBP" || unitAmount === null) return null;
-    if (product.stock_quantity < quantity) return null;
+    if (product.review_status !== "approved" || !product.is_published || product.stock_quantity < quantity) return null;
     if ((storefront?.delivery_country ?? "GB") !== "GB") return null;
-    if (deliveryOption === "flat" && Number(storefront?.delivery_charge ?? deliveryCharge) !== Number(deliveryCharge)) return null;
-    if (deliveryOption === "free" && Number(storefront?.delivery_charge ?? 0) !== 0) return null;
-    return { product, quantity, unitAmount, lineTotal: unitAmount * quantity, listerId, deliveryOption, deliveryCharge: Number(storefront?.delivery_charge ?? deliveryCharge) };
+    const lineTotal = unitAmount * quantity;
+    const deliveryOption = storefront?.delivery_option === "flat" ? "flat" : "free";
+    const deliveryAmount = deliveryOption === "flat" ? toPence(storefront?.delivery_charge ?? 0) : 0;
+    if (!Number.isSafeInteger(lineTotal) || deliveryAmount === null) return null;
+    return { product, quantity, unitAmount, lineTotal, listerId, deliveryAmount };
   });
   if (lines.some((line) => !line)) checkoutError("One or more products are unavailable, out of stock, or have changed. Please review your basket.");
 
-  const trustedLines = lines as { product: (typeof products)[number]; quantity: number; unitAmount: number; lineTotal: number; listerId: string; deliveryOption: "free" | "flat"; deliveryCharge: number }[];
-  const productSubtotal = trustedLines.reduce((total, line) => total + line.lineTotal, 0);
-  const deliveryGroups = new Map<string, number>();
-  for (const line of trustedLines) {
-    const charge = line.deliveryOption === "flat" ? line.deliveryCharge : 0;
-    deliveryGroups.set(line.listerId, (deliveryGroups.get(line.listerId) ?? 0) + charge);
-  }
-  const deliveryTotal = Array.from(deliveryGroups.values()).reduce((sum, amount) => sum + amount, 0);
-  const total = productSubtotal + deliveryTotal;
-  if (!Number.isSafeInteger(productSubtotal) || !Number.isSafeInteger(deliveryTotal) || !Number.isSafeInteger(total)) checkoutError("Your basket total is too large to process.");
+  const trustedLines = lines as { product: (typeof products)[number]; quantity: number; unitAmount: number; lineTotal: number; listerId: string; deliveryAmount: number }[];
+  const totals = calculateCheckoutTotals(trustedLines);
+  if (!totals) checkoutError("Your basket total is too large to process.");
+  const { productSubtotal, deliveryGroups, deliveryTotal, total } = totals;
 
-  const holyhubCommission = Math.round(productSubtotal * 0.05);
+  const holyhubCommission = calculateHolyHubCommission(productSubtotal);
+  if (holyhubCommission === null) checkoutError("Your basket total is too large to process.");
   const sellerAmount = productSubtotal - holyhubCommission;
 
   const stripe = getStripe();
@@ -179,6 +165,18 @@ export async function startCheckout(formData: FormData) {
 
   if (checkoutErrorResult || !checkoutRecord) {
     console.error("Checkout session database insert failed", checkoutErrorResult);
+    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
+    checkoutError("We couldn't prepare your checkout. Please try again.");
+  }
+
+  const { error: sellerSnapshotError } = await admin.from("checkout_session_sellers").insert(Array.from(deliveryGroups.entries()).map(([listerId, deliveryAmount]) => ({
+    checkout_session_id: checkoutRecord.id,
+    lister_user_id: listerId,
+    seller_business_name: storefrontMap.get(listerId)?.business_name ?? "HolyHub seller",
+    delivery_total: deliveryAmount,
+  })));
+  if (sellerSnapshotError) {
+    console.error("Checkout seller snapshot insert failed", sellerSnapshotError);
     try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
     checkoutError("We couldn't prepare your checkout. Please try again.");
   }

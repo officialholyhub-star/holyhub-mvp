@@ -60,7 +60,7 @@ export function BasketView({ error }: BasketViewProps) {
     [groupedItems],
   );
   const total = subtotal + deliveryTotal;
-  const basketPayload = JSON.stringify(items.map(({ id, quantity }) => ({ id, quantity })));
+  const basketPayload = JSON.stringify(items);
 
   function saveItems(nextItems: BasketItem[]) {
     window.localStorage.setItem(BASKET_STORAGE_KEY, JSON.stringify(nextItems));
@@ -87,8 +87,8 @@ export function BasketView({ error }: BasketViewProps) {
       ) : (
         <div className="basket-layout">
           <div className="basket-items">
-            {groupedItems.map((group) => (
-              <div className="basket-lister-group" key={group.listerId}>
+            {groupedItems.map((group, groupIndex) => (
+              <div className="basket-lister-group" key={group.listerId || `lister-group-${groupIndex}`}>
                 <div className="basket-lister-header">
                   <div>
                     <p className="eyebrow">Fulfilled by</p>
@@ -96,8 +96,8 @@ export function BasketView({ error }: BasketViewProps) {
                   </div>
                   <strong>{group.deliveryOption === "flat" ? `Delivery £${group.deliveryCharge.toFixed(2)}` : "Delivery free"}</strong>
                 </div>
-                {group.items.map((item) => (
-                  <article className="basket-row" key={item.id}>
+                {group.items.map((item, itemIndex) => (
+                  <article className="basket-row" key={item.id || `${group.listerId || "lister"}-item-${itemIndex}`}>
                     <div className="basket-row-main">
                       {item.imageUrl ? <Image src={item.imageUrl} alt="" width={300} height={300} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
                       <div><p className="eyebrow">{item.listerName}</p><h2>{item.name}</h2><p>£{item.price.toFixed(2)} each</p></div>

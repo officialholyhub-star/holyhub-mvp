@@ -3,9 +3,9 @@ import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Stripe from "stripe";
 
-function toInteger(value: unknown, fallback: number) {
+function toSafeInteger(value: unknown, fallback: number) {
   const amount = typeof value === "string" ? Number(value) : typeof value === "number" ? value : Number.NaN;
-  return Number.isFinite(amount) ? Math.round(amount) : fallback;
+  return Number.isSafeInteger(amount) ? amount : fallback;
 }
 
 export async function POST(request: Request) {
@@ -60,11 +60,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true });
     }
 
-    const productSubtotal = toInteger(session.metadata?.holyhub_product_subtotal, checkoutSessionRecord.data.product_subtotal ?? 0);
-    const deliveryTotal = toInteger(session.metadata?.holyhub_delivery_total, checkoutSessionRecord.data.delivery_total ?? 0);
-    const totalAmount = toInteger(session.amount_total, checkoutSessionRecord.data.amount_total ?? 0);
-    const holyhubCommission = toInteger(session.metadata?.holyhub_commission, checkoutSessionRecord.data.holyhub_commission ?? 0);
-    const sellerAmountTotal = toInteger(session.metadata?.holyhub_seller_amount, checkoutSessionRecord.data.seller_amount_total ?? 0);
+    const productSubtotal = toSafeInteger(checkoutSessionRecord.data.product_subtotal, -1);
+    const deliveryTotal = toSafeInteger(checkoutSessionRecord.data.delivery_total, -1);
+    const expectedTotal = toSafeInteger(checkoutSessionRecord.data.amount_total, -1);
+    const totalAmount = toSafeInteger(session.amount_total, -1);
+    const holyhubCommission = toSafeInteger(checkoutSessionRecord.data.holyhub_commission, -1);
+    const sellerAmountTotal = toSafeInteger(checkoutSessionRecord.data.seller_amount_total, -1);
+    if ([productSubtotal, deliveryTotal, expectedTotal, totalAmount, holyhubCommission, sellerAmountTotal].some((amount) => amount < 0)
+      || totalAmount !== expectedTotal
+      || productSubtotal + deliveryTotal !== expectedTotal
+      || holyhubCommission + sellerAmountTotal !== productSubtotal) {
+      console.error("Stripe payment amount does not match the checkout snapshot.", { sessionId: session.id, totalAmount, expectedTotal });
+      return NextResponse.json({ error: "Payment amount did not match the checkout record." }, { status: 500 });
+    }
 
     const { data: existingOrder, error: orderLookupError } = await admin
       .from("orders")
@@ -137,11 +145,20 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Could not group seller orders." }, { status: 500 });
       }
 
+      const { data: sellerDeliveryRows, error: sellerDeliveryError } = await admin
+        .from("checkout_session_sellers")
+        .select("lister_user_id, seller_business_name, delivery_total")
+        .eq("checkout_session_id", checkoutSessionRecord.data.id);
+      if (sellerDeliveryError) {
+        console.error("Seller delivery snapshot load failed", sellerDeliveryError);
+        return NextResponse.json({ error: "Could not load seller delivery snapshots." }, { status: 500 });
+      }
+      const sellerDeliveryById = new Map((sellerDeliveryRows ?? []).map((row) => [row.lister_user_id, row]));
+
       const groupedSellerRows = new Map<string, { sellerUserId: string; productSubtotal: number; deliveryTotal: number; totalAmount: number; sellerAmount: number; businessName: string }>();
       for (const row of sellerRows ?? []) {
-        const businessName = await admin.from("lister_storefronts").select("business_name").eq("user_id", row.lister_user_id).maybeSingle();
         const sellerKey = row.lister_user_id;
-        const business = businessName.data?.business_name ?? "HolyHub seller";
+        const business = sellerDeliveryById.get(sellerKey)?.seller_business_name ?? "HolyHub seller";
         const existing = groupedSellerRows.get(sellerKey) ?? {
           sellerUserId: sellerKey,
           productSubtotal: 0,
@@ -155,16 +172,11 @@ export async function POST(request: Request) {
         groupedSellerRows.set(sellerKey, existing);
       }
 
-      const deliveryBySeller = new Map<string, number>();
-      if (deliveryTotal > 0) {
-        for (const [sellerId, value] of Array.from(deliveryBySeller.entries())) {
-          const current = groupedSellerRows.get(sellerId);
-          if (current) {
-            current.deliveryTotal = value;
-            current.totalAmount = current.productSubtotal + value;
-            current.sellerAmount = current.productSubtotal - Math.round(current.productSubtotal * 0.05);
-          }
-        }
+      for (const [sellerId, seller] of groupedSellerRows) {
+        const sellerDelivery = sellerDeliveryById.get(sellerId)?.delivery_total ?? 0;
+        seller.deliveryTotal = toSafeInteger(sellerDelivery, 0);
+        seller.totalAmount = seller.productSubtotal + seller.deliveryTotal;
+        seller.sellerAmount = seller.productSubtotal - Math.round(seller.productSubtotal * 0.05);
       }
 
       for (const seller of Array.from(groupedSellerRows.values())) {

@@ -20,6 +20,7 @@ type ProductFormProps = {
     stock_quantity: number | string;
     is_published: boolean;
     size_guide_url?: string | null;
+    product_images?: { image_url: string; sort_order: number }[];
     variants?: { size: (typeof APPAREL_SIZES)[number]; stock_quantity: number | string }[];
   };
   error?: string;
@@ -126,6 +127,7 @@ export function ProductForm({ action, userId, product, error, children }: Produc
         <ProductImageUploader
           userId={userId}
           initialImageUrl={product?.image_url ?? null}
+          initialImages={product?.product_images}
           onUploadingChange={setIsUploading}
         />
         <label className="checkbox-field">

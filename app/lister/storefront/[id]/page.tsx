@@ -1,3 +1,5 @@
+import { isValidHttpUrl } from "@/lib/product-validation";
+import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,16 +19,18 @@ export default async function PublicListerStorefrontPage({ params }: { params: P
 
   if (!storefront) notFound();
 
-  const { data: products } = await supabase
+  const { data: rawProducts } = await supabase
     .from("products")
-    .select("id, name, price, image_url, category_type")
+    .select("id, name, price, image_url, category_type, product_images(image_url, sort_order)")
     .eq("lister_user_id", id)
     .eq("is_published", true)
     .eq("review_status", "approved")
     .order("created_at", { ascending: false });
 
-  const websiteUrl = storefront.website_url ?? (!storefront.instagram_url ? storefront.website_or_social : null);
-  const instagramUrl = storefront.instagram_url ?? null;
+  const products = rawProducts?.map(withProductCover);
+  const websiteCandidate = storefront.website_url ?? (!storefront.instagram_url ? storefront.website_or_social : null);
+  const websiteUrl = websiteCandidate && isValidHttpUrl(websiteCandidate) ? websiteCandidate : null;
+  const instagramUrl = storefront.instagram_url && isValidHttpUrl(storefront.instagram_url) ? storefront.instagram_url : null;
 
   return (
     <section className={`page-shell ${styles.page}`}>
@@ -41,10 +45,7 @@ export default async function PublicListerStorefrontPage({ params }: { params: P
           <p className="eyebrow">{storefront.category_type}</p>
           <h1>{storefront.business_name}</h1>
           <p>{storefront.description}</p>
-          <nav className={styles.brandLinks} aria-label="Brand links">
-            {websiteUrl && <a href={websiteUrl} target="_blank" rel="noopener noreferrer">Website</a>}
-            {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer">Instagram or social</a>}
-          </nav>
+
         </div>
       </header>
       <section className={styles.productsSection} aria-labelledby="storefront-products-title">
@@ -76,6 +77,10 @@ export default async function PublicListerStorefrontPage({ params }: { params: P
           <p className={styles.empty}>This brand has no products available right now.</p>
         )}
       </section>
+      <nav className={styles.brandLinks} aria-label="Discover more about this brand">
+        {instagramUrl && <a href={instagramUrl} target="_blank" rel="noopener noreferrer">Instagram or social ↗</a>}
+        {websiteUrl && <a href={websiteUrl} target="_blank" rel="noopener noreferrer">Visit brand website ↗</a>}
+      </nav>
     </section>
   );
 }

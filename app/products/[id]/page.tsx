@@ -1,3 +1,5 @@
+import { ProductGallery } from "@/components/product-gallery";
+import { orderedProductImages } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,8 +21,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, lister_user_id, product_variants(id, size, stock_quantity), lister_storefronts(user_id, business_name, description, category_type, logo_url, delivery_option, delivery_charge, delivery_country)").eq("id", id).eq("is_published", true).maybeSingle();
+  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, lister_user_id, product_images(image_url, sort_order), product_variants(id, size, stock_quantity), lister_storefronts(user_id, business_name, description, category_type, logo_url, delivery_option, delivery_charge, delivery_country)").eq("id", id).eq("is_published", true).maybeSingle();
   if (!product) notFound();
+  const images = orderedProductImages(product.product_images, product.image_url);
   const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
   const variantStock = (product.product_variants ?? []).reduce((total, variant) => total + variant.stock_quantity, 0);
   const availableStock = product.product_variants?.length ? variantStock : product.stock_quantity;
@@ -30,7 +33,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     <section className="product-detail">
       <Link className="text-link" href="/marketplace">Back to marketplace</Link>
       <div className="product-detail-grid">
-        <div>{product.image_url ? <Image className="product-detail-image" src={product.image_url} alt={product.name} width={800} height={800} unoptimized /> : <div className="product-detail-placeholder">HolyHub</div>}</div>
+        <ProductGallery images={images} name={product.name} />
         <div className={styles.detailContent}>
           {storefront ? (
             <Link className="eyebrow" href={`/lister/storefront/${storefront.user_id}`}>{storefront.business_name}</Link>
@@ -50,7 +53,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <p><span>Delivery</span><strong>{storefront?.delivery_option === "flat" ? `£${Number(storefront.delivery_charge ?? 0).toFixed(2)}` : "Free"}</strong></p>
           </div>
           <div className={styles.purchaseAction}>
-            <AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} />
+            <AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={images[0] ?? null} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} />
           </div>
           <p className={styles.secureNote}>Secure checkout</p>
           <p className={styles.returnsNote}>See our <Link className="text-link" href="/returns">returns policy</Link> for refund information.</p>

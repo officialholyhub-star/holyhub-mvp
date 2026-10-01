@@ -1,3 +1,4 @@
+import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -49,7 +50,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
-  let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, product_variants(id, size, stock_quantity), lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
+  let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, product_images(image_url, sort_order), product_variants(id, size, stock_quantity), lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
   if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
   if (categoryShortcut) query = query.eq("category_type", categoryShortcut.value);
   else if (category) query = query.eq("category_type", category);
@@ -58,7 +59,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   if (sort === "price-low") query = query.order("price", { ascending: true });
   else if (sort === "price-high") query = query.order("price", { ascending: false });
   else query = query.order("created_at", { ascending: false });
-  const { data: products, error } = await query;
+  const { data: rawProducts, error } = await query;
+  const products = rawProducts?.map(withProductCover);
   const { data: categories } = await supabase.from("products").select("category_type").eq("is_published", true).order("category_type");
   const uniqueCategories = [...new Set((categories ?? []).map(({ category_type }) => category_type))];
   const categoryOptions = [...new Set([...featuredCategories.map((item) => item.value), ...uniqueCategories])];

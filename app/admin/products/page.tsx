@@ -8,7 +8,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const { supabase } = await requireRole("admin");
   const { data: products, error } = await supabase
     .from("products")
-    .select("id, name, description, category_type, price, image_url, size_guide_url, lister_user_id, review_status, created_at, product_review_snapshots(previous_name, previous_description, previous_category_type, previous_image_url, previous_size_guide_url)")
+    .select("id, name, description, category_type, price, image_url, size_guide_url, lister_user_id, review_status, created_at, product_images(image_url, sort_order), product_review_snapshots(previous_name, previous_description, previous_category_type, previous_image_url, previous_size_guide_url, previous_gallery_images)")
     .eq("review_status", "pending")
     .order("created_at", { ascending: true });
   const listerIds = products?.map(({ lister_user_id }) => lister_user_id) ?? [];

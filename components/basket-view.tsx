@@ -1,11 +1,14 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
+import { withProductCover } from "@/lib/product-images";
+
 import Image from "next/image";
 import Link from "next/link";
 import { startCheckout } from "@/app/checkout/actions";
 import { BASKET_STORAGE_KEY, MAX_BASKET_QUANTITY, type BasketItem } from "@/lib/basket";
 import { variantLineKey } from "@/lib/product-variants";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 type BasketViewProps = { error?: string };
 
@@ -35,6 +38,17 @@ function parseStoredBasket(value: string) {
 export function BasketView({ error }: BasketViewProps) {
   const storedBasket = useSyncExternalStore(subscribeToBasket, readBasket, () => "[]");
   const items = useMemo(() => parseStoredBasket(storedBasket), [storedBasket]);
+  const [covers, setCovers] = useState<Record<string, string | null>>({});
+  const productIds = [...new Set(items.map(item => item.id))].sort().join(",");
+  useEffect(() => {
+    if (!productIds) return;
+    let cancelled = false;
+    void createClient().from("products").select("id, image_url, product_images(image_url, sort_order)")
+      .in("id", productIds.split(",")).eq("is_published", true).eq("review_status", "approved")
+      .then(({ data, error }) => { if (!cancelled && !error && data) setCovers(Object.fromEntries(data.map(product => [product.id, withProductCover(product).image_url]))); });
+    return () => { cancelled = true; };
+  }, [productIds]);
+  function currentCover(item: BasketItem) { return Object.hasOwn(covers, item.id) ? covers[item.id] : item.imageUrl; }
   const [checkoutError, setCheckoutError] = useState<string>();
 
   const groupedItems = useMemo(() => {
@@ -107,7 +121,7 @@ export function BasketView({ error }: BasketViewProps) {
                 {group.items.map((item, itemIndex) => (
                   <article className="basket-row" key={lineKey(item) || `${group.listerId || "lister"}-item-${itemIndex}`}>
                     <div className="basket-row-main">
-                      {item.imageUrl ? <Image src={item.imageUrl} alt="" width={300} height={300} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
+                      {currentCover(item) ? <Image src={currentCover(item)!} alt="" width={300} height={300} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
                       <div><p className="eyebrow">{item.listerName}</p><h2>{item.name}</h2>{item.variantSize && <p>Size: {item.variantSize}</p>}<p>£{item.price.toFixed(2)} each</p></div>
                     </div>
                     <div className="basket-row-actions">

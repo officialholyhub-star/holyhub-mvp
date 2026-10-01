@@ -9,12 +9,12 @@ export const dynamic = "force-dynamic";
 export default async function EditProductPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const { supabase, user } = await requireRole("lister");
-  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, is_published, product_variants(size, stock_quantity)").eq("id", id).eq("lister_user_id", user.id).maybeSingle();
+  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, is_published, product_images(image_url, sort_order), product_variants(size, stock_quantity)").eq("id", id).eq("lister_user_id", user.id).maybeSingle();
   if (!product) notFound();
 
   return (
     <section className="auth-wrap">
-      <ProductForm action={updateProduct} userId={user.id} product={product} error={query.error}>
+      <ProductForm action={updateProduct} userId={user.id} product={{ ...product, variants: product.product_variants ?? [] }} error={query.error}>
         <Link className="button button-quiet form-back" href="/lister/products">Back to products</Link>
         <Link className="button button-quiet form-back" href="/lister/storefront">Back to storefront</Link>
       </ProductForm>

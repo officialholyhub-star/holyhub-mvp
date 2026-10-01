@@ -1,3 +1,4 @@
+import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -13,12 +14,12 @@ export default async function HomePage() {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: products } = await supabase
     .from("products")
-    .select("id, name, price, image_url, category_type, lister_storefronts(business_name)")
+    .select("id, name, price, image_url, category_type, product_images(image_url, sort_order), lister_storefronts(business_name)")
     .eq("is_published", true)
     .order("created_at", { ascending: false })
     .limit(4);
 
-  const realProducts = products ?? [];
+  const realProducts = (products ?? []).map(withProductCover);
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
   const demoSlots = Math.max(0, 4 - realProducts.length);
   const homepageDemoProducts = demoProducts.slice(0, demoSlots);

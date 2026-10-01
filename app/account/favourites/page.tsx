@@ -1,3 +1,4 @@
+import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
@@ -9,13 +10,14 @@ export default async function FavouritesPage() {
   const { supabase, user } = await requireUser();
   const { data: favourites } = await supabase
     .from("favourites")
-    .select("created_at, products(id, name, price, image_url, category_type, lister_storefronts(business_name))")
+    .select("created_at, products(id, name, price, image_url, category_type, product_images(image_url, sort_order), lister_storefronts(business_name))")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   const products = (favourites ?? [])
     .map(({ products: product }) => Array.isArray(product) ? product[0] : product)
-    .filter((product): product is NonNullable<typeof product> => Boolean(product));
+    .filter((product): product is NonNullable<typeof product> => Boolean(product))
+    .map(withProductCover);
 
   return (
     <section className="favourites-page">

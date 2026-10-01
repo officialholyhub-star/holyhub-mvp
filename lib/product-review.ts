@@ -15,6 +15,7 @@ export type ReviewableProductFields = {
   category_type: string;
   image_url: string | null;
   size_guide_url: string | null;
+  gallery_images?: readonly string[];
   price?: number | string;
   stock_quantity?: number;
 };
@@ -24,7 +25,8 @@ export function hasMaterialProductChange(previous: ReviewableProductFields, next
     || previous.description !== next.description
     || previous.category_type !== next.category_type
     || previous.image_url !== next.image_url
-    || previous.size_guide_url !== next.size_guide_url;
+    || previous.size_guide_url !== next.size_guide_url
+    || JSON.stringify(previous.gallery_images ?? []) !== JSON.stringify(next.gallery_images ?? []);
 }
 
 export function combineReviewFeedback(presets: readonly string[], customNote: string) {

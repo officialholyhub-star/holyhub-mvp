@@ -100,12 +100,6 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </div>
 
         <div className="card customer-settings-card">
-          <h2>Church location</h2>
-          <p>Add or update the church connected to your HolyHub profile.</p>
-          <Link className="button button-quiet" href="/churches/profile">Manage church location</Link>
-        </div>
-
-        <div className="card customer-settings-card">
           <h2>Password</h2>
           <p>Use the secure reset flow if you want to change your password.</p>
           <a className="button button-quiet" href="/auth/forgot-password">Reset password</a>

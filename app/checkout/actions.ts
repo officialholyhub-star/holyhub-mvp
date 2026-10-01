@@ -138,6 +138,7 @@ export async function startCheckout(formData: FormData) {
       mode: "payment",
       line_items: [...lineItems, ...deliveryItems],
       customer_email: user.email ?? undefined,
+      shipping_address_collection: { allowed_countries: ["GB"] },
       success_url: `${siteUrl.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl.origin}/checkout/cancelled`,
       metadata: {

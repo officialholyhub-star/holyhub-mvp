@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateSellerFulfilment } from "./actions";
-import { CARRIERS, FULFILMENT_STATUS_LABELS, FULFILMENT_STATUSES } from "@/lib/fulfilment";
+import { CARRIERS, formatDeliveryAddress, FULFILMENT_STATUS_LABELS, FULFILMENT_STATUSES } from "@/lib/fulfilment";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export default async function ListerOrdersPage({ searchParams }: { searchParams:
   const { supabase, user } = await requireRole("lister");
   const { data: sellerOrders, error } = await supabase
     .from("seller_orders")
-    .select("id, order_id, seller_business_name, total_amount, fulfilment_status, carrier, carrier_other, tracking_number, tracking_url, dispatched_at, fulfilment_note, orders(user_id, created_at)")
+    .select("id, order_id, seller_business_name, total_amount, fulfilment_status, carrier, carrier_other, tracking_number, tracking_url, dispatched_at, fulfilment_note, orders(user_id, created_at, delivery_recipient_name, delivery_address_line1, delivery_address_line2, delivery_city, delivery_postcode, delivery_country)")
     .eq("seller_user_id", user.id)
     .order("created_at", { ascending: false });
   const orderIds = (sellerOrders ?? []).map((order) => order.order_id);
@@ -39,7 +39,7 @@ export default async function ListerOrdersPage({ searchParams }: { searchParams:
     <section className="lister-orders-page">
       <div className="page-heading">
         <div><p className="eyebrow">Lister space</p><h1>Orders</h1><p className="lead">Prepare your orders and keep customers updated.</p></div>
-        <a className="button button-primary" href="/lister/orders/export?scope=unfulfilled">Export unfulfilled</a>
+        <div className="order-export-actions"><a className="button button-primary" href="/lister/orders/export?scope=unfulfilled">Export unfulfilled</a><form id="selected-order-export" method="get" action="/lister/orders/export"><input type="hidden" name="scope" value="selected" /><button className="button button-quiet" type="submit">Export selected</button></form></div>
       </div>
       {params.error && <p className="notice notice-error" role="alert">{params.error}</p>}
       {params.message && <p className="notice notice-success" role="status">{params.message}</p>}
@@ -52,7 +52,7 @@ export default async function ListerOrdersPage({ searchParams }: { searchParams:
             return (
               <article className="lister-order-card" key={sellerOrder.id}>
                 <div className="lister-order-header">
-                  <div><p className="eyebrow">Order {sellerOrder.order_id.slice(0, 8)}</p><h2>{customers.get(customerId ?? "") ?? "Customer"}</h2><p>{emails.get(customerId ?? "") ?? ""} · {orderRecord?.created_at ? new Date(orderRecord.created_at).toLocaleDateString("en-GB") : ""}</p></div>
+                  <div><label className="order-select"><input type="checkbox" aria-label={`Select order ${sellerOrder.order_id.slice(0, 8)}`} name="ids" value={sellerOrder.id} form="selected-order-export" /><span><p className="eyebrow">Order {sellerOrder.order_id.slice(0, 8)}</p><h2>{customers.get(customerId ?? "") ?? "Customer"}</h2></span></label><p>{emails.get(customerId ?? "") ?? ""} · {orderRecord?.created_at ? new Date(orderRecord.created_at).toLocaleDateString("en-GB") : ""}</p>{orderRecord && <p className="order-delivery-address">{formatDeliveryAddress(orderRecord)}</p>}</div>
                   <span className={`status-pill status-${sellerOrder.fulfilment_status}`}>{FULFILMENT_STATUS_LABELS[sellerOrder.fulfilment_status as keyof typeof FULFILMENT_STATUS_LABELS] ?? sellerOrder.fulfilment_status}</span>
                 </div>
                 <div className="lister-order-items">

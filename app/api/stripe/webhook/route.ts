@@ -95,6 +95,8 @@ export async function POST(request: Request) {
     }
 
     if (!existingOrder) {
+      const shippingDetails = session.collected_information?.shipping_details;
+      const shippingAddress = shippingDetails?.address;
       const { data: orderRecord, error: orderInsertError } = await admin
         .from("orders")
         .insert({
@@ -109,6 +111,12 @@ export async function POST(request: Request) {
           total_amount: totalAmount,
           holyhub_commission: holyhubCommission,
           seller_amount_total: sellerAmountTotal,
+          delivery_recipient_name: shippingDetails?.name ?? null,
+          delivery_address_line1: shippingAddress?.line1 ?? null,
+          delivery_address_line2: shippingAddress?.line2 ?? null,
+          delivery_city: shippingAddress?.city ?? null,
+          delivery_postcode: shippingAddress?.postal_code ?? null,
+          delivery_country: shippingAddress?.country ?? null,
           paid_at: new Date().toISOString(),
         })
         .select("id")

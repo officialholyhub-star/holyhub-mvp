@@ -1,22 +1,25 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { buildCsv } from "@/lib/fulfilment";
+import { buildCsv, formatDeliveryAddress } from "@/lib/fulfilment";
 
-const UUID_PATTERN = /^[0-9a-f-]{36}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: Request) {
   const { supabase, user } = await requireRole("lister");
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope") ?? "unfulfilled";
-  const selectedIds = (url.searchParams.get("ids") ?? "").split(",").filter((id) => UUID_PATTERN.test(id));
+  if (scope !== "selected" && scope !== "unfulfilled") {
+    return NextResponse.json({ error: "Invalid export scope." }, { status: 400 });
+  }
+  const selectedIds = url.searchParams.getAll("ids").flatMap((value) => value.split(",")).filter((id) => UUID_PATTERN.test(id));
   if (scope === "selected" && selectedIds.length === 0) {
     return NextResponse.json({ error: "Select at least one seller order to export." }, { status: 400 });
   }
 
   let query = supabase
     .from("seller_orders")
-    .select("id, order_id, carrier, carrier_other, created_at, orders(user_id, created_at)")
+    .select("id, order_id, carrier, carrier_other, created_at, orders(user_id, created_at, delivery_recipient_name, delivery_address_line1, delivery_address_line2, delivery_city, delivery_postcode, delivery_country)")
     .eq("seller_user_id", user.id);
   if (scope === "selected") query = query.in("id", selectedIds);
   else query = query.in("fulfilment_status", ["pending", "packed", "dispatched"]);
@@ -50,7 +53,7 @@ export async function GET(request: Request) {
     return [
       item.order_id,
       names.get(customerId) ?? "Customer",
-      "",
+      orderRecord ? formatDeliveryAddress(orderRecord) : "",
       emails.get(customerId) ?? "",
       item.product_name,
       "",

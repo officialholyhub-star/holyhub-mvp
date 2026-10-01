@@ -2211,6 +2211,11 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; transform: non
 .customer-tracking { display: grid; gap: 4px; margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--holyhub-blue-soft); color: var(--ink); font-size: .86rem; }
 .customer-tracking a { color: var(--holyhub-blue-strong); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 
+.order-export-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.order-select { display: flex; align-items: flex-start; gap: 9px; color: inherit; }
+.order-select input { margin-top: 5px; accent-color: var(--holyhub-blue-strong); }
+.order-delivery-address { max-width: 560px; color: var(--ink); font-size: .86rem; }
+
 @media (max-width: 640px) {
   .lister-order-card,
   .customer-order-card { padding: 18px; }
@@ -2221,4 +2226,7 @@ button[aria-disabled="true"] { cursor: not-allowed; opacity: .55; transform: non
   .fulfilment-note-field,
   .fulfilment-form .button { grid-column: auto; }
   .fulfilment-form .button { width: 100%; }
+  .order-export-actions,
+  .order-export-actions form,
+  .order-export-actions .button { width: 100%; }
 }

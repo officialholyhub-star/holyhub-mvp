@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
-import { FULFILMENT_STATUS_LABELS, type FulfilmentStatus } from "@/lib/fulfilment";
+import { formatDeliveryAddress, FULFILMENT_STATUS_LABELS, type FulfilmentStatus } from "@/lib/fulfilment";
 
 function safeTrackingUrl(value: string | null) {
   if (!value) return null;
@@ -15,10 +15,11 @@ function safeTrackingUrl(value: string | null) {
 export const dynamic = "force-dynamic";
 
 export default async function AccountOrdersPage() {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const { data: orders, error } = await supabase
     .from("orders")
-    .select("id, created_at, total_amount, order_status, seller_orders(id, seller_user_id, seller_business_name, fulfilment_status, carrier, carrier_other, tracking_number, tracking_url, dispatched_at)")
+    .select("id, created_at, total_amount, order_status, delivery_recipient_name, delivery_address_line1, delivery_address_line2, delivery_city, delivery_postcode, delivery_country, seller_orders(id, seller_user_id, seller_business_name, fulfilment_status, carrier, carrier_other, tracking_number, tracking_url, dispatched_at)")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const orderIds = (orders ?? []).map((order) => order.id);
   const { data: orderItems } = orderIds.length ? await supabase.from("order_items").select("order_id, seller_user_id, product_name, quantity, variant_size").in("order_id", orderIds) : { data: [] };
@@ -33,7 +34,7 @@ export default async function AccountOrdersPage() {
         <div className="customer-order-list">
           {orders.map((order) => (
             <article className="customer-order-card" key={order.id}>
-              <div className="customer-order-header"><div><p className="eyebrow">Order {order.id.slice(0, 8)}</p><p>{new Date(order.created_at).toLocaleDateString("en-GB")}</p></div><strong>£{(Number(order.total_amount) / 100).toFixed(2)}</strong></div>
+              <div className="customer-order-header"><div><p className="eyebrow">Order {order.id.slice(0, 8)}</p><p>{new Date(order.created_at).toLocaleDateString("en-GB")}</p><p className="order-delivery-address">{formatDeliveryAddress(order)}</p></div><strong>£{(Number(order.total_amount) / 100).toFixed(2)}</strong></div>
               {(order.seller_orders ?? []).map((sellerOrder) => {
                 const status = sellerOrder.fulfilment_status as FulfilmentStatus;
                 const trackingUrl = safeTrackingUrl(sellerOrder.tracking_url);

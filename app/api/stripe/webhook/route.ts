@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { calculateHolyHubCommission } from "@/lib/checkout-pricing";
 import Stripe from "stripe";
-
-function toSafeInteger(value: unknown, fallback: number) {
-  const amount = typeof value === "string" ? Number(value) : typeof value === "number" ? value : Number.NaN;
-  return Number.isSafeInteger(amount) ? amount : fallback;
-}
 
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
@@ -29,202 +23,43 @@ export async function POST(request: Request) {
       ? "cancelled"
       : event.type === "checkout.session.async_payment_failed"
         ? "failed"
-      : null;
+        : null;
   if (!status) return NextResponse.json({ received: true });
+  // Delayed methods complete Checkout before payment succeeds. Await the later
+  // async_payment_succeeded event; neither event can fulfil an unpaid session.
+  if (status === "paid" && session.payment_status !== "paid") return NextResponse.json({ received: true });
+  if (status === "paid" && (typeof session.amount_total !== "number" || !Number.isSafeInteger(session.amount_total) || session.amount_total < 0 || session.currency !== "gbp")) {
+    return NextResponse.json({ error: "Invalid payment amount or currency." }, { status: 400 });
+  }
 
   try {
-    const admin = createAdminClient();
-    const checkoutSessionRecord = await admin
-      .from("checkout_sessions")
-      .select("id, user_id, product_subtotal, delivery_total, amount_total, holyhub_commission, seller_amount_total, stripe_checkout_session_id")
-      .eq("stripe_checkout_session_id", session.id)
-      .maybeSingle();
-
-    if (checkoutSessionRecord.error) {
-      console.error("Stripe checkout lookup failed", checkoutSessionRecord.error);
-      return NextResponse.json({ error: "Could not load payment record." }, { status: 500 });
-    }
-
-    const update = {
-      status,
-      payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
-      updated_at: new Date().toISOString(),
-      completed_at: status === "paid" ? new Date().toISOString() : null,
-    };
-    const { error: updateError } = await admin.from("checkout_sessions").update(update).eq("stripe_checkout_session_id", session.id);
-    if (updateError) {
-      console.error("Stripe checkout status update failed", updateError);
-      return NextResponse.json({ error: "Could not record payment status." }, { status: 500 });
-    }
-
-    if (status !== "paid" || !checkoutSessionRecord.data) {
-      return NextResponse.json({ received: true });
-    }
-
-    const productSubtotal = toSafeInteger(checkoutSessionRecord.data.product_subtotal, -1);
-    const deliveryTotal = toSafeInteger(checkoutSessionRecord.data.delivery_total, -1);
-    const expectedTotal = toSafeInteger(checkoutSessionRecord.data.amount_total, -1);
-    const totalAmount = toSafeInteger(session.amount_total, -1);
-    const holyhubCommission = toSafeInteger(checkoutSessionRecord.data.holyhub_commission, -1);
-    const sellerAmountTotal = toSafeInteger(checkoutSessionRecord.data.seller_amount_total, -1);
-    if ([productSubtotal, deliveryTotal, expectedTotal, totalAmount, holyhubCommission, sellerAmountTotal].some((amount) => amount < 0)
-      || totalAmount !== expectedTotal
-      || productSubtotal + deliveryTotal !== expectedTotal
-      || holyhubCommission + sellerAmountTotal !== productSubtotal) {
-      console.error("Stripe payment amount does not match the checkout snapshot.", { sessionId: session.id, totalAmount, expectedTotal });
-      return NextResponse.json({ error: "Payment amount did not match the checkout record." }, { status: 500 });
-    }
-
-    const { error: inventoryError } = await admin.rpc("process_paid_checkout_stock", {
-      p_checkout_session_id: checkoutSessionRecord.data.id,
+    const shippingDetails = session.collected_information?.shipping_details;
+    const address = shippingDetails?.address;
+    // Status, inventory, parent and children commit together. The RPC also
+    // serializes terminal events so a late failure cannot overwrite paid state.
+    const { error } = await createAdminClient().rpc("process_checkout_payment", {
+      p_stripe_session_id: session.id,
+      p_status: status,
+      p_payment_status: session.payment_status,
+      p_amount_total: session.amount_total,
+      p_currency: session.currency,
+      p_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+      p_delivery_address: {
+        delivery_recipient_name: shippingDetails?.name ?? null,
+        delivery_address_line1: address?.line1 ?? null,
+        delivery_address_line2: address?.line2 ?? null,
+        delivery_city: address?.city ?? null,
+        delivery_postcode: address?.postal_code ?? null,
+        delivery_country: address?.country ?? null,
+      },
     });
-    if (inventoryError) {
-      console.error("Paid checkout stock update failed", inventoryError);
-      return NextResponse.json({ error: "Could not confirm current stock for this order." }, { status: 500 });
-    }
-
-    const { data: existingOrder, error: orderLookupError } = await admin
-      .from("orders")
-      .select("id")
-      .eq("stripe_checkout_session_id", session.id)
-      .maybeSingle();
-
-    if (orderLookupError) {
-      console.error("Order lookup failed", orderLookupError);
-      return NextResponse.json({ error: "Could not verify order record." }, { status: 500 });
-    }
-
-    if (!existingOrder) {
-      const shippingDetails = session.collected_information?.shipping_details;
-      const shippingAddress = shippingDetails?.address;
-      const { data: orderRecord, error: orderInsertError } = await admin
-        .from("orders")
-        .insert({
-          user_id: checkoutSessionRecord.data.user_id,
-          checkout_session_id: checkoutSessionRecord.data.id,
-          stripe_checkout_session_id: session.id,
-          order_status: "paid",
-          fulfilment_status: "pending",
-          currency: "GBP",
-          product_subtotal: productSubtotal,
-          delivery_total: deliveryTotal,
-          total_amount: totalAmount,
-          holyhub_commission: holyhubCommission,
-          seller_amount_total: sellerAmountTotal,
-          delivery_recipient_name: shippingDetails?.name ?? null,
-          delivery_address_line1: shippingAddress?.line1 ?? null,
-          delivery_address_line2: shippingAddress?.line2 ?? null,
-          delivery_city: shippingAddress?.city ?? null,
-          delivery_postcode: shippingAddress?.postal_code ?? null,
-          delivery_country: shippingAddress?.country ?? null,
-          paid_at: new Date().toISOString(),
-        })
-        .select("id")
-        .single();
-
-      if (orderInsertError || !orderRecord) {
-        console.error("Order insert failed", orderInsertError);
-        return NextResponse.json({ error: "Could not create order record." }, { status: 500 });
-      }
-
-      const { data: sessionItems, error: sessionItemsError } = await admin
-        .from("checkout_session_items")
-        .select("product_id, lister_user_id, product_name, unit_amount, quantity, line_total, variant_id, variant_size")
-        .eq("checkout_session_id", checkoutSessionRecord.data.id);
-
-      if (sessionItemsError) {
-        console.error("Order item snapshot load failed", sessionItemsError);
-        return NextResponse.json({ error: "Could not load order items." }, { status: 500 });
-      }
-
-      const { error: itemInsertError } = await admin.from("order_items").insert((sessionItems ?? []).map((item) => ({
-        order_id: orderRecord.id,
-        product_id: item.product_id,
-        seller_user_id: item.lister_user_id,
-        product_name: item.product_name,
-        unit_amount: item.unit_amount,
-        quantity: item.quantity,
-        line_total: item.line_total,
-        variant_id: item.variant_id,
-        variant_size: item.variant_size,
-      })));
-
-      if (itemInsertError) {
-        console.error("Order item insert failed", itemInsertError);
-        return NextResponse.json({ error: "Could not create order items." }, { status: 500 });
-      }
-
-      const { data: sellerRows, error: sellerRowsError } = await admin
-        .from("checkout_session_items")
-        .select("lister_user_id, product_name, line_total, quantity, unit_amount")
-        .eq("checkout_session_id", checkoutSessionRecord.data.id);
-
-      if (sellerRowsError) {
-        console.error("Seller order grouping failed", sellerRowsError);
-        return NextResponse.json({ error: "Could not group seller orders." }, { status: 500 });
-      }
-
-      const { data: sellerDeliveryRows, error: sellerDeliveryError } = await admin
-        .from("checkout_session_sellers")
-        .select("lister_user_id, seller_business_name, delivery_total")
-        .eq("checkout_session_id", checkoutSessionRecord.data.id);
-      if (sellerDeliveryError) {
-        console.error("Seller delivery snapshot load failed", sellerDeliveryError);
-        return NextResponse.json({ error: "Could not load seller delivery snapshots." }, { status: 500 });
-      }
-      const sellerDeliveryById = new Map((sellerDeliveryRows ?? []).map((row) => [row.lister_user_id, row]));
-
-      const groupedSellerRows = new Map<string, { sellerUserId: string; productSubtotal: number; deliveryTotal: number; totalAmount: number; sellerAmount: number; businessName: string }>();
-      for (const row of sellerRows ?? []) {
-        const sellerKey = row.lister_user_id;
-        const business = sellerDeliveryById.get(sellerKey)?.seller_business_name ?? "HolyHub seller";
-        const existing = groupedSellerRows.get(sellerKey) ?? {
-          sellerUserId: sellerKey,
-          productSubtotal: 0,
-          deliveryTotal: 0,
-          totalAmount: 0,
-          sellerAmount: 0,
-          businessName: business,
-        };
-        existing.productSubtotal += Number(row.line_total ?? 0);
-        existing.totalAmount += Number(row.line_total ?? 0);
-        groupedSellerRows.set(sellerKey, existing);
-      }
-
-      for (const [sellerId, seller] of groupedSellerRows) {
-        const sellerDelivery = sellerDeliveryById.get(sellerId)?.delivery_total ?? 0;
-        seller.deliveryTotal = toSafeInteger(sellerDelivery, 0);
-        seller.totalAmount = seller.productSubtotal + seller.deliveryTotal;
-        seller.sellerAmount = seller.productSubtotal - (calculateHolyHubCommission(seller.productSubtotal) ?? 0);
-      }
-
-      for (const seller of Array.from(groupedSellerRows.values())) {
-        const sellerDeliveryTotal = seller.deliveryTotal;
-        const sellerTotal = seller.productSubtotal + sellerDeliveryTotal;
-        const sellerCommission = calculateHolyHubCommission(seller.productSubtotal) ?? 0;
-        const sellerNet = seller.productSubtotal - sellerCommission;
-        const { error: sellerOrderInsertError } = await admin.from("seller_orders").insert({
-          order_id: orderRecord.id,
-          seller_user_id: seller.sellerUserId,
-          seller_business_name: seller.businessName,
-          product_subtotal: seller.productSubtotal,
-          delivery_total: sellerDeliveryTotal,
-          total_amount: sellerTotal,
-          holyhub_commission: sellerCommission,
-          seller_amount: sellerNet,
-          order_status: "paid",
-          fulfilment_status: "pending",
-        });
-
-        if (sellerOrderInsertError) {
-          console.error("Seller order insert failed", sellerOrderInsertError);
-          return NextResponse.json({ error: "Could not create seller order records." }, { status: 500 });
-        }
-      }
+    if (error) {
+      console.error("Stripe checkout transaction failed", { sessionId: session.id, code: error.code });
+      return NextResponse.json({ error: "Could not record payment and order." }, { status: 500 });
     }
   } catch (error) {
     console.error("Stripe webhook database handling failed", error);
-    return NextResponse.json({ error: "Could not record payment status." }, { status: 500 });
+    return NextResponse.json({ error: "Could not record payment and order." }, { status: 500 });
   }
 
   return NextResponse.json({ received: true });

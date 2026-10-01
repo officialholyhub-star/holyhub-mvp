@@ -7,7 +7,6 @@ import React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as fulfilment from '../lib/fulfilment.ts';
-import * as pricing from '../lib/checkout-pricing.ts';
 
 function load(file, dependencies, extra = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
@@ -61,21 +60,19 @@ function exportRoute() {
   const db = database(tables);
   return load('app/lister/orders/export/route.ts', { 'next/server': next, '@/lib/auth/require-user': { requireRole: async role => { assert.equal(role, 'lister'); return { supabase: db, user: { id: 'seller-a' } }; } }, '@/lib/supabase/admin': { createAdminClient: () => db }, '@/lib/fulfilment': fulfilment }).GET;
 }
-test('successful paid checkout snapshots every real shipping field into the order', async () => {
-  const writes = [];
-  const db = database({ checkout_sessions: [{ id: 'checkout', stripe_checkout_session_id: 'stripe-session', user_id: 'customer-a', product_subtotal: 1000, delivery_total: 200, amount_total: 1200, holyhub_commission: 100, seller_amount_total: 900 }], checkout_session_items: [{ checkout_session_id: 'checkout', lister_user_id: 'seller-a', product_name: 'Shirt', line_total: 1000, quantity: 1, unit_amount: 1000, variant_size: 'M' }], checkout_session_sellers: [{ checkout_session_id: 'checkout', lister_user_id: 'seller-a', delivery_total: 200 }] }, writes);
-  const session = { id: 'stripe-session', amount_total: 1200, collected_information: { shipping_details: { name: 'Recipient', address: { line1: '10 Real Road', line2: 'Flat 2', city: 'London', postal_code: 'SW1A 1AA', country: 'GB' } } } };
-  const { POST } = load('app/api/stripe/webhook/route.ts', { 'next/server': next, '@/lib/stripe': { getStripe: () => ({ webhooks: { constructEvent: () => ({ type: 'checkout.session.completed', data: { object: session } }) } }) }, '@/lib/supabase/admin': { createAdminClient: () => db }, '@/lib/checkout-pricing': pricing }, { process: { env: { STRIPE_WEBHOOK_SECRET: 'test' } } });
+test('paid webhook passes real shipping fields to the atomic order transaction', async () => {
+  const calls = [];
+  const db = { rpc: async (name, args) => { calls.push({ name, args }); return { error: null }; } };
+  const session = { id: 'stripe-session', payment_status: 'paid', currency: 'gbp', amount_total: 1200, collected_information: { shipping_details: { name: 'Recipient', address: { line1: '10 Real Road', line2: 'Flat 2', city: 'London', postal_code: 'SW1A 1AA', country: 'GB' } } } };
+  const { POST } = load('app/api/stripe/webhook/route.ts', { 'next/server': next, '@/lib/stripe': { getStripe: () => ({ webhooks: { constructEvent: () => ({ type: 'checkout.session.completed', data: { object: session } }) } }) }, '@/lib/supabase/admin': { createAdminClient: () => db } }, { process: { env: { STRIPE_WEBHOOK_SECRET: 'test' } } });
   const response = await POST(new Request('https://example.com/webhook', { method: 'POST', headers: { 'stripe-signature': 'test' }, body: '{}' }));
   assert.equal(response.status, 200);
-  const order = writes.find(write => write.table === 'orders').value;
-  for (const [key, value] of Object.entries(address)) assert.equal(order[key], value);
-  assert.equal(writes.find(write => write.table === 'order_items').value[0].variant_size, 'M');
-  // Older checkout sessions may contain no shipping information; never fabricate it.
-  session.id = 'stripe-session'; delete session.collected_information;
+  assert.equal(calls[0].name, 'process_checkout_payment');
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].args.p_delivery_address)), address);
+  // Older Checkout Sessions may contain no shipping information; never fabricate it.
+  delete session.collected_information;
   await POST(new Request('https://example.com/webhook', { method: 'POST', headers: { 'stripe-signature': 'test' }, body: '{}' }));
-  const missing = writes.filter(write => write.table === 'orders')[1].value;
-  for (const key of Object.keys(address)) assert.equal(missing[key], null);
+  for (const key of Object.keys(address)) assert.equal(calls[1].args.p_delivery_address[key], null);
 });
 test('selected export accepts repeated and comma-separated IDs but excludes another seller and shared-order items', async () => {
   for (const ids of [`ids=${ownId}&ids=${otherId}`, `ids=${ownId},${otherId}`]) {

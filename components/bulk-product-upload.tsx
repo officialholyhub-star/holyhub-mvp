@@ -16,7 +16,7 @@ export function BulkProductUpload() {
   const invalid = state.rows?.filter(row => !row.product) ?? [];
   return <div className={styles.upload}>
     <form action={action} onSubmit={() => setReviewedCsv(csv)} className="form">
-      <label className="field"><span>Upload your completed CSV (maximum 256 KB)</span><input type="file" accept=".csv,text/csv" disabled={pending || reading} onChange={async event => {
+      <label className="field"><span>Upload your completed spreadsheet saved as CSV (maximum 256 KB)</span><input type="file" accept=".csv,text/csv" disabled={pending || reading} onChange={async event => {
         const file = event.currentTarget.files?.[0]; setCsv(""); setReviewedCsv(""); setFileError("");
         if (!file) return;
         if (file.size > MAX_CSV_BYTES) { setFileError("Choose a CSV smaller than 256 KB."); return; }
@@ -24,7 +24,7 @@ export function BulkProductUpload() {
         try { setCsv(await file.text()); } catch { setFileError("We couldn't read that file."); } finally { setReading(false); }
       }} /></label>
       <input type="hidden" name="csv" value={csv} />
-      <button className="button button-primary" disabled={!csv || pending || reading} type="submit">{pending ? "Checking…" : "Validate CSV"}</button>
+      <button className="button button-primary" disabled={!csv || pending || reading} type="submit">{pending ? "Checking…" : "Check spreadsheet"}</button>
     </form>
     {fileError && <p className="notice notice-error" role="alert">{fileError}</p>}
     {current && state.error && <p className="notice notice-error" role="alert">{state.error}</p>}

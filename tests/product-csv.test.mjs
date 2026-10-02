@@ -5,6 +5,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { createHash } from 'node:crypto';
+import { loadTypescript } from './helpers/load-typescript.mjs';
 
 function load(file, dependencies = {}) {
   const exports = {};
@@ -16,7 +17,7 @@ function load(file, dependencies = {}) {
   }, TextEncoder, URL, console });
   return exports;
 }
-const { CSV_COLUMNS, parseCsv, validateProductCsv } = load('lib/product-csv.ts');
+const { CSV_COLUMNS, LEGACY_CSV_COLUMNS, parseCsv, validateProductCsv } = load('lib/product-csv.ts');
 const { buildCsv } = load('lib/fulfilment.ts');
 function row(values = {}) {
   const product = { 'Product name': 'Book', Description: 'A lovely book', Price: '12.50', 'Stock quantity': '5', SKU: 'BOOK-1', Category: 'Books', 'Image URL': '', ...values };
@@ -27,19 +28,19 @@ function fixture({ existing = [], failAt = -1, loseResponseAt = -1, skuLookupErr
   const products = new Map(existing.map(product => [product.id, product]));
   const calls = []; let failures = 0; let lostResponses = 0;
   const supabase = { from(table) {
-    let owner; let begin = 0; let end = 999;
+    let owner; let productId; let begin = 0; let end = 999;
     const query = {
-      select() { return query; }, eq(key, value) { assert.equal(key, table === 'products' ? 'lister_user_id' : 'user_id'); owner = value; return query; },
+      select() { return query; }, eq(key, value) { if (key === 'id') productId = value; else { assert.equal(key, table === 'products' ? 'lister_user_id' : 'user_id'); owner = value; } return query; },
       not() { return query; }, order() { return query; }, range(a, b) { begin = a; end = b; return query; },
-      maybeSingle: async () => ({ data: owner === 'lister-a' ? { user_id: owner } : null, error: null }),
+      maybeSingle: async () => ({ data: table === 'products' ? products.get(productId) ?? null : owner === 'lister-a' ? { user_id: owner } : null, error: null }),
       then(resolve, reject) { assert.equal(owner, 'lister-a'); return Promise.resolve({ data: [...products.values()].filter(product => product.lister_user_id === owner && product.sku).slice(begin, end + 1), error: skuLookupError ? { code: '42501', message: 'internal schema detail' } : null }).then(resolve, reject); },
     }; return query;
-  }, async rpc(name, args) {
+  }, storage: { from: () => ({ getPublicUrl: path => ({ data: { publicUrl: `https://test.supabase.co/storage/v1/object/public/product-images/${path}` } }), upload: async () => ({ error: null }), remove: async () => ({ error: null }) }) }, async rpc(name, args) {
     assert.equal(name, 'import_product_csv_row'); calls.push(args);
     assert.ok(!('lister_user_id' in args.p_product));
     assert.ok(!('is_published' in args.p_product));
     if (products.has(args.p_id)) return { data: 'already imported', error: null };
-    if (calls.length - 1 === failAt && failures++ === 0) return { data: null, error: { code: 'unexpected' } };
+    if (calls.length - 1 === failAt && failures++ === 0) return { data: null, error: { code: 'XX000' } };
     products.set(args.p_id, { id: args.p_id, sku: args.p_product.sku, lister_user_id: 'lister-a' });
     if (calls.length - 1 === loseResponseAt && lostResponses++ === 0) throw new Error('Response lost');
     return { data: 'imported', error: null };
@@ -48,6 +49,13 @@ function fixture({ existing = [], failAt = -1, loseResponseAt = -1, skuLookupErr
     'node:crypto': { createHash }, 'next/cache': { revalidatePath() {} },
     '@/lib/auth/require-user': { requireRole: async role => { assert.equal(role, 'lister'); return { supabase, user: { id: 'lister-a' } }; } },
     '@/lib/product-csv': { validateProductCsv },
+    '@/lib/bulk-product-images': loadTypescript('lib/bulk-product-images.ts', {
+      './remote-product-image': { RemoteImageError: Error, downloadProductImage: async url => {
+        if (url.includes('failed-image')) throw new Error('could not be downloaded.');
+        return { bytes: Buffer.from('fixture'), contentType: 'image/jpeg', extension: 'jpg' };
+      } },
+      './product-images': { ownedProductImagePath: (url, userId) => url.split(`/product-images/${userId}/`)[1] ? `${userId}/${url.split(`/product-images/${userId}/`)[1]}` : null },
+    }),
   }).processProductCsv;
   async function run(text, confirm = false, extras = {}) {
     const data = new FormData(); data.set('csv', text); if (confirm) data.set('confirm', 'yes');
@@ -90,15 +98,41 @@ test('Apparel uses all six existing relational sizes and non-Apparel uses produc
   assert.ok(validateProductCsv(csv([row({ Category: 'Apparel' })]))[0].errors.some(error => error.includes('Apparel')));
   assert.ok(validateProductCsv(csv([row({ 'M Stock': '2' })]))[0].errors.some(error => error.includes('only available')));
 });
-test('remote URLs are validated but never sent to the import RPC', async () => {
-  const f = fixture(); const result = await f.run(csv([row({ 'Image URL': 'https://example.com/photo.jpg' })]), true);
-  assert.ok(result.rows[0].warnings[0].includes('not be saved')); assert.ok(!('image_url' in f.calls[0].p_product));
-  for (const image of ['javascript:alert(1)', 'file:///tmp/photo', 'not-a-url']) assert.ok(validateProductCsv(csv([row({ 'Image URL': image })]))[0].errors.some(error => error.includes('Image URL')));
+test('remote image links become owned gallery URLs rather than product payload URLs', async () => {
+  const f = fixture(); const result = await f.run(csv([row({ 'Image 1 URL': 'https://example.com/photo.jpg' })]), true);
+  assert.ok(result.rows[0].warnings[0].includes('downloaded')); assert.ok(!('image_url' in f.calls[0].p_product));
+  assert.match(f.calls[0].p_images[0], /\/product-images\/lister-a\//);
+  for (const image of ['javascript:alert(1)', 'file:///tmp/photo', 'not-a-url']) assert.ok(validateProductCsv(csv([row({ 'Image 1 URL': image })]))[0].errors.some(error => error.includes('Image 1 URL')));
+});
+test('legacy Image URL headings are accepted as Image 1; new image columns preserve order', () => {
+  const oldRow = LEGACY_CSV_COLUMNS.map(column => ({ 'Product name': 'Book', Description: 'Book description', Price: '5', 'Stock quantity': '3', Category: 'Books', 'Image URL': 'https://images.example.com/book.png' })[column] ?? '');
+  const result = validateProductCsv(buildCsv(LEGACY_CSV_COLUMNS, [oldRow]));
+  assert.equal(result[0].imageUrls[0], 'https://images.example.com/book.png'); assert.ok(result[0].product);
+  const links = Array.from({ length: 5 }, (_, i) => `https://images.example.com/${i}.png`);
+  const values = Object.fromEntries(links.map((url, i) => [`Image ${i + 1} URL`, url]));
+  assert.deepEqual([...validateProductCsv(csv([row(values)]))[0].imageUrls], links);
+  assert.ok(!validateProductCsv(csv([row({ 'Image 2 URL': links[1] })]))[0].product);
+  assert.ok(!validateProductCsv(csv([row({ 'Image 1 URL': links[0], 'Image 2 URL': links[0] })]))[0].product);
+});
+test('legacy template Image URL imports into the atomic gallery RPC', async () => {
+  const f = fixture();
+  const legacy = LEGACY_CSV_COLUMNS.map(column => ({ 'Product name': 'Book', Description: 'Description', Price: '5', 'Stock quantity': '2', Category: 'Books', 'Image URL': 'https://images.example.com/book.jpg' })[column] ?? '');
+  const result = await f.run(buildCsv(LEGACY_CSV_COLUMNS, [legacy]), true);
+  assert.equal(result.results[0].status, 'imported'); assert.equal(f.calls[0].p_images.length, 1);
+  assert.match(f.calls[0].p_images[0], /\/product-images\/lister-a\//);
+});
+test('one failed remote image row does not block other valid rows', async () => {
+  const f = fixture(); const result = await f.run(csv([
+    row({ 'Image 1 URL': 'https://images.example.com/failed-image.jpg' }),
+    row({ SKU: 'GOOD', 'Image 1 URL': 'https://images.example.com/good.jpg' }),
+  ]), true);
+  assert.equal(result.results[0].status, 'failed'); assert.match(result.results[0].message, /Image 1 could not be downloaded/);
+  assert.equal(result.results[1].status, 'imported'); assert.equal(f.products.size, 1);
 });
 test('partial failure and lost response retry without duplicating completed rows', async () => {
   for (const config of [{ failAt: 1 }, { loseResponseAt: 1 }]) {
     const f = fixture(config); const text = csv([row(), row({ SKU: 'BOOK-2' }), row({ SKU: 'BOOK-3' })]);
-    const first = await f.run(text, true); assert.equal(first.results.filter(row => row.status === 'failed').length, 1);
+    const first = await f.run(text, true); assert.equal(first.results.filter(row => row.status === 'failed').length, config.failAt === 1 ? 1 : 0);
     const retried = await f.run(text, true); assert.ok(retried.results.every(row => row.status !== 'failed')); assert.equal(f.products.size, 3);
   }
 });

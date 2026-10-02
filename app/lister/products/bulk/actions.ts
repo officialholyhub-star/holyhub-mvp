@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/require-user";
 import { validateProductCsv, type CsvRow } from "@/lib/product-csv";
+import { importBulkProductRow } from "@/lib/bulk-product-images";
 
 export type ImportResult = { row: number; name: string; status: "imported" | "already imported" | "failed"; message?: string };
 export type BulkState = { error?: string; rows?: CsvRow[]; results?: ImportResult[] };
@@ -41,15 +42,10 @@ export async function processProductCsv(_previous: BulkState, formData: FormData
   for (const row of rows) {
     if (!row.product) { results.push({ row: row.row, name: "", status: "failed", message: row.errors.join(" ") }); continue; }
     try {
-      const { data, error } = await supabase.rpc("import_product_csv_row", {
-        p_id: importId(user.id, csv, row.row), p_product: row.product,
-        p_sizes: row.product.sizes, p_stock_quantities: row.product.stockQuantities,
-      });
-      if (error || (data !== "imported" && data !== "already imported")) {
-        results.push({ row: row.row, name: row.product.name, status: "failed", message: error?.code === "23505" ? "Duplicate SKU: another product now uses this SKU." : "Could not save this row. You can retry the same CSV safely." });
-      } else results.push({ row: row.row, name: row.product.name, status: data });
+      const result = await importBulkProductRow(supabase, user.id, importId(user.id, csv, row.row), row);
+      results.push({ row: row.row, name: row.product.name, ...result });
     } catch {
-      results.push({ row: row.row, name: row.product.name, status: "failed", message: "The result could not be confirmed. Retry the same CSV to check or complete this row." });
+      results.push({ row: row.row, name: row.product.name, status: "failed", message: "The result could not be confirmed. Retry the same spreadsheet to check or complete this row." });
     }
   }
   revalidatePath("/lister/products");

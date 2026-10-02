@@ -1,0 +1,92 @@
+/* Small shared layout refinements for the existing MVP. */
+:root a:focus-visible,
+:root button:focus-visible,
+:root input:focus-visible,
+:root select:focus-visible,
+:root textarea:focus-visible {
+  outline: 3px solid #31556e;
+  outline-offset: 3px;
+}
+
+.field,
+.field-row > *,
+.variant-grid > *,
+.account-grid > *,
+.product-grid > *,
+.product-row > div,
+.basket-row-main > div,
+.review-card-header > div,
+.fulfilment-form > label {
+  min-width: 0;
+}
+
+.field input,
+.field select,
+.field textarea,
+.fulfilment-form input,
+.fulfilment-form select,
+.fulfilment-form textarea {
+  min-width: 0;
+  color: var(--ink);
+}
+
+.product-row h3,
+.basket-row-main h2,
+.meta-row > :last-child,
+.review-card-header,
+.review-details dd,
+.customer-order-items,
+.customer-tracking,
+.lister-order-item,
+.lister-action-card strong {
+  overflow-wrap: anywhere;
+}
+
+.product-row .muted-small { margin: 6px 0; }
+.row-actions { flex-wrap: wrap; }
+.row-actions .button { white-space: nowrap; }
+.meta-row > :last-child { min-width: 0; text-align: right; }
+.lister-order-item > :last-child { flex-shrink: 0; }
+
+.marketplace-card { display: flex; flex-direction: column; }
+.marketplace-card-image { flex-shrink: 0; }
+.marketplace-card .product-card-action { margin-top: auto; }
+.marketplace-card .product-card-action .button,
+.product-quantity-control button,
+.quantity-control input,
+.admin-tabs a { min-height: 44px; }
+.product-quantity-control button { width: 44px; height: 44px; }
+.marketplace-categories { padding-inline: 4px; }
+.compact-coming-soon { flex-wrap: wrap; gap: 8px 12px; }
+
+@media (min-width: 721px) and (max-width: 1040px) {
+  .basket-layout { grid-template-columns: minmax(0, 1fr) 280px; }
+  .basket-row { flex-direction: column; align-items: stretch; }
+  .basket-row-actions { justify-content: space-between; gap: 10px; }
+}
+
+@media (max-width: 720px) {
+  /* The desktop flex basis becomes an unwanted height in the stacked layout. */
+  .review-reject-form { flex-basis: auto; }
+}
+
+@media (max-width: 560px) {
+  .field input,
+  .field select,
+  .field textarea,
+  .marketplace-search input,
+  .marketplace-filter-row input,
+  .marketplace-filter-row select,
+  .fulfilment-form input,
+  .fulfilment-form select,
+  .fulfilment-form textarea,
+  .review-reject-form input,
+  .review-reject-form textarea,
+  .quantity-control input { font-size: 1rem; }
+
+  .variant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .basket-row-main { gap: 12px; align-items: flex-start; }
+  .product-detail-price-row { flex-wrap: wrap; gap: 12px; }
+  .events-options { padding-top: 32px; }
+  .events-options .section-heading-split { margin-bottom: 24px; }
+}

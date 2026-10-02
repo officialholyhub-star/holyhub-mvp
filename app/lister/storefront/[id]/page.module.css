@@ -44,6 +44,7 @@
 .brandCopy > p:not(.eyebrow) {
   max-width: 680px;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .brandLinks {
@@ -55,6 +56,8 @@
 }
 
 .brandLinks a {
+  overflow-wrap: anywhere;
+  max-width: 100%;
   color: #667782;
   text-decoration: underline;
   text-decoration-color: #b7c9d4;
@@ -130,6 +133,7 @@
 .productDetails h3 {
   margin: 0;
   font-size: 1.05rem;
+  overflow-wrap: anywhere;
 }
 
 .productDetails strong {

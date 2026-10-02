@@ -5,7 +5,7 @@
 .navigation { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 12px 0; }
 .navigation button { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: white; color: var(--ink); cursor: pointer; }
 .navigation span { color: var(--muted); font-size: .85rem; }
-.thumbnails { display: flex; justify-content: center; gap: 8px; }
+.thumbnails { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .thumbnails button { width: 64px; min-height: 44px; padding: 3px; border: 2px solid transparent; border-radius: 8px; background: white; cursor: pointer; }
 .thumbnails button[aria-pressed="true"] { border-color: var(--holyhub-blue-strong); }
 .thumbnails img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: contain; }

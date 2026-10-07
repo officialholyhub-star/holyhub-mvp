@@ -68,11 +68,13 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
         }
 
         const stripeProcessingFee = await getStripeProcessingFee(paymentIntentId);
-        const { error: feeError } = await admin.rpc("record_order_stripe_fee", {
-          p_stripe_session_id: session.id,
-          p_stripe_processing_fee: stripeProcessingFee,
-        });
-        if (feeError) console.error("Checkout success fee reconciliation failed", { sessionId: session.id, code: feeError.code });
+        if (stripeProcessingFee !== null) {
+          const { error: feeError } = await admin.rpc("record_order_stripe_fee", {
+            p_stripe_session_id: session.id,
+            p_stripe_processing_fee: stripeProcessingFee,
+          });
+          if (feeError) console.error("Checkout success fee reconciliation failed", { sessionId: session.id, code: feeError.code });
+        }
 
         checkout = await loadCheckout();
       }

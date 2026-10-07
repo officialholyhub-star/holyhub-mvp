@@ -1,6 +1,6 @@
 import { getStripe } from "@/lib/stripe";
 
-export async function getStripeProcessingFee(paymentIntentId: string | null): Promise<number> {
+export async function getStripeProcessingFee(paymentIntentId: string | null): Promise<number | null> {
   if (!paymentIntentId) throw new Error("Stripe payment intent is missing.");
 
   const stripe = getStripe();
@@ -9,13 +9,13 @@ export async function getStripeProcessingFee(paymentIntentId: string | null): Pr
   });
 
   const latestCharge = paymentIntent.latest_charge;
-  if (!latestCharge) throw new Error("Stripe charge is missing.");
+  if (!latestCharge) return null;
 
   const charge = typeof latestCharge === "string"
     ? await stripe.charges.retrieve(latestCharge, { expand: ["balance_transaction"] })
     : latestCharge;
   const balanceTransaction = charge.balance_transaction;
-  if (!balanceTransaction) throw new Error("Stripe balance transaction is missing.");
+  if (!balanceTransaction) return null;
 
   const transaction = typeof balanceTransaction === "string"
     ? await stripe.balanceTransactions.retrieve(balanceTransaction)

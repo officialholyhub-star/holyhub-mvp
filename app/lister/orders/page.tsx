@@ -16,7 +16,7 @@ export default async function ListerOrdersPage({ searchParams }: { searchParams:
   const { supabase, user } = await requireRole("lister");
   const { data: sellerOrders, error } = await supabase
     .from("seller_orders")
-    .select("id, order_id, seller_business_name, total_amount, holyhub_commission, seller_amount, fulfilment_status, carrier, carrier_other, tracking_number, tracking_url, dispatched_at, fulfilment_note, orders(user_id, created_at, delivery_recipient_name, delivery_address_line1, delivery_address_line2, delivery_city, delivery_postcode, delivery_country)")
+    .select("id, order_id, seller_business_name, product_subtotal, delivery_total, total_amount, holyhub_commission, stripe_processing_fee, seller_payout_amount, fulfilment_status, carrier, carrier_other, tracking_number, tracking_url, dispatched_at, fulfilment_note, orders(user_id, created_at, delivery_recipient_name, delivery_address_line1, delivery_address_line2, delivery_city, delivery_postcode, delivery_country)")
     .eq("seller_user_id", user.id)
     .order("created_at", { ascending: false });
   const orderIds = (sellerOrders ?? []).map((order) => order.order_id);
@@ -59,9 +59,12 @@ export default async function ListerOrdersPage({ searchParams }: { searchParams:
                   <span className={`status-pill status-${sellerOrder.fulfilment_status}`}>{FULFILMENT_STATUS_LABELS[sellerOrder.fulfilment_status as keyof typeof FULFILMENT_STATUS_LABELS] ?? sellerOrder.fulfilment_status}</span>
                 </div>
                 <dl className={styles.financialSummary} aria-label="Your portion of this order">
+                  <div><dt>Products</dt><dd>{gbp.format(sellerOrder.product_subtotal / 100)}</dd></div>
+                  <div><dt>Delivery paid by customer</dt><dd>+{gbp.format(sellerOrder.delivery_total / 100)}</dd></div>
                   <div><dt>Customer paid</dt><dd>{gbp.format(sellerOrder.total_amount / 100)}</dd></div>
-                  <div><dt>HolyHub fee</dt><dd>{gbp.format(sellerOrder.holyhub_commission / 100)}</dd></div>
-                  <div className={styles.payout}><dt>Your payout</dt><dd>{gbp.format(sellerOrder.seller_amount / 100)}</dd></div>
+                  <div><dt>HolyHub commission (5%)</dt><dd>−{gbp.format(sellerOrder.holyhub_commission / 100)}</dd></div>
+                  <div><dt>Stripe processing</dt><dd>{sellerOrder.stripe_processing_fee === null ? "Pending" : `−${gbp.format(sellerOrder.stripe_processing_fee / 100)}`}</dd></div>
+                  <div className={styles.payout}><dt>Your payout</dt><dd>{sellerOrder.seller_payout_amount === null ? "Pending" : gbp.format(sellerOrder.seller_payout_amount / 100)}</dd></div>
                 </dl>
                 <div className="lister-order-items">
                   {orderItems.map((item, index) => <div className="lister-order-item" key={`${item.product_name}-${index}`}><span>{item.product_name}{item.variant_size ? ` · Size ${item.variant_size}` : ""}</span><strong>× {item.quantity}</strong></div>)}

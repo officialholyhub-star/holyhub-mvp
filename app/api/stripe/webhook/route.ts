@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { getStripeProcessingFee } from "@/lib/stripe-processing-fee";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Stripe from "stripe";
 
@@ -25,8 +26,6 @@ export async function POST(request: Request) {
         ? "failed"
         : null;
   if (!status) return NextResponse.json({ received: true });
-  // Delayed methods complete Checkout before payment succeeds. Await the later
-  // async_payment_succeeded event; neither event can fulfil an unpaid session.
   if (status === "paid" && session.payment_status !== "paid") return NextResponse.json({ received: true });
   if (status === "paid" && (typeof session.amount_total !== "number" || !Number.isSafeInteger(session.amount_total) || session.amount_total < 0 || session.currency !== "gbp")) {
     return NextResponse.json({ error: "Invalid payment amount or currency." }, { status: 400 });
@@ -35,15 +34,15 @@ export async function POST(request: Request) {
   try {
     const shippingDetails = session.collected_information?.shipping_details;
     const address = shippingDetails?.address;
-    // Status, inventory, parent and children commit together. The RPC also
-    // serializes terminal events so a late failure cannot overwrite paid state.
-    const { error } = await createAdminClient().rpc("process_checkout_payment", {
+    const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
+    const admin = createAdminClient();
+    const { error } = await admin.rpc("process_checkout_payment", {
       p_stripe_session_id: session.id,
       p_status: status,
       p_payment_status: session.payment_status,
       p_amount_total: session.amount_total,
       p_currency: session.currency,
-      p_payment_intent_id: typeof session.payment_intent === "string" ? session.payment_intent : null,
+      p_payment_intent_id: paymentIntentId,
       p_delivery_address: {
         delivery_recipient_name: shippingDetails?.name ?? null,
         delivery_address_line1: address?.line1 ?? null,
@@ -56,6 +55,18 @@ export async function POST(request: Request) {
     if (error) {
       console.error("Stripe checkout transaction failed", { sessionId: session.id, code: error.code });
       return NextResponse.json({ error: "Could not record payment and order." }, { status: 500 });
+    }
+
+    if (status === "paid") {
+      const stripeProcessingFee = await getStripeProcessingFee(paymentIntentId);
+      const { error: feeError } = await admin.rpc("record_order_stripe_fee", {
+        p_stripe_session_id: session.id,
+        p_stripe_processing_fee: stripeProcessingFee,
+      });
+      if (feeError) {
+        console.error("Stripe fee reconciliation failed", { sessionId: session.id, code: feeError.code });
+        return NextResponse.json({ error: "Could not record payment fee." }, { status: 500 });
+      }
     }
   } catch (error) {
     console.error("Stripe webhook database handling failed", error);

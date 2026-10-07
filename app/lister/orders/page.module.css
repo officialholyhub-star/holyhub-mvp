@@ -1,0 +1,41 @@
+.financialSummary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--ink);
+}
+
+.financialSummary > div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e2e8ec;
+  border-radius: 8px;
+}
+
+.financialSummary dt {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.financialSummary dd {
+  margin: 6px 0 0;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.financialSummary .payout {
+  background: #edf5ef;
+  border-color: #cddfd2;
+}
+
+.payout dt,
+.payout dd {
+  color: #41634d;
+  font-weight: 700;
+}
+
+.payout dd {
+  font-size: 1.25rem;
+}

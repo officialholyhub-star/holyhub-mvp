@@ -35,7 +35,9 @@ export async function updateSession(request: NextRequest) {
   if (needsAuth && !isSignedIn) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    url.search = "";
     url.searchParams.set("message", "Please log in to continue.");
+    url.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
 

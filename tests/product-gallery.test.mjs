@@ -10,6 +10,7 @@ import * as images from '../lib/product-images.ts';
 import * as variants from '../lib/product-variants.ts';
 import * as categories from '../lib/product-categories.ts';
 import * as validation from '../lib/product-validation.ts';
+import * as helpCopy from '../lib/help-copy.ts';
 import { hasMaterialProductChange } from '../lib/product-review.ts';
 
 const origin = 'https://example.supabase.co';
@@ -20,6 +21,8 @@ function load(file, dependencies) {
   const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   vm.runInNewContext(source, { exports, crypto: webcrypto, URL, console, process: { env: { NEXT_PUBLIC_SUPABASE_URL: origin } }, require: name => {
     if (name in dependencies) return dependencies[name];
+    if (name === '@/lib/help-copy') return helpCopy;
+    if (name === '@/components/draft-form') return { DraftForm: 'form', ClearDraft: () => null };
     if (name.endsWith('.module.css')) return { default: {} };
     throw new Error(`Unexpected dependency: ${name}`);
   } });
@@ -115,13 +118,14 @@ test('uploader accepts five images, rejects a sixth, reorders, replaces safely a
 });
 function productActions() {
   const calls = [];
-  const supabase = { from() { const query = { select() { return query; }, eq() { return query; }, maybeSingle: async () => ({ data: { image_url: url(1), product_images: [] }, error: null }) }; return query; }, rpc: async (name, args) => { calls.push({ name, args }); return { error: null }; } };
-  const actions = load('app/lister/actions.ts', { 'next/cache': { revalidatePath() {} }, 'next/navigation': { redirect: value => { throw new Error(`REDIRECT:${value}`); } }, '@/lib/auth/require-user': { requireRole: async () => ({ supabase, user: { id: owner } }) }, '@/lib/product-images': { ...images, validProductImages: (urls, user, existing) => urls.length <= 5 && new Set(urls).size === urls.length && urls.every(value => existing?.includes(value) || images.ownedProductImagePath(value, user, origin)), ownedProductImagePath: (value, user) => images.ownedProductImagePath(value, user, origin) }, '@/lib/product-categories': categories, '@/lib/product-variants': variants, '@/lib/product-validation': validation });
-  return { calls, ...actions };
+  const writes = [];
+  const supabase = { from() { const query = { update(values) { writes.push(values); return query; }, select() { return query; }, eq() { return query; }, maybeSingle: async () => ({ data: { id: "saved-product", category_type: "Books", image_url: url(1), product_images: [] }, error: null }) }; return query; }, rpc: async (name, args) => { calls.push({ name, args }); return { error: null }; } };
+  const actions = load('app/lister/actions.ts', { 'next/headers': { cookies: async () => ({ set() {} }) }, '@/lib/lister-onboarding': { onboardingCookie: id => `hh-setup-${id}` }, 'next/cache': { revalidatePath() {} }, 'next/navigation': { redirect: value => { throw new Error(`REDIRECT:${value}`); } }, '@/lib/auth/require-user': { requireRole: async () => ({ supabase, user: { id: owner } }) }, '@/lib/product-images': { ...images, validProductImages: (urls, user, existing) => urls.length <= 5 && new Set(urls).size === urls.length && urls.every(value => existing?.includes(value) || images.ownedProductImagePath(value, user, origin)), ownedProductImagePath: (value, user) => images.ownedProductImagePath(value, user, origin) }, '@/lib/application-categories': { applicationCategoryValue: (category) => categories.isProductCategory(category) ? category : null }, '@/lib/product-categories': categories, '@/lib/product-variants': variants, '@/lib/product-validation': validation });
+  return { calls, writes, ...actions };
 }
 function form(publish = false, urls = []) {
   const data = new FormData(); for (const [key, value] of Object.entries({ name: 'Book', description: 'Lovely book', category_type: 'Books', price: '12.50', stock_quantity: '5', gallery_present: '1' })) data.set(key, value);
-  if (publish) data.set('is_published', 'on'); urls.forEach(value => data.append('image_urls', value)); return data;
+  if (publish) data.set('publication_action', 'publish'); urls.forEach(value => data.append('image_urls', value)); return data;
 }
 test('real create action permits image-free drafts, blocks image-free submission, and saves galleries atomically', async () => {
   const actions = productActions(); await assert.rejects(actions.createProduct(form()), /Product%20created/);
@@ -130,6 +134,13 @@ test('real create action permits image-free drafts, blocks image-free submission
   await assert.rejects(actions.createProduct(form(true, [url(1), url(2)])), /Product%20created/);
   assert.equal(actions.calls[1].name, 'save_product_with_images'); assert.equal(actions.calls[1].args.p_values.image_url, url(1));
   await assert.rejects(actions.createProduct(form(true, [url(1).replace(owner, 'foreign')])), /valid%20values/); assert.equal(actions.calls.length, 2);
+});
+test('guided creation reports submitted success only after review submission, not draft save', async () => {
+  const actions = productActions();
+  const draft = form(); draft.set('onboarding', '1');
+  await assert.rejects(actions.createProduct(draft), /Product%20created/);
+  const submitted = form(true, [url(1)]); submitted.set('onboarding', '1');
+  await assert.rejects(actions.createProduct(submitted), /onboarding\/success/);
 });
 test('gallery-only changes are material and migration preserves ordered snapshots without allowing direct API mutations', () => {
   const product = { name: 'Book', description: 'Book', category_type: 'Books', image_url: url(1), size_guide_url: null, gallery_images: [url(1), url(2)] };
@@ -153,4 +164,48 @@ test('all cover contexts use galleries, product buying page has internal brand l
   assert.ok(storefront.indexOf('storefront-products-title') < storefront.indexOf('Instagram or social ↗'));
   assert.ok(storefront.indexOf('Instagram or social ↗') < storefront.indexOf('Visit brand website ↗'));
   assert.ok(storefront.includes('target="_blank" rel="noopener noreferrer"'));
+});
+
+
+test('publish and draft updates preserve submitted saved stock and cannot set approval metadata', async () => {
+  const actions = productActions();
+  for (const publication of ['publish', 'draft']) {
+    const data = form(false, [url(1)]);
+    data.set('product_id', 'saved-product'); data.set('publication_action', publication); data.set('stock_quantity', '27');
+    await assert.rejects(actions.updateProduct(data), /Product%20updated/);
+    const values = actions.calls.at(-1).args.p_values;
+    assert.equal(values.stock_quantity, 27);
+    assert.equal(values.is_published, publication === 'publish');
+    assert.equal(values.review_status, undefined);
+  }
+});
+test('archive ignores incomplete unsaved edits and changes visibility without changing stock or deleting', async () => {
+  const actions = productActions(); const data = new FormData();
+  data.set('product_id', 'saved-product'); data.set('publication_action', 'archive'); data.set('stock_quantity', '');
+  await assert.rejects(actions.updateProduct(data), /Product%20archived/);
+  assert.equal(actions.calls.length, 0);
+  assert.equal(actions.writes.length, 1);
+  assert.deepEqual(Object.keys(actions.writes[0]).sort(), ['is_published', 'updated_at']);
+  assert.equal(actions.writes[0].is_published, false);
+});
+test('admin review navigates all images in the card and preview with arrows and mobile swipe', () => {
+  const render = component('components/admin-product-review-card.tsx', 'AdminProductReviewCard', {
+    storefrontName: 'Shop', product: { id: 'product', name: 'Book', description: 'Book', category_type: 'Books', price: 12, created_at: '2026-10-01', image_url: url(0), product_images: Array.from({length:5}, (_,i)=>({image_url:url(i),sort_order:i})) }
+  }, { '@/app/admin/actions': { reviewProductListing() {} }, '@/lib/product-review': { REJECTION_PRESETS: ['Other'] } });
+  let tree = render(); button(tree, 'Next product image').props.onClick(); tree = render();
+  let cover = button(tree, 'Enlarge Book image'); assert.equal(cover.props.children.props.src, url(1));
+  cover.props.onTouchStart({touches:[{clientX:200}]}); cover.props.onTouchEnd({changedTouches:[{clientX:100}]}); tree=render();
+  assert.equal(button(tree, 'Enlarge Book image').props.children.props.src,url(2));
+  const dialog = walk(tree,node=>node.type==='dialog')[0]; let opened=0;
+  dialog.props.ref.current={showModal(){opened++;}};
+  button(tree, 'Enlarge Book image').props.onClick(); tree=render(); assert.equal(opened,1);
+  button(tree, 'Next preview image').props.onClick(); tree=render();
+  let content=walk(tree,node=>node.props?.className==='admin-image-dialog-content')[0];
+  assert.equal(walk(content,node=>node.type==='img')[0].props.src,url(3));
+  content.props.onTouchStart({touches:[{clientX:200}]}); content.props.onTouchEnd({changedTouches:[{clientX:100}]}); tree=render();
+  content=walk(tree,node=>node.props?.className==='admin-image-dialog-content')[0];
+  assert.equal(walk(content,node=>node.type==='img')[0].props.src,url(4));
+  button(tree, 'Next preview image').props.onClick(); tree=render();
+  content=walk(tree,node=>node.props?.className==='admin-image-dialog-content')[0];
+  assert.equal(walk(content,node=>node.type==='img')[0].props.src,url(0));
 });

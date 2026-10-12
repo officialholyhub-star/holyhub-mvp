@@ -1,0 +1,33 @@
+// STAGED ONLY. Do not run without separately approving the target and write.
+// Usage AFTER APPROVED DEPLOYMENT: node scripts/reconcile-dispatch-confirmation.mjs evt_...
+// Reads an existing Stripe event and fills UNKNOWN timing only. It never calls
+// payment processing, creates orders, charges, refunds, or changes stock/status.
+import nextEnv from "@next/env";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
+nextEnv.loadEnvConfig(process.cwd(), true);
+const eventId = process.argv[2];
+if (!/^evt_[A-Za-z0-9]+$/.test(eventId ?? "")) throw new Error("Supply the verified successful Checkout event ID.");
+const key = process.env.STRIPE_SECRET_KEY;
+if (!key) throw new Error("Stripe server key required.");
+const stripe = new Stripe(key, { maxNetworkRetries: 0, timeout: 15000 });
+const event = await stripe.events.retrieve(eventId);
+const session = event.data.object;
+if (!["checkout.session.completed", "checkout.session.async_payment_succeeded"].includes(event.type)
+  || session.object !== "checkout.session" || session.payment_status !== "paid"
+  || typeof event.created !== "number" || !Number.isSafeInteger(event.created) || event.created <= 0
+  || typeof session.id !== "string" || !session.id.startsWith("cs_")) throw new Error("Not a paid Checkout confirmation event.");
+if (event.livemode !== key.startsWith("sk_live_")) throw new Error("Stripe key/event mode mismatch.");
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { persistSession: false, autoRefreshToken: false } });
+const { data: order, error } = await db.from("orders")
+  .select("id, stripe_checkout_session_id, order_status, total_amount, currency")
+  .eq("stripe_checkout_session_id", session.id).eq("order_status", "paid").maybeSingle();
+if (error || !order || order.total_amount !== session.amount_total
+  || order.currency.toLowerCase() !== session.currency) throw new Error("No matching permanent paid order.");
+const { data: updated, error: timingError } = await db.rpc("record_order_dispatch_confirmation", {
+  p_order_id: order.id, p_stripe_session_id: session.id,
+  p_confirmed_at: new Date(event.created * 1000).toISOString(), p_event_id: event.id,
+}).abortSignal(AbortSignal.timeout(5000));
+if (timingError) throw new Error("Timing repair failed. Inspect database logs; no payment processing was invoked.");
+console.log(JSON.stringify({ eventId: event.id, orderId: order.id, sellerTimingsFilled: updated }));

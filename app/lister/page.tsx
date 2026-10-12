@@ -1,54 +1,38 @@
+import { ListingStage } from "@/components/listing-stage";
+import { HolyHubIcon } from "@/components/holyhub-icon";
 import Link from "next/link";
-import Image from "next/image";
 import { requireRole } from "@/lib/auth/require-user";
-
+import { getSellerFulfilmentSummary } from "@/lib/fulfilment-summary";
+import { readAllRows } from "@/lib/read-all-rows";
+import styles from "@/components/lister-onboarding.module.css";
 export const dynamic = "force-dynamic";
-
-export default async function ListerDashboardPage() {
+export default async function ListerDashboardPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const params = await searchParams;
   const { supabase, user } = await requireRole("lister");
-  const { count: productCount } = await supabase
-    .from("products")
-    .select("id", { count: "exact", head: true })
-    .eq("lister_user_id", user.id);
-
-  return (
-    <section className="lister-space">
-      <div className="lister-heading">
-        <p className="eyebrow">Your seller space</p>
-        <h1>Build your brand on HolyHub.</h1>
-        <p className="lead">Everything you need to keep your shop ready.</p>
-      </div>
-      <div className="lister-image-wrap">
-        <Image src="/images/creator-studio.jpg" alt="A creator meeting a customer in a bright studio" width={1200} height={800} priority />
-      </div>
-      <div className="lister-actions">
-        <Link className="lister-action-card" href="/lister/orders">
-          <span className="lister-action-index">01</span>
-          <span><strong>Orders</strong><small>Prepare and export fulfilment</small></span>
-          <span className="lister-action-arrow" aria-hidden="true">→</span>
-        </Link>
-        <Link className="lister-action-card lister-action-primary" href="/lister/products">
-          <span className="lister-action-index">02</span>
-          <span><strong>Products</strong><small>Add and manage your listings</small></span>
-          <span className="lister-action-arrow" aria-hidden="true">→</span>
-        </Link>
-        <Link className="lister-action-card" href="/lister/products/bulk">
-          <span className="lister-action-index">CSV</span>
-          <span><strong>Bulk Upload Products</strong><small>Import listings from a spreadsheet</small></span>
-          <span className="lister-action-arrow" aria-hidden="true">→</span>
-        </Link>
-        <Link className="lister-action-card" href="/lister/storefront">
-          <span className="lister-action-index">03</span>
-          <span><strong>Storefront</strong><small>Shape how your brand appears</small></span>
-          <span className="lister-action-arrow" aria-hidden="true">→</span>
-        </Link>
-        <Link className="lister-action-card" href="/account">
-          <span className="lister-action-index">04</span>
-          <span><strong>Account</strong><small>Manage your personal details</small></span>
-          <span className="lister-action-arrow" aria-hidden="true">→</span>
-        </Link>
-      </div>
-      <div className="lister-summary"><strong>{productCount ?? 0}</strong><span>product listings</span></div>
-    </section>
-  );
+  const [summary, shopResult, catalogue, sales] = await Promise.all([
+    getSellerFulfilmentSummary(supabase, user.id),
+    supabase.from("lister_storefronts").select("business_name").eq("user_id", user.id).maybeSingle(),
+    readAllRows(offset => supabase.from("products").select("id, name, review_status, is_published, review_reason").eq("lister_user_id", user.id).order("id").range(offset, offset + 999)),
+    supabase.from("seller_orders").select("id", { count: "exact", head: true }).eq("seller_user_id", user.id),
+  ]);
+  const products = catalogue.data ?? [];
+  const live = products.filter(product => product.review_status === "approved" && product.is_published).length;
+  const pending = products.filter(product => product.review_status === "pending").length;
+  const hour = new Date().getUTCHours();
+  return <section className={styles.shell}>
+    {(shopResult.error || catalogue.error) && <p role="alert" className="notice notice-error">Some shop setup details could not be loaded. Refresh to check your progress.</p>}
+    {params?.error && <p role="alert" className="notice notice-error">{params.error}</p>}
+    <p className="eyebrow">Your HolyHub shop</p><h1>Good {hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"}, {shopResult.data?.business_name || "welcome back"}</h1><p>Make a little room for your next big idea.</p>
+    {!shopResult.error && !shopResult.data && <Link className={styles.banner} href="/lister/onboarding"><strong>Welcome to HolyHub — your lister application has been accepted 💙</strong><p>Continue shop setup →</p></Link>}
+    {!shopResult.error && shopResult.data && !catalogue.error && products.length === 0 && <Link className={styles.banner} href="/lister/products/new?onboarding=1"><strong>Your shop is saved. Add your first product.</strong><p>Add photos, details and stock, then submit for HolyHub review →</p></Link>}
+    {!catalogue.error && !shopResult.error && shopResult.data && <ListingStage products={products} />}
+    <div className={styles.actions}><Link className="button button-primary" href="/lister/products/new">+ Add product</Link><Link className="button button-quiet" href="/lister/orders">Orders to fulfil</Link><Link className="button button-quiet" href="/lister/storefront"><HolyHubIcon name="settings" className="storefront-settings-icon" />Storefront settings</Link></div>
+    <div className={styles.grid}>
+      <Link className={styles.tile} href="/lister/products"><strong>Products</strong><p>{catalogue.error ? "Product counts unavailable. Refresh to try again." : `${live} live · ${pending} awaiting review`}</p></Link>
+      <Link className={styles.tile} href="/lister/orders"><strong>Orders to fulfil</strong><p>{summary ? `${summary.toFulfil} need preparing or dispatch` : "Order counts unavailable. Refresh to try again."}</p></Link>
+      <Link className={styles.tile} href="/lister/orders"><strong>Sales</strong><p>{sales.error || sales.count == null ? "Sales count unavailable. Refresh to try again." : `${sales.count} orders received`}</p></Link>
+      <Link className={styles.tile} href="/lister/storefront"><strong>Shop</strong><p>{shopResult.error ? "Shop details unavailable. Refresh to try again." : shopResult.data?.business_name || "Set up your shop"}</p></Link>
+    </div>
+    <div className={styles.actions}><Link href="/lister/products/bulk">Bulk upload products</Link><Link href="/account">Your account</Link>{!shopResult.error && shopResult.data && <Link href={`/lister/storefront/${user.id}`}>View shop</Link>}</div>
+  </section>;
 }

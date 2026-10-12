@@ -1,22 +1,23 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { logout } from "@/app/auth/actions";
 import { HolyHubIcon } from "@/components/holyhub-icon";
+import { SiteMenu } from "@/components/site-menu";
 
 export async function SiteHeader() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   let isLister = false;
+  let isAdmin = false;
   if (user) {
-    const { data: listerRole } = await supabase
+    const { data: roles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .eq("role", "lister")
-      .maybeSingle();
+      .in("role", ["lister", "admin"]);
 
-    isLister = Boolean(listerRole);
+    isLister = roles?.some(({ role }) => role === "lister") ?? false;
+    isAdmin = roles?.some(({ role }) => role === "admin") ?? false;
   }
 
   return (
@@ -33,48 +34,9 @@ export async function SiteHeader() {
           <Link href="/events">Events</Link>
         </nav>
 
-        <nav className="utility-nav utility-desktop" aria-label="Account and shopping navigation">
-          <Link className="utility-link" href="/basket">Basket</Link>
-          {user ? (
-            <>
-              <Link className="utility-link" href={isLister ? "/lister" : "/lister/apply"}>
-                {isLister ? "Lister space" : "Become a Lister"}
-              </Link>
-              <Link className="utility-link utility-favourites-link" href="/account/favourites">Favourites</Link>
-              <Link className="utility-link" href="/account">Account</Link>
-              <form action={logout} className="inline-form">
-                <button className="utility-button" type="submit">Log out</button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link className="utility-link" href="/auth/login">Log in</Link>
-              <Link className="button button-primary header-join" href="/auth/signup">Join</Link>
-            </>
-          )}
-        </nav>
-
-        <div className="utility-mobile">
-          <details className="mobile-account-menu">
-            <summary aria-label="Open account menu"><HolyHubIcon name="menu" /></summary>
-            <div className="mobile-account-panel">
-              {user ? (
-                <>
-                  <Link href="/account">Account</Link>
-                  <Link href="/account/favourites"><span aria-hidden="true">♥</span> Favourites</Link>
-                  <Link href={isLister ? "/lister" : "/lister/apply"}>{isLister ? "Lister space" : "Become a Lister"}</Link>
-                  <Link href="/basket">Basket</Link>
-                  <form action={logout}><button type="submit">Log out</button></form>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth/login">Log in</Link>
-                  <Link href="/auth/signup">Join HolyHub</Link>
-                  <Link href="/basket">Basket</Link>
-                </>
-              )}
-            </div>
-          </details>
+        <div className="header-tools">
+          <Link className="basket-link" href="/basket" aria-label="Open basket"><HolyHubIcon name="basket" /><span>Basket</span></Link>
+          <SiteMenu isLister={isLister} isAdmin={isAdmin} user={Boolean(user)} />
         </div>
       </div>
     </header>

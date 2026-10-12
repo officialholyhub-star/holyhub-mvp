@@ -1,3 +1,4 @@
+import { PRODUCT_CATEGORIES, isProductCategory, marketplaceCategoryValues, productCategoryLabel } from "@/lib/product-categories";
 import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,19 +8,17 @@ import { HolyHubIcon } from "@/components/holyhub-icon";
 import { FavouriteButton } from "@/components/favourite-button";
 import { demoProducts } from "@/lib/demo-products";
 import { getFavouriteIds } from "@/lib/favourites";
+import { decodeDisplayText } from "@/lib/display-text";
 
 export const dynamic = "force-dynamic";
 
 type MarketplaceParams = { q?: string; category?: string; min?: string; max?: string; sort?: string };
 
-const featuredCategories = [
-  { label: "Clothing & accessories", value: "Apparel", demoValue: "Clothing & accessories", icon: "activity" as const },
-  { label: "Jewellery", value: "Jewellery", demoValue: "Jewellery", icon: "community" as const },
-  { label: "Books & stationery", value: "Books", demoValue: "Books & stationery", icon: "bible" as const },
-  { label: "Gifts", value: "Gifts", demoValue: "Gifts", icon: "festival" as const },
-  { label: "Home & living", value: "Home & Living", demoValue: "Home & living", icon: "home" as const },
-  { label: "Art & prints", value: "Art", demoValue: "Art & prints", icon: "opportunities" as const },
-];
+const categoryIcons = {
+  Apparel: "activity", Bookmarks: "bible", Gifts: "festival", Books: "bible",
+  Jewellery: "community", "Home & Living": "home", Arts: "opportunities",
+} as const;
+const featuredCategories = PRODUCT_CATEGORIES.map(value => ({ label: value, value, icon: categoryIcons[value] }));
 
 function parseOptionalPrice(value?: string) {
   const trimmed = value?.trim() ?? "";
@@ -42,7 +41,7 @@ function marketplaceHref(params: MarketplaceParams, category: string) {
 export default async function MarketplacePage({ searchParams }: { searchParams: Promise<MarketplaceParams> }) {
   const params = await searchParams;
   const search = (params.q?.trim() ?? "").replace(/[,%()]/g, " ").replace(/\s+/g, " ").trim();
-  const category = params.category?.trim() ?? "";
+  const category = productCategoryLabel(params.category?.trim() ?? "");
   const min = parseOptionalPrice(params.min);
   const max = parseOptionalPrice(params.max);
   const sort = params.sort ?? "newest";
@@ -52,8 +51,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
   let query = supabase.from("products").select("id, name, description, category_type, price, image_url, stock_quantity, lister_user_id, product_images(image_url, sort_order), product_variants(id, size, stock_quantity), lister_storefronts(business_name, delivery_option, delivery_charge, delivery_country)").eq("is_published", true);
   if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-  if (categoryShortcut) query = query.eq("category_type", categoryShortcut.value);
-  else if (category) query = query.eq("category_type", category);
+  if (category) query = query.in("category_type", marketplaceCategoryValues(category));
   if (min !== null) query = query.gte("price", min);
   if (max !== null) query = query.lte("price", max);
   if (sort === "price-low") query = query.order("price", { ascending: true });
@@ -61,16 +59,14 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   else query = query.order("created_at", { ascending: false });
   const { data: rawProducts, error } = await query;
   const products = rawProducts?.map(withProductCover);
-  const { data: categories } = await supabase.from("products").select("category_type").eq("is_published", true).order("category_type");
-  const uniqueCategories = [...new Set((categories ?? []).map(({ category_type }) => category_type))];
-  const categoryOptions = [...new Set([...featuredCategories.map((item) => item.value), ...uniqueCategories])];
+  const categoryOptions = PRODUCT_CATEGORIES;
 
   const filteredDemoProducts = !error
     ? demoProducts
         .filter((product) => {
           const matchesSearch = !search || [product.name, product.listerName, product.category_type]
             .some((value) => value.toLowerCase().includes(search.toLowerCase()));
-          const matchesCategory = !category || product.category_type === category || categoryShortcut?.demoValue === product.category_type;
+          const matchesCategory = !category || product.category_type === category;
           const matchesMin = min === null || product.price >= min;
           const matchesMax = max === null || product.price <= max;
           return matchesSearch && matchesCategory && matchesMin && matchesMax;
@@ -82,7 +78,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         })
     : [];
 
-  const showDemoPreview = !error && (products?.length ?? 0) < 8 && filteredDemoProducts.length > 0;
+  const showDemoPreview = process.env.NODE_ENV === "development" && !error && (products?.length ?? 0) < 8 && filteredDemoProducts.length > 0;
 
   return (
     <section className="marketplace-page">
@@ -106,6 +102,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
             <span>Category</span>
             <select id="category" name="category" defaultValue={category}>
               <option value="">All categories</option>
+              {category && !isProductCategory(category) && <option value={category}>{category} (existing category)</option>}
               {categoryOptions.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
@@ -141,7 +138,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <p className="eyebrow">Curated for you</p>
           <h2>{search ? `Results for “${search}”` : categoryShortcut?.label ?? (category || "Shop Christian brands")}</h2>
         </div>
-        {!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "real product" : "real products"}</p>}
+        {!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p>}
       </div>
 
       {error && (
@@ -159,8 +156,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                 <div className="marketplace-card-media">
                   <Link href={`/products/${product.id}`}>
                     <div className="marketplace-card-image">
-                    {product.image_url ? <Image src={product.image_url} alt={product.name} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
-                    <span>{product.category_type}</span>
+                    {product.image_url ? <Image src={product.image_url} alt={decodeDisplayText(product.name)} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
+                    <span>{productCategoryLabel(product.category_type)}</span>
                     </div>
                   </Link>
                   <FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} />
@@ -168,11 +165,11 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                 <Link href={`/products/${product.id}`}>
                   <div className="product-card-body">
                     <p className="marketplace-lister">{storefront?.business_name ?? "HolyHub lister"}</p>
-                    <h3>{product.name}</h3>
+                    <h3>{decodeDisplayText(product.name)}</h3>
                     <strong>£{Number(product.price).toFixed(2)}</strong>
                   </div>
                 </Link>
-                <div className="product-card-action"><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} /></div>
+                <div className="product-card-action"><AddToBasketButton showQuantity={false} id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} /></div>
               </article>
             );
           })}
@@ -191,7 +188,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
                 <div>
                   <div className="marketplace-card-image">
                     <Image src={product.image_url} alt="" width={600} height={600} unoptimized />
-                    <span>{product.category_type}</span>
+                    <span>{productCategoryLabel(product.category_type)}</span>
                   </div>
                   <div className="product-card-body">
                     <p className="marketplace-lister">{product.listerName} · DEMO</p>
@@ -210,9 +207,14 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
 
       {!error && !products?.length && !showDemoPreview ? (
         <div className="marketplace-status">
-          <strong>No products found</strong>
-          <p>Try another search or clear the filters.</p>
-          <Link className="button button-primary" href="/marketplace">View all products</Link>
+          {search || category || min !== null || max !== null ? <>
+            <strong>No products found</strong>
+            <p>Try another search or clear the filters.</p>
+            <Link className="button button-primary" href="/marketplace">View all products</Link>
+          </> : <>
+            <strong>Products are coming soon</strong>
+            <p>Our brands are getting ready. Please check back.</p>
+          </>}
         </div>
       ) : null}
     </section>

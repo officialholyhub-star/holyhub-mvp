@@ -15,18 +15,20 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   const params = await searchParams;
   const { supabase, user } = await requireUser();
 
-  const loadCheckout = async (): Promise<CheckoutSnapshot | null> => {
-    if (!params.session_id) return null;
-    const { data } = await supabase
+  const loadCheckout = async (): Promise<{ data: CheckoutSnapshot | null; error: unknown }> => {
+    if (!params.session_id) return { data: null, error: null };
+    const { data, error } = await supabase
       .from("checkout_sessions")
       .select("status, amount_total, currency")
       .eq("stripe_checkout_session_id", params.session_id)
       .eq("user_id", user.id)
       .maybeSingle();
-    return data;
+    return { data, error };
   };
 
-  let checkout = await loadCheckout();
+  const initial = await loadCheckout();
+  let unavailable = Boolean(initial.error);
+  let checkout = initial.data;
 
   // Webhooks remain the primary source of payment completion. This server-side
   // reconciliation safely recovers a paid Checkout Session when the webhook is
@@ -62,22 +64,30 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
         });
 
         if (error) {
+          unavailable = true;
           console.error("Checkout success reconciliation failed", { sessionId: session.id, code: error.code });
         } else {
-          checkout = await loadCheckout();
+          const refreshed = await loadCheckout();
+          checkout = refreshed.data;
+          unavailable = Boolean(refreshed.error);
         }
       }
     } catch (error) {
+      unavailable = true;
       console.error("Checkout success Stripe verification failed", error);
     }
   }
 
+  const confirmed = !unavailable && checkout?.status === "paid";
+  const unsuccessful = !unavailable && (checkout?.status === "failed" || checkout?.status === "cancelled");
+  const pending = !unavailable && checkout?.status === "pending";
   return (
     <section className="auth-wrap">
       <div className="card">
         <p className="eyebrow">HolyHub checkout</p>
-        <h2>Thank you for your payment</h2>
-        <p>{checkout?.status === "paid" ? "Your payment has been confirmed." : "Your payment return was received. Payment confirmation is completed securely by Stripe webhook."}</p>
+        <h2>{confirmed ? "Thank you for your payment" : unsuccessful ? "Checkout was not completed" : "We couldn’t confirm your payment yet."}</h2>
+        <p>{confirmed ? "Your payment has been confirmed." : unsuccessful ? "This checkout is marked as failed or cancelled. Check My Purchases before starting another checkout." : pending ? "Your payment is still being verified. Please wait, then refresh or check My Purchases. Do not pay again while its status is uncertain." : "Payment details are unavailable. Check My Purchases or contact HolyHub before trying another payment."}</p>
+        <div className="row-actions"><Link className="button button-primary" href="/account/orders">Check My Purchases</Link>{!confirmed && !unsuccessful && <a className="button button-quiet" href={params.session_id ? `/checkout/success?session_id=${encodeURIComponent(params.session_id)}` : "/checkout/success"}>Refresh</a>}{unsuccessful && <Link className="button button-quiet" href="/basket">Return to basket</Link>}{!confirmed && <Link className="text-link" href="/contact">Contact HolyHub</Link>}</div>
         <div className="button-row"><Link className="button button-primary" href="/marketplace">Continue shopping</Link><Link className="button button-quiet" href="/account">Back to account</Link></div>
       </div>
     </section>

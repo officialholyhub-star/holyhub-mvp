@@ -1,3 +1,43 @@
+/* Shared desktop width: compact screens retain their original safe gutters. */
+@media (min-width: 1200px) {
+  .site-header-inner {
+    width: min(var(--page-max-width), var(--page-width));
+    padding-inline: 0;
+  }
+  .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.site-footer-inner { width: min(var(--page-max-width), var(--page-width)); }
+
+.customer-settings-card .form { max-width: 480px; }
+.account-grid,
+.admin-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.lister-action-card { grid-template-columns: 54px minmax(0, 1fr) auto; }
+.lister-actions > *,
+.lister-order-list > *,
+.customer-order-list > * { min-width: 0; }
+
+@media (min-width: 1024px) {
+  .lister-actions,
+  .lister-order-list,
+  .customer-order-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .lister-actions { align-items: stretch; }
+  .admin-overview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1200px) {
+  .customer-account-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1800px) {
+  .marketplace-page .marketplace-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 28px 20px; }
+}
+
+@media (max-width: 720px) {
+  .account-grid,
+  .admin-overview-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Small shared layout refinements for the existing MVP. */
 :root a:focus-visible,
 :root button:focus-visible,
@@ -49,6 +89,9 @@
 .lister-order-item > :last-child { flex-shrink: 0; }
 
 .marketplace-card { display: flex; flex-direction: column; }
+.marketplace-card .purchase-controls { min-width: 0; }
+.marketplace-card .purchase-controls > .button { min-width: 0; white-space: normal; }
+.marketplace-card .product-quantity-control { max-width: 100%; flex-wrap: wrap; }
 .marketplace-card-image { flex-shrink: 0; }
 .marketplace-card .product-card-action { margin-top: auto; }
 .marketplace-card .product-card-action .button,
@@ -71,6 +114,7 @@
 }
 
 @media (max-width: 560px) {
+  .marketplace-card .product-quantity-control > span { flex-basis: 100%; }
   .field input,
   .field select,
   .field textarea,

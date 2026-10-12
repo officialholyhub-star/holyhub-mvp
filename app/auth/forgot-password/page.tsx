@@ -10,14 +10,14 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
           <h2>Reset your password</h2>
           <p>Enter the email used for your HolyHub account.</p>
         </div>
-        {params.error && <p className="notice notice-error">{params.error}</p>}
-        {params.message && <p className="notice notice-success">{params.message}</p>}
-        <form className="form" action={requestPasswordReset}>
+        {params.error && <p role="alert" className="notice notice-error">{params.error}</p>}
+        {params.message && <p role="status" className="notice notice-success">{params.message}</p>}
+        <form className="form" action={requestPasswordReset} noValidate>
           <div className="field">
             <label htmlFor="email">Email</label>
-            <input id="email" name="email" type="email" autoComplete="email" required />
+            <input id="email" name="email" type="email" autoComplete="email" maxLength={254} required />
           </div>
-          <button className="button button-primary" type="submit">Send reset link</button>
+          <button className="button button-primary" type="submit">{params.message ? "Resend reset email" : "Send reset link"}</button>
         </form>
         <div className="form-footer">
           <Link className="text-link" href="/auth/login">Back to log in</Link>

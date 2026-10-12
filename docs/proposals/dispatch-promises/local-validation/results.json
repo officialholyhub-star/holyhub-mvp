@@ -1,0 +1,50 @@
+[
+  {
+    "name": "historical parent rows unchanged and all historic timing remains unknown",
+    "result": "PASS"
+  },
+  {
+    "name": "fresh multi-lister order: separate immutable snapshots, unchanged totals commission stock",
+    "result": "PASS"
+  },
+  {
+    "name": "shop settings changed by actual owning lister cannot move existing order deadlines",
+    "result": "PASS"
+  },
+  {
+    "name": "retry cannot overwrite confirmed deadline or decrement stock again",
+    "result": "PASS"
+  },
+  {
+    "name": "old in-flight checkout creates valid unknown deadlines after migration",
+    "result": "PASS"
+  },
+  {
+    "name": "London working days, weekends, BST/GMT, local midnight, timezone independence, invalid values",
+    "result": "PASS"
+  },
+  {
+    "name": "actual customer/lister RLS visibility and forbidden snapshot/deadline/RPC writes",
+    "result": "PASS"
+  },
+  {
+    "name": "existing owner fulfilment update succeeds while foreign seller update stays blocked",
+    "result": "PASS"
+  },
+  {
+    "name": "concurrent success-page/webhook-equivalent RPCs and confirmations: one order, one stock decrement",
+    "result": "PASS"
+  },
+  {
+    "name": "post-commit actual RPC permission failure cannot roll back permanent paid order",
+    "result": "PASS"
+  },
+  {
+    "name": "overdue query boundary: unknown/dispatched/delivered excluded; exact deadline becomes overdue",
+    "result": "PASS"
+  },
+  {
+    "name": "original payment integrity database regressions",
+    "result": "PASS"
+  }
+]

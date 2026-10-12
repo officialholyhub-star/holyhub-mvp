@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 type HolyHubIconName =
+  | "settings"
   | "home"
   | "hub"
   | "marketplace"
@@ -14,9 +15,11 @@ type HolyHubIconName =
   | "festival"
   | "activity"
   | "menu"
+  | "close"
   | "basket";
 
 const paths: Record<HolyHubIconName, ReactNode> = {
+  settings: <><path d="m9 3-.5 2-2 .9-1.8-.6-2 3.4 1.5 1.4v2.3l-1.5 1.4 2 3.4 1.8-.6 2 .9.5 2h4l.5-2 2-.9 1.8.6 2-3.4-1.5-1.4v-2.3l1.5-1.4-2-3.4-1.8.6-2-.9L13 3Z" /><circle cx="11" cy="11.3" r="3" /></>,
   home: <><path d="m3.5 10.5 8.5-7 8.5 7" /><path d="M5.5 9.5V20h13V9.5" /><path d="M9.5 20v-6h5v6" /></>,
   hub: <><circle cx="5.5" cy="7.5" r="1.7" /><circle cx="12" cy="6.5" r="1.9" /><circle cx="18.5" cy="7.5" r="1.7" /><path d="M2.5 18c.4-3 1.8-4.8 4.3-4.8 1.2 0 2.2.4 3 1.2" /><path d="M9 18c.4-3.3 1.6-5.2 3-5.2s2.6 1.9 3 5.2" /><path d="M14.2 14.4c.8-.8 1.8-1.2 3-1.2 2.5 0 3.9 1.8 4.3 4.8" /></>,
   marketplace: <><path d="M4 8h16l-1.3 11H5.3L4 8Z" /><path d="M8 8a4 4 0 0 1 8 0" /></>,
@@ -30,6 +33,7 @@ const paths: Record<HolyHubIconName, ReactNode> = {
   festival: <><path d="M12 3v18M5 7l7-4 7 4-7 4-7-4Z" /><path d="M5 17l7 4 7-4" /></>,
   activity: <><path d="M4 16c3-5 5-7 8-7s5 2 8 7" /><circle cx="12" cy="6" r="2" /><path d="M7 20h10" /></>,
   menu: <><path d="M5 7h14M5 12h14M5 17h14" /></>,
+  close: <><path d="m6 6 12 12M18 6 6 18" /></>,
   basket: <><path d="M5 9h14l-1.2 10H6.2L5 9Z" /><path d="m8 9 4-5 4 5" /></>,
 };
 

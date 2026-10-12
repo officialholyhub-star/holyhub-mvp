@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+import { safeInternalPath } from "@/lib/auth/redirect";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,7 +10,14 @@ export async function requireUser() {
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error || !user) {
-    redirect("/auth/login?message=Please%20log%20in%20to%20continue.");
+    const requestHeaders = await headers();
+    let next = "/account";
+    try {
+      const referer = requestHeaders.get("referer");
+      if (referer) { const url = new URL(referer); next = safeInternalPath(`${url.pathname}${url.search}`, "/account"); }
+    } catch { /* Use the account page when the referring path is unavailable. */ }
+    if (next.startsWith("/auth/")) next = "/account";
+    redirect(`/auth/login?message=Please%20log%20in%20to%20continue.&next=${encodeURIComponent(next)}`);
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -17,7 +26,8 @@ export async function requireUser() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError || !profile || profile.account_status !== "active") {
+  if (profileError) throw new Error("Account details could not be verified. Please try again.");
+  if (!profile || profile.account_status !== "active") {
     redirect("/auth/blocked");
   }
 
@@ -33,7 +43,8 @@ export async function requireRole(role: AppRole) {
     .eq("role", role)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) throw new Error("Access could not be verified. Please try again.");
+  if (!data) {
     redirect("/account?error=You%20do%20not%20have%20access%20to%20that%20area.");
   }
 

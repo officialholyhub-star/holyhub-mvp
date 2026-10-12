@@ -83,3 +83,10 @@
     width: 100%;
   }
 }
+.section { border:0; padding:0; margin:0; min-width:0; display:grid; gap:20px; }
+.section[hidden] { display:none; }
+.section > legend { font-weight:700; margin-bottom:16px; }
+
+.section { animation: reveal .25s ease both; overflow-wrap:anywhere; }
+@keyframes reveal { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .section { animation:none; } }

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FavouritesPage() {
   const { supabase, user } = await requireUser();
-  const { data: favourites } = await supabase
+  const { data: favourites, error } = await supabase
     .from("favourites")
     .select("created_at, products(id, name, price, image_url, category_type, product_images(image_url, sort_order), lister_storefronts(business_name))")
     .eq("user_id", user.id)
@@ -30,7 +30,7 @@ export default async function FavouritesPage() {
         <Link className="button button-primary" href="/marketplace">Explore Marketplace</Link>
       </div>
 
-      {products.length ? (
+      {error ? <p className="notice notice-error" role="alert">Your favourites could not be loaded. Please refresh to try again.</p> : products.length ? (
         <div className="product-grid marketplace-grid">
           {products.map((product) => {
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;

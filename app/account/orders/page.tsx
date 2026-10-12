@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
 import { formatDeliveryAddress, FULFILMENT_STATUS_LABELS, type FulfilmentStatus } from "@/lib/fulfilment";
+import { decodeDisplayText } from "@/lib/display-text";
 
 function safeTrackingUrl(value: string | null) {
   if (!value) return null;
@@ -22,15 +23,16 @@ export default async function AccountOrdersPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   const orderIds = (orders ?? []).map((order) => order.id);
-  const { data: orderItems } = orderIds.length ? await supabase.from("order_items").select("order_id, seller_user_id, product_name, quantity, variant_size").in("order_id", orderIds) : { data: [] };
+  const { data: orderItems, error: itemsError } = orderIds.length ? await supabase.from("order_items").select("order_id, seller_user_id, product_name, quantity, variant_size").in("order_id", orderIds) : { data: [], error: null };
   const itemsByOrder = new Map<string, typeof orderItems>();
   for (const item of orderItems ?? []) itemsByOrder.set(item.order_id, [...(itemsByOrder.get(item.order_id) ?? []), item]);
 
   return (
     <section className="customer-orders-page">
       <Link className="text-link" href="/account">Back to account</Link>
-      <div className="page-heading"><div><p className="eyebrow">Your HolyHub space</p><h1>Orders</h1><p className="lead">See fulfilment updates for your purchases.</p></div></div>
-      {error ? <p className="notice notice-error">Orders could not be loaded.</p> : orders?.length ? (
+      <div className="page-heading"><div><p className="eyebrow">Your HolyHub space</p><h1>My purchases</h1><p className="lead">View products you’ve bought and track their delivery.</p></div></div>
+      {itemsError && <p role="alert" className="notice notice-error">Some order items could not be loaded. Refresh to see complete purchase details.</p>}
+      {error ? <p className="notice notice-error">Purchases could not be loaded.</p> : orders?.length ? (
         <div className="customer-order-list">
           {orders.map((order) => (
             <article className="customer-order-card" key={order.id}>
@@ -40,16 +42,18 @@ export default async function AccountOrdersPage() {
                 const trackingUrl = safeTrackingUrl(sellerOrder.tracking_url);
                 return (
                   <div className="customer-seller-order" key={sellerOrder.id}>
-                    <div className="customer-seller-order-heading"><h2>{sellerOrder.seller_business_name}</h2><span className={`status-pill status-${status}`}>{FULFILMENT_STATUS_LABELS[status] ?? status}</span></div>
-                    <div className="customer-order-items">{(itemsByOrder.get(order.id) ?? []).filter((item) => item.seller_user_id === sellerOrder.seller_user_id).map((item, index) => <p key={`${item.product_name}-${index}`}>{item.product_name}{item.variant_size ? ` · Size ${item.variant_size}` : ""} · Qty {item.quantity}</p>)}</div>
-                    {(sellerOrder.carrier || sellerOrder.tracking_number || sellerOrder.dispatched_at) && <div className="customer-tracking"><strong>Delivery</strong>{sellerOrder.carrier && <span>{sellerOrder.carrier === "Other" ? sellerOrder.carrier_other : sellerOrder.carrier}</span>}{sellerOrder.tracking_number && <span>Tracking: {sellerOrder.tracking_number}</span>}{sellerOrder.dispatched_at && <span>Dispatched {new Date(sellerOrder.dispatched_at).toLocaleDateString("en-GB")}</span>}{trackingUrl && <a href={trackingUrl} target="_blank" rel="noopener noreferrer">Open tracking link</a>}</div>}
+                    <div className="customer-seller-order-heading"><h2>{decodeDisplayText(sellerOrder.seller_business_name)}</h2><span className={`status-pill status-${status}`}>{status === "pending" ? "Awaiting preparation" : FULFILMENT_STATUS_LABELS[status] ?? status}</span></div>
+                    {status === "cancelled" && <p>This order has been cancelled.</p>}
+                    <div className="customer-order-items">{(itemsByOrder.get(order.id) ?? []).filter((item) => item.seller_user_id === sellerOrder.seller_user_id).map((item, index) => <p key={`${item.product_name}-${index}`}>{decodeDisplayText(item.product_name)}{item.variant_size ? ` · Size ${decodeDisplayText(item.variant_size)}` : ""} · Qty {item.quantity}</p>)}</div>
+                    {sellerOrder.fulfilment_status === "dispatched" && !sellerOrder.tracking_number && !trackingUrl && <p>No tracking details have been added.</p>}
+                    {(sellerOrder.carrier || sellerOrder.tracking_number || trackingUrl || sellerOrder.dispatched_at) && <div className="customer-tracking"><strong>Delivery</strong>{sellerOrder.carrier && <span>{sellerOrder.carrier === "Other" ? sellerOrder.carrier_other : sellerOrder.carrier}</span>}{sellerOrder.tracking_number && <span>Tracking: {sellerOrder.tracking_number}</span>}{sellerOrder.dispatched_at && <span>Dispatched {new Date(sellerOrder.dispatched_at).toLocaleDateString("en-GB")}</span>}{trackingUrl && <a href={trackingUrl} target="_blank" rel="noopener noreferrer">Open tracking link</a>}</div>}
                   </div>
                 );
               })}
             </article>
           ))}
         </div>
-      ) : <div className="card empty-state"><p>You have no orders yet.</p><Link className="button button-primary" href="/marketplace">Browse marketplace</Link></div>}
+      ) : <div className="card empty-state"><p>You have no purchases yet.</p><Link className="button button-primary" href="/marketplace">Browse marketplace</Link></div>}
     </section>
   );
 }

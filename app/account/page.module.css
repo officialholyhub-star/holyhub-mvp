@@ -1,0 +1,82 @@
+.page { min-width: 0; }
+.welcome { padding: 4px 0 28px; }
+.welcome h1 { max-width: 100%; font-size: clamp(2.2rem, 4vw, 3.6rem); overflow-wrap: anywhere; }
+.welcome .summary { margin: 24px 0 0; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: .85rem; color: var(--muted); }
+.summary > div { display: flex; gap: 8px; min-width: 0; }
+.summary dt::after { content: ":"; }
+.summary dd { margin: 0; color: #4d626f; overflow-wrap: anywhere; }
+
+.listerShortcut {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 8px 0 32px;
+  padding: clamp(24px, 3vw, 40px);
+  border-radius: 28px 28px 28px 8px;
+  background: linear-gradient(115deg, #deedf7, #edf5fa);
+  box-shadow: 0 12px 36px rgba(58, 82, 99, .05);
+  transition: background .2s ease, box-shadow .2s ease;
+}
+.listerShortcut:hover { background: #deedf7; box-shadow: 0 14px 36px rgba(58, 82, 99, .1); }
+.listerCopy { flex: 1; min-width: 0; }
+.listerCopy :global(.eyebrow) { margin-bottom: 8px; font-size: .8rem; }
+.listerCopy h2 { font-size: clamp(1.55rem, 2.5vw, 2rem); }
+.listerCopy p { margin: 0 0 16px; }
+.listerCta { display: inline-flex; gap: 12px; font-weight: 700; color: #31556e; }
+.listerArrow { display: grid; place-items: center; flex: 0 0 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,.65); color: #31556e; font-size: 1.65rem; }
+
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 36px; margin: 8px 0 32px; }
+.action { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 0; padding: 26px 0; border-bottom: 1px solid var(--line); }
+.action > div { min-width: 0; }
+.action h2 { margin-bottom: 8px; font-size: 1.3rem; }
+.action p { max-width: 48ch; margin: 0 0 12px; font-size: .94rem; }
+.actionLabel { color: #42647c; font-weight: 700; font-size: .88rem; }
+.actionArrow { flex: 0 0 28px; color: #6f94b0; font-size: 1.5rem; transition: transform .2s ease; }
+.action:hover .actionArrow { transform: translateX(4px); }
+.action:hover .actionLabel { text-decoration: underline; text-underline-offset: 4px; }
+.orders { grid-row: span 2; padding: clamp(24px, 3vw, 40px); border: 0; border-radius: 24px; background: rgba(255,255,255,.75); }
+.orders h2 { font-size: clamp(1.6rem, 2.5vw, 2rem); }
+.orders :global(.eyebrow) { margin-bottom: 12px; font-size: .78rem; }
+
+.application { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 24px; margin: 0 0 40px; }
+.application h2 { margin: 0; font-size: 1rem; color: #536873; }
+.application p { margin: 0; font-size: .88rem; }
+.application a { display: inline-block; }
+
+.settings { margin-top: 44px; padding-top: 32px; border-top: 1px solid var(--line); }
+.settingsHeading h2 { font-size: 1.35rem; }
+.settingsHeading p { margin: 0 0 28px; font-size: .94rem; }
+.settingsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 56px; }
+.settingsForm { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.settingsForm h3 { margin: 0 0 20px; padding-bottom: 12px; border-bottom: 2px solid var(--holyhub-pink-soft); font-size: 1.15rem; }
+.settingsForm form { max-width: 480px; }
+.settingsForm button { justify-self: start; }
+.settingsForm p { margin: 0; }
+
+@media (max-width: 720px) {
+  .welcome { padding-bottom: 20px; }
+  .listerShortcut { gap: 16px; flex-wrap: wrap; padding: 24px; }
+  .listerCopy { flex-basis: calc(100% - 120px); }
+  .listerArrow { display: none; }
+  .actions { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .orders { grid-row: auto; min-height: 200px; }
+  .action { gap: 12px; }
+  .settings { margin-top: 32px; padding-top: 28px; }
+  .settingsGrid { grid-template-columns: minmax(0, 480px); }
+}
+
+@media (max-width: 390px) {
+  .listerCopy { flex-basis: 100%; }
+}
+
+@media (min-width: 1200px) {
+  .actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+  .action { padding: 28px; border: 1px solid var(--line); border-radius: 24px; background: rgba(255,255,255,.75); }
+  .orders { grid-row: auto; }
+  .orders h2 { font-size: 1.3rem; }
+}
+
+.management { margin-top: 28px; padding: 24px; border: 1px solid var(--holyhub-pink); border-radius: 16px; background: var(--holyhub-pink-soft); }
+.management h3 { margin: 0 0 12px; }
+.management p { max-width: 65ch; margin: 12px 0; }

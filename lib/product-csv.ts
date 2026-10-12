@@ -51,11 +51,12 @@ export function validateProductCsv(text: string): CsvRow[] {
     const sizeStocks = trimmed.slice(6 + imageCount);
     const errors: string[] = []; const warnings: string[] = [];
     const price = parsePrice(priceText); const stock = parseStockQuantity(stockText); const sku = skuText.toUpperCase();
-    if (cells.length !== columnCount) errors.push("Wrong number of columns.");
+    if (cells.length !== columnCount) errors.push(`Wrong number of columns: expected ${columnCount}, found ${cells.length}. Check for missing cells or unquoted commas.`);
     if (!name || name.length > 150) errors.push("Product name is required (maximum 150 characters).");
     if (!description || description.length > 1000) errors.push("Description is required (maximum 1000 characters).");
     if (price === null) errors.push("Price is invalid. Use pounds with up to two decimal places, without £.");
-    if (!isProductCategory(category)) errors.push(`Invalid category "${category}".`);
+    if (!category) errors.push("Category is required.");
+    else if (!isProductCategory(category)) errors.push(`Invalid category "${category}".`);
     if (sku.length > 100 || /[\x00-\x1F\x7F]/.test(sku)) errors.push("SKU must be at most 100 characters with no control characters.");
     if (sku && (counts.get(sku) ?? 0) > 1) errors.push("Duplicate SKU in this CSV.");
     imageUrls.forEach((image, i) => {

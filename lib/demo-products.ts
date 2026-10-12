@@ -1,8 +1,10 @@
+import type { ProductCategory } from "./product-categories";
+
 export type DemoProduct = {
   id: string;
   name: string;
   price: number;
-  category_type: string;
+  category_type: ProductCategory;
   image_url: string;
   listerName: string;
 };
@@ -12,7 +14,7 @@ export const demoProducts: DemoProduct[] = [
     id: "demo-grace-hoodie",
     name: "Grace Oversized Hoodie",
     price: 48,
-    category_type: "Clothing & accessories",
+    category_type: "Apparel",
     image_url: "/demo-products/grace-hoodie.svg",
     listerName: "Covenant Supply",
   },
@@ -20,7 +22,7 @@ export const demoProducts: DemoProduct[] = [
     id: "demo-kingdom-tee",
     name: "Kingdom Heavyweight Tee",
     price: 28,
-    category_type: "Clothing & accessories",
+    category_type: "Apparel",
     image_url: "/demo-products/kingdom-tee.svg",
     listerName: "Narrow Way",
   },
@@ -28,7 +30,7 @@ export const demoProducts: DemoProduct[] = [
     id: "demo-chosen-cap",
     name: "Chosen Embroidered Cap",
     price: 22,
-    category_type: "Clothing & accessories",
+    category_type: "Apparel",
     image_url: "/demo-products/chosen-cap.svg",
     listerName: "Selah Studio",
   },
@@ -36,7 +38,7 @@ export const demoProducts: DemoProduct[] = [
     id: "demo-scripture-journal",
     name: "Scripture Study Journal",
     price: 18,
-    category_type: "Books & stationery",
+    category_type: "Books",
     image_url: "/demo-products/scripture-journal.svg",
     listerName: "Good Soil Paper Co.",
   },
@@ -60,7 +62,7 @@ export const demoProducts: DemoProduct[] = [
     id: "demo-psalm-print",
     name: "Psalm 23 Art Print",
     price: 16,
-    category_type: "Art & prints",
+    category_type: "Arts",
     image_url: "/demo-products/psalm-print.svg",
     listerName: "Still Waters",
   },
@@ -68,7 +70,7 @@ export const demoProducts: DemoProduct[] = [
     id: "demo-be-still-mug",
     name: "Be Still Stoneware Mug",
     price: 17,
-    category_type: "Home & living",
+    category_type: "Home & Living",
     image_url: "/demo-products/be-still-mug.svg",
     listerName: "Abide Home",
   },

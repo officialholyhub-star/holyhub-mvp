@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireUser } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSiteUrl, getStripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
+import { checkoutRedirectUrls } from "@/lib/checkout-origin";
 import { MAX_BASKET_ITEMS, MAX_BASKET_QUANTITY } from "@/lib/basket";
 import { calculateCheckoutTotals, calculateHolyHubCommission, toPence } from "@/lib/checkout-pricing";
 
@@ -108,10 +109,7 @@ export async function startCheckout(formData: FormData) {
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>;
   try {
     const requestHeaders = await headers();
-    const siteUrl = new URL(requestHeaders.get("origin") || getSiteUrl());
-    if (siteUrl.protocol !== "https:" && siteUrl.protocol !== "http:") {
-      throw new Error("Invalid checkout site origin.");
-    }
+    const redirectUrls = checkoutRedirectUrls(requestHeaders);
 
     const lineItems = trustedLines.map(({ product, quantity, unitAmount, variantSize }) => ({
       quantity,
@@ -139,8 +137,7 @@ export async function startCheckout(formData: FormData) {
       line_items: [...lineItems, ...deliveryItems],
       customer_email: user.email ?? undefined,
       shipping_address_collection: { allowed_countries: ["GB"] },
-      success_url: `${siteUrl.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl.origin}/checkout/cancelled`,
+      ...redirectUrls,
       metadata: {
         holyhub_user_id: user.id,
         holyhub_product_subtotal: String(productSubtotal),

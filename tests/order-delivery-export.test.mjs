@@ -7,11 +7,63 @@ import React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as fulfilment from '../lib/fulfilment.ts';
+import { loadTypescript } from './helpers/load-typescript.mjs';
+import { createPortal } from 'react-dom';
+
+const fulfilmentSummary = loadTypescript('lib/fulfilment-summary.ts');
+const displayText = loadTypescript('lib/display-text.ts');
+const helpCopy = loadTypescript('lib/help-copy.ts');
+const helpComponent = load('components/help-icon.tsx', {
+  react: React, 'react-dom': { createPortal }, 'react/jsx-runtime': jsxRuntime,
+  './help-icon.module.css': { default: {} },
+});
+const cancellation = load('components/order-cancellation.tsx', {
+  react: React, 'react-dom': { useFormStatus: () => ({ pending: false }) }, 'react/jsx-runtime': jsxRuntime,
+  '@/lib/order-cancellation': loadTypescript('lib/order-cancellation.ts'), './order-update-panel.module.css': { default: {} },
+});
+const orderUpdate = load('components/order-update-panel.tsx', {
+  react: React, 'react-dom': { useFormStatus: () => ({ pending: false }) }, 'react/jsx-runtime': jsxRuntime, '@/lib/fulfilment': fulfilment,
+  '@/lib/help-copy': helpCopy, './help-icon': helpComponent,
+  './order-update-panel.module.css': { default: {} }, './order-cancellation': cancellation,
+});
+const statusBadge = load('components/fulfilment-status-badge.tsx', {
+  'react/jsx-runtime': jsxRuntime, '@/lib/fulfilment': fulfilment,
+  '@/lib/help-copy': helpCopy, './help-icon': helpComponent,
+});
+const exportTools = load('components/order-export-tools.tsx', {
+  react: React, 'react/jsx-runtime': jsxRuntime, '@/lib/help-copy': helpCopy,
+  './help-icon': helpComponent, './order-export-tools.module.css': { default: {} },
+});
+const summaryComponent = load('components/fulfilment-summary.tsx', {
+  'react/jsx-runtime': jsxRuntime,
+  'next/link': { default: props => React.createElement('a', props) },
+  './fulfilment-summary.module.css': { default: {} },
+  './help-icon': helpComponent, '@/lib/help-copy': helpCopy,
+});
+
+test('fulfilment summary renders counts, the orders link, and honest empty/error states', () => {
+  const summary = { toFulfil: 3, unfulfilled: 2, processing: 1, dispatched: 3, completed: 4 };
+  const render = (summary, compact = false) => renderToStaticMarkup(React.createElement(summaryComponent.FulfilmentSummary, { summary, compact }));
+  const html = render(summary);
+  for (const [label, count] of [['Orders to fulfil', 3], ['Processing', 1], ['Dispatched', 3], ['Completed', 4]]) {
+    assert.match(html, new RegExp(`${label}[\\s\\S]*?</dt><dd>${count}</dd>`));
+  }
+  assert.ok(html.includes('href="/lister/orders"'));
+  assert.ok(html.includes('View orders'));
+  assert.ok(!render(summary, true).includes('View orders'));
+  assert.ok(render({ toFulfil: 0, unfulfilled: 0, processing: 0, dispatched: 0, completed: 0 }).includes('No orders waiting to be prepared or sent.'));
+  assert.ok(!html.includes('No orders waiting to be prepared or sent.'));
+  assert.ok(render(null).includes('Order counts could not be loaded'));
+  assert.ok(!render(null).includes('No orders waiting to be prepared or sent.'));
+});
 
 function load(file, dependencies, extra = {}) {
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const exports = {};
   vm.runInNewContext(code, { exports, require: (name) => {
+    if (name === '@/components/draft-form') return { DraftForm: 'form', ClearDraft: () => null };
+    if (name === '@/lib/form-drafts') return { readDraft: () => null, writeDraft() {} };
+    if (name === 'next/navigation') return { unstable_rethrow(error) { throw error; } };
     if (!(name in dependencies)) throw new Error(`Unexpected dependency: ${name}`);
     return dependencies[name];
   }, URL, Response, console, ...extra });
@@ -33,7 +85,7 @@ function database(tables, writes = []) {
       update() { return query; },
       maybeSingle() { return Promise.resolve({ data: rows[0] ?? null, error: null }); },
       single() { return Promise.resolve({ data: inserted ? { id: 'new-order' } : rows[0], error: null }); },
-      then(resolve, reject) { return Promise.resolve({ data: rows, error: null }).then(resolve, reject); },
+      then(resolve, reject) { return Promise.resolve({ data: rows, count: rows.length, error: null }).then(resolve, reject); },
     };
     return query;
   }, rpc: async () => ({ error: null }), auth: { admin: { getUserById: async id => ({ data: { user: { email: `${id}@example.com` } } }) } } };
@@ -62,7 +114,7 @@ function exportRoute() {
 }
 test('paid webhook passes real shipping fields to the atomic order transaction', async () => {
   const calls = [];
-  const db = { rpc: async (name, args) => { calls.push({ name, args }); return { error: null }; } };
+  const db = { rpc: async (name, args) => { calls.push({ name, args }); return { data: 'order-test', error: null }; } };
   const session = { id: 'stripe-session', payment_status: 'paid', currency: 'gbp', amount_total: 1200, collected_information: { shipping_details: { name: 'Recipient', address: { line1: '10 Real Road', line2: 'Flat 2', city: 'London', postal_code: 'SW1A 1AA', country: 'GB' } } } };
   const { POST } = load('app/api/stripe/webhook/route.ts', { 'next/server': next, '@/lib/stripe': { getStripe: () => ({ webhooks: { constructEvent: () => ({ type: 'checkout.session.completed', data: { object: session } }) } }) }, '@/lib/supabase/admin': { createAdminClient: () => db } }, { process: { env: { STRIPE_WEBHOOK_SECRET: 'test' } } });
   const response = await POST(new Request('https://example.com/webhook', { method: 'POST', headers: { 'stripe-signature': 'test' }, body: '{}' }));
@@ -117,24 +169,52 @@ test('lister page shows only its delivery address, items and selected-order cont
     { id: ownId, order_id: 'own-order', seller_user_id: 'seller-a', fulfilment_status: 'pending', orders: { user_id: 'customer-a', ...address } },
     { id: otherId, order_id: 'other-order', seller_user_id: 'seller-b', fulfilment_status: 'pending', orders: { user_id: 'customer-b', delivery_address_line1: 'SECRET ADDRESS' } },
   ], order_items: [
-    { order_id: 'own-order', seller_user_id: 'seller-a', product_name: 'Shirt', variant_size: 'M', quantity: 1 },
+    { order_id: 'own-order', seller_user_id: 'seller-a', product_name: 'HolyHu&#x62; van&#x73;', variant_size: 'M', quantity: 1 },
     { order_id: 'own-order', seller_user_id: 'seller-b', product_name: 'SECRET ITEM', quantity: 1 },
   ] });
-  const page = load('app/lister/orders/page.tsx', { 'react/jsx-runtime': jsxRuntime, 'next/link': { default: props => React.createElement('a', props) }, '@/lib/auth/require-user': { requireRole: async () => ({ supabase: db, user: { id: 'seller-a' } }) }, '@/lib/supabase/admin': { createAdminClient: () => db }, './actions': { updateSellerFulfilment: '/test-action' }, '@/lib/fulfilment': fulfilment }).default;
+  const page = load('app/lister/orders/page.tsx', { 'react/jsx-runtime': jsxRuntime, 'next/link': { default: props => React.createElement('a', props) }, '@/lib/auth/require-user': { requireRole: async () => ({ supabase: db, user: { id: 'seller-a' } }) }, '@/lib/supabase/admin': { createAdminClient: () => db }, './actions': { updateSellerFulfilment: '/test-action' }, './page.module.css': { default: {} }, '@/lib/order-presentation': loadTypescript('lib/order-presentation.ts'), '@/lib/fulfilment': fulfilment, '@/lib/fulfilment-summary': fulfilmentSummary, '@/components/fulfilment-summary': summaryComponent, '@/lib/display-text': displayText, '@/components/order-update-panel': orderUpdate, '@/components/fulfilment-status-badge': statusBadge, '@/components/order-export-tools': exportTools }).default;
   const html = renderToStaticMarkup(await page({ searchParams: Promise.resolve({}) }));
   assert.ok(html.includes('10 Real Road'));
   assert.ok(html.includes('Size M'));
   assert.ok(html.includes('form="selected-order-export"'));
   assert.ok(!html.includes('SECRET'));
   assert.ok(!html.includes(otherId));
+  assert.match(html, /Orders to fulfil[\s\S]*?<\/dt><dd>1<\/dd>/);
+  assert.match(html, /Completed[\s\S]*?<\/dt><dd>0<\/dd>/);
+  assert.ok(html.includes('HolyHub vans'));
+  assert.ok(!html.includes('HolyHu&amp;#x62;'));
+  assert.ok(html.includes("Start preparing order"));
+  assert.ok(!html.includes("<select"));
+  assert.ok(html.includes('Needs preparing'));
 });
 test('customer order page displays only the signed-in customer address and retains tracking and sizes', async () => {
   const db = database({ orders: [
     { id: 'own-order', user_id: 'customer-a', created_at: '2026-10-01', total_amount: 1200, ...address, seller_orders: [{ id: ownId, seller_user_id: 'seller-a', seller_business_name: 'Shop', fulfilment_status: 'dispatched', carrier: 'DPD', tracking_number: 'TRACK123', tracking_url: 'https://example.com/track' }] },
     { id: 'other-order', user_id: 'customer-b', delivery_address_line1: 'SECRET ADDRESS', seller_orders: [] },
   ], order_items: [{ order_id: 'own-order', seller_user_id: 'seller-a', product_name: 'Shirt', quantity: 1, variant_size: 'M' }] });
-  const page = load('app/account/orders/page.tsx', { 'react/jsx-runtime': jsxRuntime, 'next/link': { default: props => React.createElement('a', props) }, '@/lib/auth/require-user': { requireUser: async () => ({ supabase: db, user: { id: 'customer-a' } }) }, '@/lib/fulfilment': fulfilment }).default;
+  const page = load('app/account/orders/page.tsx', { 'react/jsx-runtime': jsxRuntime, 'next/link': { default: props => React.createElement('a', props) }, '@/lib/auth/require-user': { requireUser: async () => ({ supabase: db, user: { id: 'customer-a' } }) }, '@/lib/fulfilment': fulfilment, '@/lib/display-text': displayText }).default;
   const html = renderToStaticMarkup(await page());
   for (const value of ['10 Real Road', 'TRACK123', 'DPD', 'Size M', 'Dispatched']) assert.ok(html.includes(value));
   assert.ok(!html.includes('SECRET'));
+});
+
+test('customer tracking URL displays even without a carrier or number, and private notes never render', async () => {
+  const db = database({ orders: [{ id: 'own-order', user_id: 'customer-a', created_at: '2026-10-01', total_amount: 1200,
+    seller_orders: [{ id: ownId, seller_user_id: 'seller-a', seller_business_name: 'Shop', fulfilment_status: 'delivered', carrier: null, tracking_number: null, tracking_url: 'https://example.com/later-tracking', dispatched_at: null, fulfilment_note: 'PRIVATE SELLER NOTE' }] }], order_items: [] });
+  const page = load('app/account/orders/page.tsx', { 'react/jsx-runtime': jsxRuntime, 'next/link': { default: props => React.createElement('a', props) }, '@/lib/auth/require-user': { requireUser: async () => ({ supabase: db, user: { id: 'customer-a' } }) }, '@/lib/fulfilment': fulfilment, '@/lib/display-text': displayText }).default;
+  const html = renderToStaticMarkup(await page());
+  assert.ok(html.includes('https://example.com/later-tracking'));
+  assert.ok(html.includes('Delivered'));
+  assert.ok(!html.includes('PRIVATE SELLER NOTE'));
+  assert.ok(!html.includes('fulfilment'));
+});
+
+test('cancelled customer orders show a clear state without seller reasons or private metadata', async () => {
+  const db = database({ orders: [{ id: 'own-order', user_id: 'customer-a', created_at: '2026-10-01', total_amount: 1200,
+    seller_orders: [{ id: ownId, seller_user_id: 'seller-a', seller_business_name: 'Shop', fulfilment_status: 'cancelled', carrier: null, tracking_number: null, tracking_url: null, dispatched_at: null, fulfilment_note: 'PRIVATE SELLER NOTE', cancellation_reason: 'SENSITIVE REASON', cancelled_by: 'PRIVATE INTERNAL USER' }] }], order_items: [] });
+  const page = load('app/account/orders/page.tsx', { 'react/jsx-runtime': jsxRuntime, 'next/link': { default: props => React.createElement('a', props) }, '@/lib/auth/require-user': { requireUser: async () => ({ supabase: db, user: { id: 'customer-a' } }) }, '@/lib/fulfilment': fulfilment, '@/lib/display-text': displayText }).default;
+  const html = renderToStaticMarkup(await page());
+  assert.ok(html.includes('Cancelled'));
+  assert.ok(html.includes('This order has been cancelled.'));
+  for (const hidden of ['PRIVATE SELLER NOTE', 'SENSITIVE REASON', 'PRIVATE INTERNAL USER', 'fulfilment']) assert.ok(!html.includes(hidden));
 });

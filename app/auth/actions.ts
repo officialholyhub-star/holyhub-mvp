@@ -10,7 +10,7 @@ import { authOrigin } from "@/lib/auth/origin";
 import { hasRecoveryProof, INVALID_RECOVERY_LINK, RECOVERY_COOKIE } from "@/lib/auth/recovery";
 
 const MAX_EMAIL_LENGTH = 254;
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 12;
 const MAX_PASSWORD_LENGTH = 128;
 
 function clean(value: FormDataEntryValue | null) {
@@ -68,7 +68,7 @@ export async function signup(formData: FormData) {
   if (!isValidEmail(email)) redirect(messageUrl("/auth/signup", "error", "Enter a valid email address."));
   if (fullName.length > 100) redirect(messageUrl("/auth/signup", "error", "Name is too long."));
   if (!isValidPasswordLength(password)) {
-    redirect(messageUrl("/auth/signup", "error", "Use a password between 8 and 128 characters."));
+    redirect(messageUrl("/auth/signup", "error", "Use a password between 12 and 128 characters."));
   }
   if (password !== confirmPassword) redirect(messageUrl("/auth/signup", "error", "Your passwords don't match."));
 
@@ -140,7 +140,7 @@ export async function updatePassword(formData: FormData) {
   const password = raw(formData.get("password"));
   const confirmPassword = raw(formData.get("confirm_password"));
   if (password.length < MIN_PASSWORD_LENGTH) {
-    redirect(messageUrl("/auth/reset-password", "error", "Your password must be at least 8 characters."));
+    redirect(messageUrl("/auth/reset-password", "error", "Your password must be at least 12 characters."));
   }
   if (password.length > MAX_PASSWORD_LENGTH) {
     redirect(messageUrl("/auth/reset-password", "error", "Your password must be no more than 128 characters."));

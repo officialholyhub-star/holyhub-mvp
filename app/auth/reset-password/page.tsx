@@ -17,17 +17,17 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
       <div className="card">
         <div className="card-header">
           <h2>Set new password</h2>
-          <p>Use at least 8 characters.</p>
+          <p>Use at least 12 characters.</p>
         </div>
         {params.error && <p role="alert" className="notice notice-error">{params.error}</p>}
         <form className="form" action={updatePassword} noValidate>
           <div className="field">
             <label htmlFor="password">New password</label>
-            <PasswordInput id="password" name="password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput id="password" name="password" autoComplete="new-password" minLength={12} required />
           </div>
           <div className="field">
             <label htmlFor="confirm_password">Confirm new password</label>
-            <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={12} required />
           </div>
           <button className="button button-primary" type="submit">Update password</button>
         </form>

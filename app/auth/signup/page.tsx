@@ -23,11 +23,11 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <PasswordInput id="password" name="password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput id="password" name="password" autoComplete="new-password" minLength={12} required />
           </div>
           <div className="field">
             <label htmlFor="confirm_password">Confirm password</label>
-            <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={8} required />
+            <PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" minLength={12} required />
           </div>
           <label className="terms-consent">
             <input type="checkbox" name="accept_terms" required />

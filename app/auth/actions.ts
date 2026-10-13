@@ -2,8 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+
+import { safeInternalPath } from "@/lib/auth/redirect";
+import { authOrigin } from "@/lib/auth/origin";
+import { hasRecoveryProof, INVALID_RECOVERY_LINK, RECOVERY_COOKIE } from "@/lib/auth/recovery";
 
 const MAX_EMAIL_LENGTH = 254;
 const MIN_PASSWORD_LENGTH = 8;
@@ -30,35 +34,27 @@ function messageUrl(path: string, kind: "error" | "message", message: string) {
 }
 
 async function getSiteUrl() {
-  if (process.env.NODE_ENV === "development") {
-    const requestHeaders = await headers();
-    const forwardedHost = requestHeaders.get("x-forwarded-host")?.split(",")[0]?.trim();
-    const host = forwardedHost || requestHeaders.get("host")?.trim();
-    const forwardedProto = requestHeaders.get("x-forwarded-proto")?.split(",")[0]?.trim();
-
-    if (host && (host === "localhost:3000" || host === "127.0.0.1:3000" || host.endsWith(".app.github.dev"))) {
-      const protocol = host.endsWith(".app.github.dev") ? "https" : (forwardedProto || "http");
-      return `${protocol}://${host}`;
-    }
-  }
-
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  return authOrigin(await headers());
 }
 
 export async function login(formData: FormData) {
+  const requestedNext = safeInternalPath(clean(formData.get("next")), "/account");
+  const next = requestedNext.startsWith("/auth/") ? "/account" : requestedNext;
+  const loginError = (message: string) => `${messageUrl("/auth/login", "error", message)}&next=${encodeURIComponent(next)}`;
   const email = clean(formData.get("email")).toLowerCase();
   const password = raw(formData.get("password"));
 
   if (!isValidEmail(email) || !password || password.length > MAX_PASSWORD_LENGTH) {
-    redirect(messageUrl("/auth/login", "error", "We couldn't log you in. Check your details and try again."));
+    redirect(loginError("We couldn't log you in. Check your details and try again."));
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) redirect(messageUrl("/auth/login", "error", "We couldn't log you in. Check your details and try again."));
+  if (error?.code === "email_not_confirmed") redirect(loginError("Confirm your email before logging in. Use Resend confirmation below if you need a new link."));
+  if (error) redirect(loginError("We couldn't log you in. Check your details and try again."));
 
   revalidatePath("/", "layout");
-  redirect("/account");
+  redirect(next);
 }
 
 export async function signup(formData: FormData) {
@@ -108,13 +104,14 @@ export async function resendSignupConfirmation(formData: FormData) {
 
   const supabase = await createClient();
   const siteUrl = await getSiteUrl();
-  await supabase.auth.resend({
+  const { error } = await supabase.auth.resend({
     type: "signup",
     email,
     options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/account` },
   });
 
-  redirect(messageUrl("/auth/check-email", "message", "If that account still needs confirmation, a new email is on its way."));
+  if (error) redirect(messageUrl("/auth/check-email", "error", "We couldn’t request another email. Wait a minute and try again, or contact HolyHub if this continues."));
+  redirect(messageUrl("/auth/check-email", "message", "If that account still needs confirmation, we’ve requested a new email. Check your inbox and spam folder."));
 }
 
 export async function requestPasswordReset(formData: FormData) {
@@ -123,28 +120,51 @@ export async function requestPasswordReset(formData: FormData) {
 
   const supabase = await createClient();
   const siteUrl = await getSiteUrl();
-  await supabase.auth.resetPasswordForEmail(email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
   });
 
-  // Deliberately generic so the form does not reveal whether an email is registered.
-  redirect(messageUrl("/auth/forgot-password", "message", "If that email belongs to a HolyHub account, a reset link is on its way."));
+  if (error) redirect(messageUrl("/auth/forgot-password", "error", "We couldn’t send the reset email. Please try again."));
+
+  // Supabase intentionally returns success for unknown addresses too.
+  redirect(messageUrl("/auth/forgot-password", "message", "We’ve sent you a password reset link. Check your inbox and spam folder."));
 }
 
 export async function updatePassword(formData: FormData) {
+  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !hasRecoveryProof(cookieStore.get(RECOVERY_COOKIE)?.value, user.id)) {
+    redirect(messageUrl("/auth/forgot-password", "error", INVALID_RECOVERY_LINK));
+  }
   const password = raw(formData.get("password"));
   const confirmPassword = raw(formData.get("confirm_password"));
-
-  if (!isValidPasswordLength(password)) {
-    redirect(messageUrl("/auth/reset-password", "error", "Use a password between 8 and 128 characters."));
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    redirect(messageUrl("/auth/reset-password", "error", "Your password must be at least 8 characters."));
   }
-  if (password !== confirmPassword) redirect(messageUrl("/auth/reset-password", "error", "Your passwords don't match."));
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    redirect(messageUrl("/auth/reset-password", "error", "Your password must be no more than 128 characters."));
+  }
+  if (password !== confirmPassword) redirect(messageUrl("/auth/reset-password", "error", "Your passwords don’t match."));
 
-  const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) redirect(messageUrl("/auth/reset-password", "error", "We couldn't update your password. Request a new reset link and try again."));
+  if (error) {
+    if (["session_not_found", "session_expired", "refresh_token_not_found", "refresh_token_already_used"].includes(error.code || "") || error.status === 401 || error.status === 403) {
+      cookieStore.set(RECOVERY_COOKIE, "", { path: "/auth", maxAge: 0 });
+      redirect(messageUrl("/auth/forgot-password", "error", INVALID_RECOVERY_LINK));
+    }
+    const message = error.code === "same_password"
+      ? "Choose a different password from your current password."
+      : error.code === "weak_password"
+        ? "Choose a stronger password with letters, numbers and symbols."
+        : "We couldn’t update your password. Please try again.";
+    redirect(messageUrl("/auth/reset-password", "error", message));
+  }
 
-  redirect(messageUrl("/account", "message", "Password updated."));
+  cookieStore.set(RECOVERY_COOKIE, "", { path: "/auth", maxAge: 0 });
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect(messageUrl("/auth/login", "message", "Password updated successfully."));
 }
 
 export async function logout() {

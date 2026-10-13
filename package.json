@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:stripe": "node scripts/dev-stripe.mjs",
+    "stripe:diagnose": "node scripts/stripe-test-diagnostics.mjs",
+    "stripe:listen": "node scripts/dev-stripe.mjs --listen-only",
     "dev:codespace": "NEXT_PUBLIC_SITE_URL=https://${CODESPACE_NAME}-3000.app.github.dev next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",

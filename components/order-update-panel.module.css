@@ -1,0 +1,43 @@
+.panel { margin-top: 24px; padding-top: 20px; border-top: 1px solid #e4e9ec; min-width: 0; }
+.panel h3 { margin: 20px 0 8px; font-size: 1.1rem; }
+.helper { color: var(--muted); font-size: .9rem; line-height: 1.6; margin: 0 0 16px; }
+.progress { display: flex; justify-content: space-between; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.progress li { display: grid; justify-items: center; gap: 6px; font-size: .75rem; color: var(--muted); }
+.progress span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #f0f3f5; }
+.progress li[data-reached="true"] span { background: var(--holyhub-blue-soft); color: #294b65; }
+.progress li[aria-current] { color: #294b65; font-weight: 650; }
+.address { padding: 14px; background: #f8fafb; border-radius: 8px; margin-bottom: 18px; font-size: .875rem; overflow-wrap: anywhere; }
+.address p { line-height: 1.6; margin: 6px 0; user-select: text; }
+.address span { display: block; }
+.form { display: grid; gap: 16px; margin-top: 16px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.field { display: grid; gap: 7px; min-width: 0; }
+.field label { font-size: .875rem; font-weight: 500; }
+.field input, .field select, .field textarea { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; font: inherit; border: 1px solid #dbe2e7; border-radius: 7px; background: white; }
+.panel button { max-width: 100%; white-space: normal; }
+.secondary { margin-top: 18px; }
+.secondary summary { width: fit-content; min-height: 44px; padding: 12px 0; color: #294b65; cursor: pointer; font-size: .875rem; }
+.secondary button { margin-right: 8px; }
+.delivery { font-size: .875rem; overflow-wrap: anywhere; margin-bottom: 18px; }
+.delivery dl { display: grid; gap: 10px; }
+.delivery dt { color: var(--muted); }
+.delivery dd { margin: 3px 0 0; }
+.panel :focus-visible { outline: 2px solid #6f94b0; outline-offset: 3px; }
+@media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .panel > .button, .form > button { width: 100%; } .progress li { font-size: .68rem; } }
+
+.options, .correction { display: grid; gap: 12px; padding: 16px; border: 1px solid #e4e9ec; border-radius: 10px; background: #f8fafb; }
+.correction p { margin: 0; font-size: .875rem; line-height: 1.6; }
+.timeline { padding-left: 20px; display: grid; gap: 12px; font-size: .875rem; }
+.timeline time, .timeline span { display: block; margin-top: 4px; color: var(--muted); }
+.delivery > button { display: block; margin-top: 16px; }
+.form h4 { margin: 0; }
+
+.cancelWarning, .correction { min-width: 0; overflow-wrap: anywhere; }
+.cancelWarning { padding: 18px; border: 2px solid #b63a3a; border-radius: 10px; background: #fff4f3; color: #7d2020; }
+.cancelWarning h4, .correction h4 { margin: 0; font-size: 1rem; }
+.cancelWarning p { font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.cancelActions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.cancelActions button { margin: 0; min-height: 44px; }
+.cancelActions .cancelButton { background: #a52b2b; border: 1px solid #a52b2b; color: #fff; box-shadow: none; }
+.cancelActions .cancelButton:hover { background: #852020; }
+@media (max-width: 640px) { .cancelActions { flex-direction: column; } .cancelActions button { width: 100%; } }

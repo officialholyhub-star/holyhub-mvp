@@ -23,7 +23,7 @@ async function removeTemporaryLogo(path: string) {
   }
 }
 
-export function BrandLogoUploader({ userId, initialLogoUrl }: { userId: string; initialLogoUrl: string | null }) {
+export function BrandLogoUploader({ userId, initialLogoUrl, onUploadingChange }: { userId: string; initialLogoUrl: string | null; onUploadingChange?: (uploading: boolean) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const pendingPath = useRef<string | null>(null);
   const [logoUrl, setLogoUrl] = useState(initialLogoUrl ?? "");
@@ -49,6 +49,7 @@ export function BrandLogoUploader({ userId, initialLogoUrl }: { userId: string; 
     const localPreview = URL.createObjectURL(file);
     setPreviewUrl(localPreview);
     setIsUploading(true);
+    onUploadingChange?.(true);
 
     try {
       const supabase = createClient();
@@ -73,6 +74,7 @@ export function BrandLogoUploader({ userId, initialLogoUrl }: { userId: string; 
       setError("We couldn't upload that logo. Please try again.");
     } finally {
       setIsUploading(false);
+      onUploadingChange?.(false);
     }
   }
 

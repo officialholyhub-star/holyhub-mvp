@@ -11,7 +11,7 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
         <div className="check-email-icon" aria-hidden="true">✉</div>
         <p className="eyebrow">One more step</p>
         <h1>Check your email</h1>
-        <p className="lead">We sent a confirmation link to the email address you used.</p>
+        <p className="lead">If your account needs confirmation, check the email address you used for a confirmation link.</p>
         <ol className="confirmation-steps">
           <li>Open the email from HolyHub.</li>
           <li>Click the confirmation link.</li>
@@ -33,9 +33,9 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
         </form>
         <div className="button-row">
           <Link className="button button-primary" href="/auth/login">Go to login</Link>
-          <Link className="button button-quiet" href="/">Back to home</Link>
+          <Link className="button button-quiet" href="/auth/forgot-password">Forgot password</Link>
         </div>
-        <p className="muted-small">No email? Check your spam or junk folder.</p>
+        <p className="muted-small">No email? Check your spam or junk folder and that you entered the correct address. Wait a minute before resending. Already confirmed? Try signing in. If emails still don’t arrive, contact HolyHub.</p>
       </div>
     </section>
   );

@@ -14,7 +14,7 @@ function load(file, dependencies = {}) {
     if (name in dependencies) return dependencies[name];
     if (name.startsWith('.')) return load(path.resolve(path.dirname(file), `${name}.ts`), dependencies);
     throw new Error(`Unexpected dependency ${name}`);
-  }, TextEncoder, URL, console });
+  }, TextEncoder, URL, console, Error });
   return exports;
 }
 const { CSV_COLUMNS, LEGACY_CSV_COLUMNS, parseCsv, validateProductCsv } = load('lib/product-csv.ts');
@@ -83,6 +83,27 @@ test('malformed price and negative, decimal, exponent or oversized stock are rej
 test('duplicate SKUs in a file are flagged case-insensitively on every matching row', () => {
   const rows = validateProductCsv(csv([row({ SKU: ' Abc ' }), row({ SKU: 'abc' })]));
   assert.ok(rows.every(row => row.errors.includes('Duplicate SKU in this CSV.')));
+});
+test('missing required fields are reported together and confirmation writes nothing', async () => {
+  const f = fixture();
+  const text = csv([row({ 'Product name': '', Description: '', Price: '', 'Stock quantity': '', Category: '' })]);
+  const preview = await f.run(text);
+  for (const field of ['Product name', 'Description', 'Price', 'Stock quantity', 'Category']) {
+    assert.ok(preview.rows[0].errors.some(error => error.includes(field)), field);
+  }
+  const confirmed = await f.run(text, true);
+  assert.equal(confirmed.results[0].status, 'failed');
+  assert.equal(f.calls.length, 0);
+});
+test('malformed rows report column counts and malformed quoting prevents every write', async () => {
+  const malformed = buildCsv(CSV_COLUMNS, [['Too few', 'cells']]);
+  const validated = validateProductCsv(malformed);
+  assert.equal(validated[0].product, null);
+  assert.match(validated[0].errors[0], /expected 17, found 2/);
+  const f = fixture();
+  const result = await f.run(csv([row()]) + '"unclosed', true);
+  assert.match(result.error, /unclosed quoted field/);
+  assert.equal(f.calls.length, 0);
 });
 test('existing SKU blocks same lister but another lister can use the same SKU', async () => {
   const f = fixture({ existing: [{ id: 'existing', lister_user_id: 'lister-a', sku: 'book-1' }, { id: 'foreign', lister_user_id: 'lister-b', sku: 'SHARED' }] });

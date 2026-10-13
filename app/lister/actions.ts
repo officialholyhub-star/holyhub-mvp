@@ -1,11 +1,14 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { onboardingCookie } from "@/lib/lister-onboarding";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth/require-user";
 import { parsePrice, parseStockQuantity, isValidHttpUrl } from "@/lib/product-validation";
 import { orderedProductImages, ownedProductImagePath, validProductImages } from "@/lib/product-images";
-import { isProductCategory } from "@/lib/product-categories";
+import { applicationCategoryValue } from "@/lib/application-categories";
+import { isAllowedProductCategory } from "@/lib/product-categories";
 import { APPAREL_SIZES, hasAvailableApparelStock, hasValidApparelStock } from "@/lib/product-variants";
 
 function clean(value: FormDataEntryValue | null) {
@@ -13,7 +16,7 @@ function clean(value: FormDataEntryValue | null) {
 }
 
 function messageUrl(path: string, kind: "error" | "message", message: string) {
-  return `${path}?${kind}=${encodeURIComponent(message)}`;
+  return `${path}${path.includes("?") ? "&" : "?"}${kind}=${encodeURIComponent(message)}`;
 }
 
 function parseDeliveryCharge(value: string) {
@@ -58,7 +61,7 @@ export type StorefrontFormState = { error: string };
 export async function saveStorefront(_previousState: StorefrontFormState, formData: FormData): Promise<StorefrontFormState> {
   const businessName = clean(formData.get("business_name"));
   const description = clean(formData.get("description"));
-  const categoryType = clean(formData.get("category_type"));
+  const categoryType = applicationCategoryValue(clean(formData.get("category_type")), clean(formData.get("suggested_category")));
   const websiteUrl = clean(formData.get("website_url"));
   const instagramUrl = clean(formData.get("instagram_url"));
   const logoUrl = clean(formData.get("logo_url"));
@@ -83,7 +86,7 @@ export async function saveStorefront(_previousState: StorefrontFormState, formDa
       details: lookupError.details,
       hint: lookupError.hint,
     });
-    return { error: "We couldn't load your storefront." };
+    return { error: "We couldn't load your shop. Please refresh before trying again." };
   }
 
   const logoIsAllowed = !logoUrl || logoUrl === existingStorefront?.logo_url || ownedListerLogoPath(logoUrl, user.id) !== null;
@@ -104,17 +107,17 @@ export async function saveStorefront(_previousState: StorefrontFormState, formDa
     updated_at: new Date().toISOString(),
   };
   const saveResult = existingStorefront
-    ? await supabase.from("lister_storefronts").update(storefrontValues).eq("user_id", user.id)
-    : await supabase.from("lister_storefronts").insert({ ...storefrontValues, user_id: user.id });
+    ? await supabase.from("lister_storefronts").update(storefrontValues).eq("user_id", user.id).select("user_id").maybeSingle()
+    : await supabase.from("lister_storefronts").insert({ ...storefrontValues, user_id: user.id }).select("user_id").maybeSingle();
 
-  if (saveResult.error) {
+  if (saveResult.error || !saveResult.data) {
     console.error("Lister storefront save failed", {
-      code: saveResult.error.code,
-      message: saveResult.error.message,
-      details: saveResult.error.details,
-      hint: saveResult.error.hint,
+      code: saveResult.error?.code,
+      message: saveResult.error?.message,
+      details: saveResult.error?.details,
+      hint: saveResult.error?.hint,
     });
-    return { error: "We couldn't save your storefront." };
+    return { error: "We couldn't confirm your shop was saved. Your entered details are still here. Refresh to check the latest settings before trying again." };
   }
   if (existingStorefront?.logo_url && existingStorefront.logo_url !== logoUrl) {
     await removeOwnedListerLogo(supabase, existingStorefront.logo_url, user.id);
@@ -123,6 +126,10 @@ export async function saveStorefront(_previousState: StorefrontFormState, formDa
   revalidatePath("/marketplace");
   revalidatePath(`/lister/storefront/${user.id}`);
   revalidatePath("/account");
+  if (formData.get("onboarding") === "1") {
+    (await cookies()).set(onboardingCookie(user.id), "3:later", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 31536000 });
+    redirect("/lister/onboarding");
+  }
   redirect("/account?message=Storefront%20saved.");
 }
 
@@ -136,7 +143,7 @@ function variantValues(formData: FormData, categoryType: string, isPublished: bo
     : { sizes: [...APPAREL_SIZES], stockQuantities: stockQuantities as number[] };
 }
 
-function productValues(formData: FormData, userId: string, existingImages: readonly string[] = []) {
+function productValues(formData: FormData, userId: string, existingImages: readonly string[] = [], existingCategory?: string) {
   const name = clean(formData.get("name"));
   const description = clean(formData.get("description"));
   const categoryType = clean(formData.get("category_type"));
@@ -146,14 +153,24 @@ function productValues(formData: FormData, userId: string, existingImages: reado
   const price = parsePrice(priceValue);
   const stockQuantity = parseStockQuantity(stockQuantityValue);
   const sizeGuideUrl = clean(formData.get("size_guide_url"));
-  const isPublished = formData.get("is_published") === "on";
+  const isPublished = formData.get("publication_action") === "publish";
 
   const imageIsAllowed = !imageUrl || existingImages.includes(imageUrl) || ownedProductImagePath(imageUrl, userId) !== null;
-  if (!name || name.length > 150 || !description || description.length > 1000 || !isProductCategory(categoryType) || price === null || stockQuantity === null || imageUrl.length > 500 || sizeGuideUrl.length > 500 || !isValidHttpUrl(sizeGuideUrl) || !imageIsAllowed) {
+  if (!name || name.length > 150 || !description || description.length > 1000 || !isAllowedProductCategory(categoryType, existingCategory) || price === null || stockQuantity === null || imageUrl.length > 500 || sizeGuideUrl.length > 500 || !isValidHttpUrl(sizeGuideUrl) || !imageIsAllowed) {
     return null;
   }
 
   return { name, description, category_type: categoryType, price, currency: "GBP", image_url: imageUrl || null, size_guide_url: sizeGuideUrl || null, stock_quantity: stockQuantity, is_published: isPublished };
+}
+
+function productFieldError(formData: FormData) {
+  if (!clean(formData.get("name")) || clean(formData.get("name")).length > 150) return "Enter a product name of up to 150 characters.";
+  if (!clean(formData.get("description")) || clean(formData.get("description")).length > 1000) return "Enter a description of up to 1,000 characters.";
+  if (parsePrice(clean(formData.get("price"))) === null) return "Enter a valid price in pounds, with up to two decimal places.";
+  if (parseStockQuantity(clean(formData.get("stock_quantity"))) === null) return "Enter stock as a whole number of zero or more.";
+  if (clean(formData.get("category_type")) === "Apparel" && APPAREL_SIZES.some(size => parseStockQuantity(clean(formData.get(`variant_${size}`))) === null)) return "Enter stock for every size as a whole number of zero or more.";
+  if (!isValidHttpUrl(clean(formData.get("size_guide_url")))) return "Enter a valid size guide link, or leave it blank.";
+  return null;
 }
 
 function submittedImages(formData: FormData) {
@@ -163,24 +180,28 @@ function submittedImages(formData: FormData) {
 
 export async function createProduct(formData: FormData) {
   const { supabase, user } = await requireRole("lister");
+  const newProductPath = formData.get("onboarding") === "1" ? "/lister/products/new?onboarding=1" : "/lister/products/new";
   const images = submittedImages(formData);
-  if (formData.get("is_published") === "on" && !images.length) {
-    redirect(messageUrl("/lister/products/new", "error", "Add at least one product image before submitting this product for review."));
+  if (formData.get("publication_action") === "publish" && !images.length) {
+    redirect(messageUrl(newProductPath, "error", "Add at least one product image before submitting this product for review."));
   }
   formData.set("image_url", images[0] ?? "");
+  const fieldError = productFieldError(formData);
+  if (fieldError) redirect(messageUrl(newProductPath, "error", fieldError));
   const values = productValues(formData, user.id);
   const variants = variantValues(formData, values?.category_type ?? "", values?.is_published ?? false);
-  if (!values || !variants || !validProductImages(images, user.id)) redirect(messageUrl("/lister/products/new", "error", "Complete the product fields, images and size stock with valid values."));
+  if (!values || !variants || !validProductImages(images, user.id)) redirect(messageUrl(newProductPath, "error", "Complete the product fields, images and size stock with valid values."));
   const { error } = await supabase.rpc("save_product_with_images", {
     p_product_id: null, p_values: values, p_images: images,
     p_sizes: variants.sizes, p_stock_quantities: variants.stockQuantities,
   });
-  if (error) redirect(messageUrl("/lister/products/new", "error", "We couldn't save your product. Your previous images have not been removed."));
+  if (error) redirect(messageUrl(newProductPath, "error", "We couldn't save your product. Your previous images have not been removed."));
   revalidatePath("/lister/products");
   revalidatePath("/marketplace");
   revalidatePath("/");
   revalidatePath(`/lister/storefront/${user.id}`);
-  redirect("/lister/products?message=Product%20created.");
+  if (formData.get("onboarding") === "1" && values.is_published) redirect("/lister/onboarding/success?saved=new");
+  redirect("/lister/products?message=Product%20created.&saved=new");
 }
 
 export async function updateProduct(formData: FormData) {
@@ -188,15 +209,26 @@ export async function updateProduct(formData: FormData) {
   const { supabase, user } = await requireRole("lister");
   if (!productId) redirect(messageUrl("/lister/products", "error", "Complete the product fields with valid values."));
   const { data: existingProduct, error: lookupError } = await supabase.from("products")
-    .select("image_url, product_images(image_url, sort_order)").eq("id", productId).eq("lister_user_id", user.id).maybeSingle();
+    .select("image_url, category_type, product_images(image_url, sort_order)").eq("id", productId).eq("lister_user_id", user.id).maybeSingle();
   if (lookupError || !existingProduct) redirect(messageUrl("/lister/products", "error", "We couldn't update that product."));
+  // Archive only changes visibility: unsaved form edits and stock cannot overwrite the listing.
+  if (formData.get("publication_action") === "archive") {
+    const { data: archived, error } = await supabase.from("products")
+      .update({ is_published: false, updated_at: new Date().toISOString() })
+      .eq("id", productId).eq("lister_user_id", user.id).select("id").maybeSingle();
+    if (error || !archived) redirect(messageUrl(`/lister/products/${productId}/edit`, "error", "We couldn't archive that product."));
+    for (const path of ["/lister/products", `/products/${productId}`, "/marketplace", "/account/favourites", "/", `/lister/storefront/${user.id}`]) revalidatePath(path);
+    redirect("/lister/products?message=Product%20archived.%20It%20is%20hidden%20and%20saved%20as%20a%20draft.");
+  }
   const images = submittedImages(formData);
   const existingImages = orderedProductImages(existingProduct.product_images, existingProduct.image_url);
-  if (formData.get("is_published") === "on" && !images.length) {
+  if (formData.get("publication_action") === "publish" && !images.length) {
     redirect(messageUrl(`/lister/products/${productId}/edit`, "error", "Add at least one product image before submitting this product for review."));
   }
   formData.set("image_url", images[0] ?? "");
-  const values = productValues(formData, user.id, existingImages);
+  const fieldError = productFieldError(formData);
+  if (fieldError) redirect(messageUrl(`/lister/products/${productId}/edit`, "error", fieldError));
+  const values = productValues(formData, user.id, existingImages, existingProduct.category_type);
   const variants = variantValues(formData, values?.category_type ?? "", values?.is_published ?? false);
   if (!values || !variants || !validProductImages(images, user.id, existingImages)) redirect(messageUrl(`/lister/products/${productId}/edit`, "error", "Complete the product fields, images and size stock with valid values."));
   const { error } = await supabase.rpc("save_product_with_images", {
@@ -212,7 +244,7 @@ export async function updateProduct(formData: FormData) {
   revalidatePath("/account/favourites");
   revalidatePath("/");
   revalidatePath(`/lister/storefront/${user.id}`);
-  redirect("/lister/products?message=Product%20updated.");
+  redirect(`/lister/products?message=Product%20updated.&saved=${encodeURIComponent(productId)}`);
 }
 
 export async function deleteProduct(formData: FormData) {

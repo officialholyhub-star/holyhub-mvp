@@ -1,3 +1,4 @@
+import { ErrorRecovery } from "@/components/error-recovery";
 import { ProductGallery } from "@/components/product-gallery";
 import { orderedProductImages } from "@/lib/product-images";
 import Image from "next/image";
@@ -9,6 +10,7 @@ import { FavouriteButton } from "@/components/favourite-button";
 import { getFavouriteIds } from "@/lib/favourites";
 import brandStyles from "@/components/storefront-brand.module.css";
 import styles from "./product-detail.module.css";
+import { decodeDisplayText } from "@/lib/display-text";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +23,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: product } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, lister_user_id, product_images(image_url, sort_order), product_variants(id, size, stock_quantity), lister_storefronts(user_id, business_name, description, category_type, logo_url, delivery_option, delivery_charge, delivery_country)").eq("id", id).eq("is_published", true).maybeSingle();
+  const { data: product, error } = await supabase.from("products").select("id, name, description, category_type, price, image_url, size_guide_url, stock_quantity, lister_user_id, product_images(image_url, sort_order), product_variants(id, size, stock_quantity), lister_storefronts(user_id, business_name, description, category_type, logo_url, delivery_option, delivery_charge, delivery_country)").eq("id", id).eq("is_published", true).maybeSingle();
+  if (error) return <ErrorRecovery title="We couldn’t load these details" message="Please refresh before editing or continuing. Your saved details could not be checked." href="/marketplace" label="Return to marketplace" />;
   if (!product) notFound();
   const images = orderedProductImages(product.product_images, product.image_url);
   const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
@@ -33,14 +36,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     <section className="product-detail">
       <Link className="text-link" href="/marketplace">Back to marketplace</Link>
       <div className="product-detail-grid">
-        <ProductGallery images={images} name={product.name} />
+        <ProductGallery images={images} name={decodeDisplayText(product.name)} />
         <div className={styles.detailContent}>
           {storefront ? (
             <Link className="eyebrow" href={`/lister/storefront/${storefront.user_id}`}>{storefront.business_name}</Link>
           ) : (
             <p className="eyebrow">HolyHub lister</p>
           )}
-          <h1 className="page-title">{product.name}</h1>
+          <h1 className="page-title">{decodeDisplayText(product.name)}</h1>
           <div className="product-detail-price-row">
             <p className="product-price">£{Number(product.price).toFixed(2)}</p>
             <FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} />

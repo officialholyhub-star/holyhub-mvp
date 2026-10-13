@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const { data: products } = await supabase
+  const { data: products, error: productsError } = await supabase
     .from("products")
     .select("id, name, price, image_url, category_type, product_images(image_url, sort_order), lister_storefronts(business_name)")
     .eq("is_published", true)
@@ -26,8 +26,10 @@ export default async function HomePage() {
 
   return (
     <div className="home-page">
-      <section className="home-hero home-hero-refresh premium-home-hero">
-        <div className="home-hero-copy">
+      <section className="home-hero-layout">
+        {productsError && <p role="alert" className="notice notice-error">Featured products could not be loaded. Refresh or visit the marketplace to try again.</p>}
+        <div className="home-intro-panel">
+          <div className="home-hero-copy">
           <p className="eyebrow">HolyHub</p>
           <h1>Connect. Discover. <span>Grow.</span></h1>
           <p className="lead">
@@ -36,20 +38,9 @@ export default async function HomePage() {
           <div className="button-row">
             <Link className="button button-primary button-large" href="/marketplace">Explore Marketplace <span aria-hidden="true">→</span></Link>
           </div>
+          </div>
         </div>
-
-        <VerseOfTheDay hero />
-      </section>
-
-      <section className="home-community-note" aria-labelledby="home-community-title">
-        <div className="home-community-image">
-          <Image src="/images/community-lifestyle.jpg" alt="Friends gathering around a table" width={1200} height={1798} />
-        </div>
-        <div>
-          <p className="eyebrow">Made for real life</p>
-          <h2 id="home-community-title">Products with people behind them.</h2>
-          <p>Discover pieces from Christian brands and independent creators who are building something meaningful.</p>
-        </div>
+        <div className="home-verse-panel"><VerseOfTheDay hero /></div>
       </section>
 
       <section className="home-products" aria-labelledby="home-products-title">

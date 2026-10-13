@@ -9,6 +9,14 @@ export const FULFILMENT_STATUS_LABELS: Record<FulfilmentStatus, string> = {
   cancelled: "Cancelled",
 };
 
+// Friendlier lister wording; stored status values and CSV labels stay intact.
+export const LISTER_FULFILMENT_STATUS_LABELS: Record<FulfilmentStatus, string> = {
+  ...FULFILMENT_STATUS_LABELS,
+  pending: "Needs preparing",
+  packed: "Preparing",
+  delivered: "Completed",
+};
+
 export const CARRIERS = ["Royal Mail", "Evri", "DPD", "DHL", "Yodel", "Other"] as const;
 export type Carrier = (typeof CARRIERS)[number];
 

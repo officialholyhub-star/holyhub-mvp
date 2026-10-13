@@ -12,11 +12,13 @@ export function FavouriteButton({ productId, initialSaved }: FavouriteButtonProp
   const [saved, setSaved] = useState(initialSaved);
   const [busy, setBusy] = useState(false);
   const [prompt, setPrompt] = useState(false);
+  const [error, setError] = useState(false);
 
   async function toggleFavourite() {
     if (busy) return;
     setBusy(true);
     setPrompt(false);
+    setError(false);
 
     try {
       const response = await fetch("/api/favourites", {
@@ -28,8 +30,13 @@ export function FavouriteButton({ productId, initialSaved }: FavouriteButtonProp
         setPrompt(true);
         return;
       }
-      if (!response.ok) return;
+      if (!response.ok) {
+        setError(true);
+        return;
+      }
       setSaved(!saved);
+    } catch {
+      setError(true);
     } finally {
       setBusy(false);
     }
@@ -53,6 +60,7 @@ export function FavouriteButton({ productId, initialSaved }: FavouriteButtonProp
           <Link href="/auth/login?message=Log%20in%20to%20save%20favourites.">Sign in to save favourites</Link>
         </span>
       )}
+      {error && <span className="favourite-prompt" role="status">Couldn&apos;t update favourites. Try again.</span>}
     </span>
   );
 }

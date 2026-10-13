@@ -1,0 +1,15 @@
+.brandHeading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.brandDetails { min-width: 0; }
+
+.suggestedCategory { overflow-wrap: anywhere; }
+
+@media (max-width: 480px) {
+  .brandHeading { flex-wrap: wrap; gap: 12px; }
+  .brandDetails { flex: 1 1 160px; }
+}

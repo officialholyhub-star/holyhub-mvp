@@ -1,7 +1,9 @@
+import { ErrorRecovery } from "@/components/error-recovery";
 import { isValidHttpUrl } from "@/lib/product-validation";
 import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
+import { decodeDisplayText } from "@/lib/display-text";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import styles from "./page.module.css";
@@ -11,15 +13,16 @@ export const dynamic = "force-dynamic";
 export default async function PublicListerStorefrontPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: storefront } = await supabase
+  const { data: storefront, error } = await supabase
     .from("lister_storefronts")
     .select("user_id, business_name, description, category_type, logo_url, website_url, instagram_url, website_or_social")
     .eq("user_id", id)
     .maybeSingle();
 
+  if (error) return <ErrorRecovery title="We couldn’t load these details" message="Please refresh before editing or continuing. Your saved details could not be checked." href="/marketplace" label="Return to marketplace" />;
   if (!storefront) notFound();
 
-  const { data: rawProducts } = await supabase
+  const { data: rawProducts, error: productsError } = await supabase
     .from("products")
     .select("id, name, price, image_url, category_type, product_images(image_url, sort_order)")
     .eq("lister_user_id", id)
@@ -27,6 +30,7 @@ export default async function PublicListerStorefrontPage({ params }: { params: P
     .eq("review_status", "approved")
     .order("created_at", { ascending: false });
 
+  if (productsError) return <ErrorRecovery title="We couldn’t load this shop’s products" href="/marketplace" label="Return to marketplace" />;
   const products = rawProducts?.map(withProductCover);
   const websiteCandidate = storefront.website_url ?? (!storefront.instagram_url ? storefront.website_or_social : null);
   const websiteUrl = websiteCandidate && isValidHttpUrl(websiteCandidate) ? websiteCandidate : null;
@@ -61,20 +65,20 @@ export default async function PublicListerStorefrontPage({ params }: { params: P
             {products.map((product) => (
               <Link className={styles.product} href={`/products/${product.id}`} key={product.id}>
                 {product.image_url ? (
-                  <Image src={product.image_url} alt={product.name} width={480} height={360} unoptimized />
+                  <Image src={product.image_url} alt={decodeDisplayText(product.name)} width={480} height={360} unoptimized />
                 ) : (
                   <div className={styles.productPlaceholder}>HolyHub</div>
                 )}
                 <div className={styles.productDetails}>
                   <p>{product.category_type}</p>
-                  <h3>{product.name}</h3>
+                  <h3>{decodeDisplayText(product.name)}</h3>
                   <strong>£{Number(product.price).toFixed(2)}</strong>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <p className={styles.empty}>This brand has no products available right now.</p>
+          <div className={styles.empty}><p>This brand has no products available right now.</p><Link className="button button-primary" href="/marketplace">Browse marketplace</Link></div>
         )}
       </section>
       <nav className={styles.brandLinks} aria-label="Discover more about this brand">

@@ -19,12 +19,12 @@ export async function updateProfile(formData: FormData) {
   if (fullName.length > 100) redirect("/account?error=Name%20is%20too%20long.");
 
   const { supabase, user } = await requireUser();
-  const { error } = await supabase
+  const { data: saved, error } = await supabase
     .from("profiles")
     .update({ full_name: fullName || null, updated_at: new Date().toISOString() })
-    .eq("id", user.id);
+    .eq("id", user.id).select("id").maybeSingle();
 
-  if (error) redirect("/account?error=We%20couldn't%20save%20your%20profile.");
+  if (error || !saved) redirect("/account?error=We%20couldn%E2%80%99t%20confirm%20your%20profile%20was%20saved.%20Refresh%20and%20check%20before%20trying%20again.");
   revalidatePath("/account");
   redirect("/account?message=Profile%20updated.");
 }

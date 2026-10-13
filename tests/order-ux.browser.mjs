@@ -1,0 +1,223 @@
+// Optional real-browser checks. Tools can be installed outside the repository:
+// npm install --prefix /tmp/holyhub-ux-browser playwright@1.55.1 esbuild@0.25.10
+// node tests/order-ux.browser.mjs
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { createServer } from "node:http";
+import { readFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
+
+const directory = process.env.HOLYHUB_BROWSER_TOOLS_DIR ?? "/tmp/holyhub-ux-browser";
+const require = createRequire(path.join(directory, "package.json"));
+const { chromium } = require("playwright");
+const { build } = require("esbuild");
+const output = path.join(directory, "results");
+mkdirSync(output, { recursive: true });
+await build({
+  entryPoints: ["tests/fixtures/order-ux.tsx"], outfile: path.join(output, "fixture.js"), bundle: true,
+  jsx: "automatic", nodePaths: [path.join(process.cwd(), "node_modules")],
+  plugins: [{ name: "fixture-link", setup(build) {
+    build.onResolve({ filter: /^next\/link$/ }, () => ({ path: "next/link", namespace: "fixture" }));
+    build.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ contents: 'import React from "react"; export default function Link(props) { return React.createElement("a", props); }', resolveDir: process.cwd(), loader: "js" }));
+  } }],
+});
+const server = createServer((request, response) => {
+  if (request.url === "/fixture.js" || request.url === "/fixture.css") {
+    response.setHeader("content-type", request.url.endsWith("css") ? "text/css" : "text/javascript");
+    response.end(readFileSync(path.join(output, request.url.slice(1))));
+  } else response.end('<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>HolyHub order UX fixture</title><link rel="stylesheet" href="/fixture.css"></head><body><div id="root"></div><script src="/fixture.js"></script></body></html>');
+});
+await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+let browser;
+try {
+  browser = await chromium.launch({ executablePath: process.env.HOLYHUB_CHROMIUM_PATH ?? "/home/codespace/.cache/ms-playwright/chromium-1193/chrome-linux/chrome", headless: true });
+  const errors = [];
+  const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+  page.on("pageerror", error => errors.push(error.message));
+  const url = `http://127.0.0.1:${server.address().port}`;
+  await page.goto(url);
+  await page.getByText("HolyHub vans", { exact: false }).waitFor();
+  assert.equal(await page.locator('details[open]').count(), 0);
+  assert.equal(await page.getByLabel("Delivery carrier", { exact: true }).isVisible(), false);
+  assert.equal(await page.locator('[data-testid="unsafe-name"] img').count(), 0);
+  await page.screenshot({ path: path.join(output, "orders-desktop.png"), fullPage: true });
+
+  const help = page.getByRole("button", { name: "About Orders to fulfil", exact: true });
+  await help.hover();
+  await page.getByRole("tooltip").waitFor();
+  assert.equal(await page.getByRole("tooltip").innerText(), "Orders that still need action from you.");
+  await page.getByRole("tooltip").hover();
+  await page.waitForTimeout(200);
+  assert.equal(await page.getByRole("tooltip").isVisible(), true);
+  await page.getByRole("button", { name: "About Processing", exact: true }).hover();
+  assert.equal(await page.getByRole("tooltip").count(), 1);
+  assert.equal(await help.getAttribute("aria-expanded"), "false");
+  await page.mouse.move(0, 0);
+  await help.focus();
+  await page.getByRole("tooltip").waitFor();
+  const descriptionId = await help.getAttribute("aria-describedby");
+  assert.equal(await page.locator(`[id="${descriptionId}"]`).innerText(), "Orders that still need action from you.");
+  await page.keyboard.press("Tab");
+  assert.equal(await page.getByRole("tooltip").innerText(), "Orders you’re currently preparing.");
+  await page.keyboard.press("Escape");
+  await page.getByRole("tooltip").waitFor({ state: "detached" });
+
+  await page.getByRole("button", { name: "Start preparing order", exact: true }).click();
+  await page.waitForFunction(() => Boolean(window.savedOrder));
+  assert.equal((await page.evaluate(() => window.savedOrder)).fulfilment_status, "packed");
+  await page.goto(url + "?status=packed");
+  assert.equal(await page.getByLabel("Delivery carrier", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Ready to send", exact: true }).click();
+  await page.getByLabel("Delivery carrier", { exact: true }).selectOption("Other");
+  await page.getByLabel("Other carrier name", { exact: true }).fill("Local delivery");
+  await page.getByLabel("Tracking URL (optional)", { exact: true }).fill("https://example.com/new-tracking");
+  page.once("dialog", async dialog => { assert.equal(dialog.message(), "Mark this order as dispatched?"); await dialog.dismiss(); });
+  await page.getByRole("button", { name: "Mark as dispatched", exact: true }).click();
+  assert.equal(await page.evaluate(() => window.savedOrder), undefined);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Mark as dispatched", exact: true }).click();
+  await page.waitForFunction(() => Boolean(window.savedOrder));
+  const saved = await page.evaluate(() => window.savedOrder);
+  assert.equal(saved.fulfilment_status, "dispatched");
+  assert.equal(saved.tracking_number, "TRACK123");
+  assert.equal(saved.tracking_url, "https://example.com/new-tracking");
+  assert.equal(saved.carrier_other, "Local delivery");
+  assert.equal(saved.fulfilment_note, "Pack carefully");
+  await page.goto(url + "?status=dispatched");
+  assert.equal(await page.getByLabel("Delivery carrier", { exact: true }).count(), 0);
+  page.once("dialog", async dialog => { assert.equal(dialog.message(), "Mark this order as delivered?"); await dialog.dismiss(); });
+  await page.getByRole("button", { name: "Mark as delivered", exact: true }).click();
+  assert.equal(await page.evaluate(() => window.savedOrder), undefined);
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Mark as delivered", exact: true }).click();
+  await page.waitForFunction(() => Boolean(window.savedOrder));
+  assert.equal((await page.evaluate(() => window.savedOrder)).fulfilment_status, "delivered");
+  await page.goto(url + "?status=delivered");
+  await page.getByRole("heading", { name: "Completed ✓", exact: true }).waitFor();
+  for (const status of ["dispatched", "delivered"]) {
+    await page.goto(url + `?status=${status}&empty`);
+    await page.getByText("No tracking details added. You can add them later.", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Edit delivery details", exact: true }).click();
+    await page.getByLabel("Tracking number (optional)", { exact: true }).fill("LATER123");
+    await page.getByRole("button", { name: "Save delivery details", exact: true }).click();
+    await page.waitForFunction(() => Boolean(window.savedOrder));
+    const metadata = await page.evaluate(() => window.savedOrder);
+    assert.equal(metadata.intent, "delivery");
+    assert.equal(metadata.fulfilment_status, status);
+    assert.equal(metadata.tracking_number, "LATER123");
+    await page.getByText("More options", { exact: true }).click();
+    assert.equal(await page.getByRole("button", { name: "Cancel order", exact: true }).count(), 0);
+    await page.getByRole("button", { name: "Correct order status", exact: true }).click();
+    await page.evaluate(() => { delete window.savedOrder; });
+    page.once("dialog", dialog => dialog.dismiss());
+    await page.getByRole("button", { name: "Return to Preparing", exact: true }).click();
+    assert.equal(await page.evaluate(() => window.savedOrder), undefined);
+    page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Return to Preparing", exact: true }).click();
+    await page.waitForFunction(() => Boolean(window.savedOrder));
+    assert.equal((await page.evaluate(() => window.savedOrder)).intent, "correction");
+    await page.getByText("Order timeline", { exact: true }).click();
+    assert.equal(await page.locator('time').count(), 3);
+    await page.getByText("More details", { exact: true }).click();
+    await page.getByLabel("Private note", { exact: true }).fill("Seller-only update");
+    await page.getByRole("button", { name: "Save private note", exact: true }).click();
+    await page.waitForFunction(() => window.savedOrder?.intent === "note");
+  }
+  await page.goto(url);
+  await page.getByText("More options", { exact: true }).click();
+  await page.getByRole("button", { name: "Cancel order", exact: true }).click();
+  assert.equal(await page.evaluate(() => window.savedOrder), undefined);
+  await page.getByRole("button", { name: "Review cancellation", exact: true }).click();
+  assert.equal(await page.getByRole("heading", { name: "Cancel this order?", exact: true }).count(), 0);
+  await page.getByLabel("Cancellation reason", { exact: true }).selectOption("other");
+  await page.getByLabel("Short reason", { exact: true }).fill("   ");
+  await page.getByRole("button", { name: "Review cancellation", exact: true }).click();
+  await page.getByRole("alert").waitFor();
+  await page.getByLabel("Short reason", { exact: true }).fill("Wrong item ordered");
+  await page.getByRole("button", { name: "Review cancellation", exact: true }).click();
+  await page.getByRole("heading", { name: "Cancel this order?", exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Cancel this order?");
+  await page.getByRole("button", { name: "Continue to cancellation", exact: true }).click();
+  await page.getByRole("heading", { name: "Are you absolutely sure?", exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => window.savedOrder), undefined);
+  await page.getByRole("button", { name: "Go back", exact: true }).click();
+  await page.getByRole("heading", { name: "Cancel this order?", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Keep order", exact: true }).click();
+  assert.equal(await page.evaluate(() => document.activeElement?.textContent), "Cancel order");
+  assert.equal(await page.evaluate(() => window.savedOrder), undefined);
+  await page.getByRole("button", { name: "Cancel order", exact: true }).click();
+  await page.getByLabel("Cancellation reason", { exact: true }).selectOption("item_unavailable");
+  assert.equal(await page.getByLabel("Short reason", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Review cancellation", exact: true }).click();
+  await page.getByRole("button", { name: "Continue to cancellation", exact: true }).click();
+  const destructive = page.getByRole("button", { name: "Cancel order", exact: true });
+  assert.equal(await destructive.evaluate(button => getComputedStyle(button).backgroundColor), "rgb(165, 43, 43)");
+  await destructive.click();
+  await page.waitForFunction(() => Boolean(window.savedOrder));
+  const cancelled = await page.evaluate(() => window.savedOrder);
+  assert.equal(cancelled.fulfilment_status, "cancelled");
+  assert.equal(cancelled.cancellation_reason, "item_unavailable");
+  assert.equal(cancelled.cancellation_confirmation, "final");
+  await page.goto(url + "?status=cancelled");
+  assert.equal(await page.getByRole("button", { name: "Correct order status", exact: true }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "Cancel order", exact: true }).count(), 0);
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  assert.equal(await page.getByRole("checkbox", { name: "Select order 12345678 for export", includeHidden: true }).isVisible(), false);
+  await page.getByRole("button", { name: "Select orders", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Select order 12345678 for export" }).check();
+  const exportData = await page.locator('#selected-order-export').evaluate(form => Object.fromEntries(new FormData(form)));
+  assert.equal(exportData.ids, "test-order");
+  assert.equal(exportData.scope, "selected");
+  await page.getByRole("button", { name: "Done selecting", exact: true }).click();
+  assert.equal(await page.getByRole("checkbox", { name: "Select order 12345678 for export", includeHidden: true }).isVisible(), false);
+  assert.equal(await page.locator("#selected-order-export").evaluate(form => new FormData(form).get("ids")), "test-order");
+  await page.setViewportSize({ width: 768, height: 1024 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const mobile = await context.newPage();
+  mobile.on("pageerror", error => errors.push(error.message));
+  await mobile.goto(url);
+  const mobileHelp = mobile.getByRole("button", { name: "About Orders to fulfil", exact: true });
+  await mobileHelp.tap();
+  await mobile.getByRole("tooltip").waitFor();
+  const bounds = await mobile.getByRole("tooltip").boundingBox();
+  assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 390);
+  await mobileHelp.tap();
+  await mobile.getByRole("tooltip").waitFor({ state: "detached" });
+  await mobileHelp.tap();
+  await mobile.getByRole("heading", { name: "Orders", exact: true }).tap();
+  await mobile.getByRole("tooltip").waitFor({ state: "detached" });
+  assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  await mobile.screenshot({ path: path.join(output, "orders-mobile.png"), fullPage: true });
+  await mobile.goto(url + "?status=packed");
+  await mobile.getByRole("button", { name: "Ready to send", exact: true }).tap();
+  assert.equal(await mobile.getByLabel("Tracking URL (optional)", { exact: true }).isVisible(), true);
+  await mobile.screenshot({ path: path.join(output, "orders-mobile-expanded.png"), fullPage: true });
+  await mobile.setViewportSize({ width: 320, height: 760 });
+  assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  for (const width of [320, 390, 768, 1024, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(url + "?status=delivered&empty");
+    await page.getByRole("button", { name: "Edit delivery details", exact: true }).click();
+    await page.getByText("More options", { exact: true }).click();
+    await page.getByRole("button", { name: "Correct order status", exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.screenshot({ path: path.join(output, `completed-edit-${width}.png`), fullPage: true });
+    await page.goto(url + "?status=packed");
+    await page.getByText("More options", { exact: true }).click();
+    await page.getByRole("button", { name: "Cancel order", exact: true }).click();
+    await page.getByLabel("Cancellation reason", { exact: true }).selectOption("other");
+    await page.getByLabel("Short reason", { exact: true }).fill("x".repeat(240));
+    await page.getByRole("button", { name: "Review cancellation", exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.getByRole("button", { name: "Continue to cancellation", exact: true }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    await page.screenshot({ path: path.join(output, `cancel-confirmation-${width}.png`), fullPage: true });
+  }
+  assert.deepEqual(errors, []);
+  console.log("PASS: desktop hover, keyboard focus/Tab/Escape, screen-reader descriptions, single tooltip, touch toggle/dismissal, viewport bounds, compact cards, conditional fields, preserved tracking FormData, save action, export selection and safe entity text. Screenshots:", output);
+} finally {
+  await browser?.close();
+  await new Promise(resolve => server.close(resolve));
+}

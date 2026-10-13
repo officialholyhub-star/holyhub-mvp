@@ -11,25 +11,31 @@ type ProductVariant = {
 
 type AddToBasketButtonProps = Omit<BasketItem, "quantity" | "variantId" | "variantSize"> & {
   variants?: ProductVariant[];
+  showQuantity?: boolean;
 };
 
 export function AddToBasketButton(product: AddToBasketButtonProps) {
   const [added, setAdded] = useState(false);
+  const [error, setError] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState(product.variants?.find((variant) => variant.stock_quantity > 0)?.id ?? "");
   const [quantity, setQuantity] = useState(1);
   const selectedVariant = product.variants?.find((variant) => variant.id === selectedVariantId);
   const availableStock = selectedVariant?.stock_quantity ?? product.stockQuantity;
   const hasVariants = Boolean(product.variants?.length);
-  const isOutOfStock = typeof availableStock === "number" && availableStock < 1;
+  const isOutOfStock = (typeof availableStock === "number" && availableStock < 1)
+    || (hasVariants && !product.variants?.some(variant => variant.stock_quantity > 0));
   const maximum = typeof availableStock === "number" ? Math.min(MAX_BASKET_QUANTITY, availableStock) : MAX_BASKET_QUANTITY;
 
   function addToBasket() {
     if (isOutOfStock || (hasVariants && !selectedVariant)) return;
+    setError("");
     try {
       const stored = window.localStorage.getItem(BASKET_STORAGE_KEY);
       const basket: BasketItem[] = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(basket)) throw new Error("Invalid basket");
       const existing = basket.find((item) => item.id === product.id && item.variantId === selectedVariant?.id);
       if (existing) {
+        if (existing.quantity >= maximum) { setError("You already have the available quantity in your basket. Open your basket to review it."); return; }
         existing.quantity = Math.min(existing.quantity + quantity, maximum);
       } else if (basket.length < MAX_BASKET_ITEMS) {
         basket.push({
@@ -47,18 +53,20 @@ export function AddToBasketButton(product: AddToBasketButtonProps) {
           variantSize: selectedVariant?.size,
           quantity,
         });
-      }
+      } else { setError("Your basket is full. Open your basket and remove an item before adding another."); return; }
       window.localStorage.setItem(BASKET_STORAGE_KEY, JSON.stringify(basket));
       window.dispatchEvent(new Event("holyhub-basket-updated"));
       setAdded(true);
       window.setTimeout(() => setAdded(false), 1800);
     } catch {
       setAdded(false);
+      setError("We couldn’t save this item. Allow browser storage and try again, or contact HolyHub.");
     }
   }
 
   return (
     <div className="purchase-controls">
+      {error && <p role="alert">{error} <a href="/basket">Open basket</a> · <a href="/contact">Contact HolyHub</a></p>}
       {hasVariants && (
         <label className="field">
           <span>Choose size</span>
@@ -68,12 +76,12 @@ export function AddToBasketButton(product: AddToBasketButtonProps) {
           </select>
         </label>
       )}
-      <div className="quantity-control product-quantity-control">
+      {product.showQuantity !== false && <div className="quantity-control product-quantity-control">
         <span>Quantity</span>
         <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((current) => Math.max(1, current - 1))} disabled={quantity <= 1}>-</button>
         <output>{quantity}</output>
         <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((current) => Math.min(maximum, current + 1))} disabled={quantity >= maximum}>+</button>
-      </div>
+      </div>}
       <button className="button button-primary" type="button" onClick={addToBasket} disabled={isOutOfStock || (hasVariants && !selectedVariant)}>{isOutOfStock ? "Out of stock" : added ? "Added ✓" : "Add to basket"}</button>
     </div>
   );

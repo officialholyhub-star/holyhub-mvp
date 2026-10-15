@@ -57,20 +57,21 @@ export async function login(formData: FormData) {
   redirect(next);
 }
 
-export async function signup(formData: FormData) {
+export async function signup(formData: FormData): Promise<{ error?: string; next?: string; userId?: string }> {
   const fullName = clean(formData.get("full_name"));
   const email = clean(formData.get("email")).toLowerCase();
   const password = raw(formData.get("password"));
   const confirmPassword = raw(formData.get("confirm_password"));
   const acceptedTerms = formData.get("accept_terms") === "on";
 
-  if (!acceptedTerms) redirect(messageUrl("/auth/signup", "error", "Please agree to the HolyHub terms to create an account."));
-  if (!isValidEmail(email)) redirect(messageUrl("/auth/signup", "error", "Enter a valid email address."));
-  if (fullName.length > 100) redirect(messageUrl("/auth/signup", "error", "Name is too long."));
+  if (!acceptedTerms) return { error: "Please agree to the HolyHub terms to create an account." };
+  if (!isValidEmail(email)) return { error: "Enter a valid email address." };
+  if (!fullName) return { error: "Enter your first name." };
+  if (fullName.length > 100) return { error: "Name is too long." };
   if (!isValidPasswordLength(password)) {
-    redirect(messageUrl("/auth/signup", "error", "Use a password between 12 and 128 characters."));
+    return { error: "Use a password between 12 and 128 characters." };
   }
-  if (password !== confirmPassword) redirect(messageUrl("/auth/signup", "error", "Your passwords don't match."));
+  if (password !== confirmPassword) return { error: "Your passwords don't match." };
 
   const supabase = await createClient();
   const siteUrl = await getSiteUrl();
@@ -85,15 +86,15 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    redirect(messageUrl("/auth/signup", "error", "We couldn't use that email address. Check it's correct and try again."));
+    return { error: "We couldn't use that email address. Check it's correct and try again." };
   }
 
   if (!data.session) {
-    redirect("/auth/check-email");
+    return { next: "/auth/check-email" };
   }
 
   revalidatePath("/", "layout");
-  redirect("/account");
+  return { next: "/account", userId: data.user?.id };
 }
 
 export async function resendSignupConfirmation(formData: FormData) {

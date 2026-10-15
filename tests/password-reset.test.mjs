@@ -127,8 +127,10 @@ test('development origins override stale config; production uses configured doma
     if (oldSite === undefined) delete process.env.NEXT_PUBLIC_SITE_URL; else process.env.NEXT_PUBLIC_SITE_URL = oldSite;
   }
 });
-test('existing login and signup still redirect to account', async () => {
+test('existing login redirects and signup returns account destination for welcome', async () => {
   const { actions } = setup();
   assert.equal((await destination(actions.login, { email: EMAIL, password: 'existing-password' })).pathname, '/account');
-  assert.equal((await destination(actions.signup, { email: EMAIL, ...passwords, accept_terms: 'on' })).pathname, '/account');
+  const data = new FormData();
+  Object.entries({ full_name: 'Alex', email: EMAIL, ...passwords, accept_terms: 'on' }).forEach(([key, value]) => data.set(key, value));
+  assert.equal((await actions.signup(data)).next, '/account');
 });

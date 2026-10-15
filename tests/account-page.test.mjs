@@ -76,3 +76,12 @@ test("profile and email actions still authenticate, save the expected fields, an
   await assert.rejects(actions.updateEmail(email), /confirm%20the%20change/);
   assert.deepEqual(writes[2], ["email", "new@example.test"]);
 });
+
+test("permanent preferences entry survives completed or dismissed optional onboarding", async () => {
+  const { html, tree } = await renderAccount();
+  assert.match(html, /Personalise HolyHub/);
+  assert.match(html, /Update what you’re interested in and finish your HolyHub setup\./);
+  const entry = elements(tree, element => element.props?.href === "/account/setup?edit=1");
+  assert.equal(entry.length, 1);
+  assert.match(html, /Edit preferences/);
+});

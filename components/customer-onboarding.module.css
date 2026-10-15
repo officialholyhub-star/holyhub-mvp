@@ -1,0 +1,43 @@
+.wrap { width: 100%; max-width: 660px; margin: 30px auto 60px; }
+.card { padding: clamp(22px, 5vw, 44px); overflow: hidden; border-radius: 26px; }
+.progress { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 30px; color: #526575; font-size: .85rem; }
+.progress > div { display: flex; gap: 6px; }
+.progress i { display: block; width: 36px; height: 5px; background: #edf0f3; border-radius: 10px; }
+.progress i.active { background: #a9d9ef; }
+.step { animation: slide .24s ease-out both; }
+.step[data-direction="backward"] { animation-name: back; }
+.step h1, .welcome h1 { font-size: clamp(1.55rem, 4vw, 2rem); line-height: 1.25; margin: 0 0 14px; }
+.step h1:focus, .welcome h1:focus { outline: none; }
+.helper { color: #526575; line-height: 1.6; }
+.note { font-size: .8rem; color: #526575; line-height: 1.55; }
+.options { display: grid; gap: 12px; margin: 26px 0; }
+.option { position: relative; display: flex; align-items: center; gap: 12px; padding: 17px; border: 1px solid #dce7ee; background: #fff; border-radius: 16px; cursor: pointer; line-height: 1.4; animation: enter .22s ease-out both; animation-delay: var(--delay); transition: transform .15s, border-color .15s, background .15s; }
+.option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.option:focus-within { outline: 3px solid #4889ae; outline-offset: 3px; }
+.selected { border-color: #87c3df; background: #edf8fe; transform: translateY(-2px) scale(1.01); }
+.tick { margin-left: auto; flex-shrink: 0; width: 22px; height: 22px; border: 1px solid #bed4e0; border-radius: 50%; display: grid; place-items: center; color: #245570; }
+.selected .tick { background: #bce2f5; border-color: #87c3df; }
+.actions { display: flex; gap: 12px; margin-top: 24px; }
+.actions > :last-child { flex: 1; }
+.skip { display: block; margin: 18px auto 0; padding: 10px; border: 0; background: transparent; color: #526575; cursor: pointer; text-decoration: underline; }
+.welcome { text-align: center; }
+.welcome > span { display: inline-grid; place-items: center; background: #fceef3; width: 76px; height: 76px; border-radius: 24px; font-size: 2rem; margin-bottom: 24px; }
+.reminder { position: fixed; z-index: 45; top: 90px; left: 16px; width: min(285px, calc(100vw - 32px)); padding: 20px; background: #f5fbff; border: 1px solid #b9dced; border-radius: 18px; box-shadow: 0 6px 28px #23435615; animation: slide .24s ease-out; }
+.reminder p { margin: 8px 0 14px; font-size: .85rem; color: #526575; }
+.dismiss { float: right; border: 0; background: transparent; cursor: pointer; padding: 4px 8px; }
+@media (min-width: 600px) { .options:not(.single) { grid-template-columns: 1fr 1fr; } }
+@keyframes slide { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes back { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes enter { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .step, .option, .welcome, .reminder { animation: none; transition: none; } .selected { transform: none; } }
+
+.continue:disabled { background: #e4edf2; border-color: #d3e0e8; color: #627785; cursor: not-allowed; box-shadow: none; transform: none; opacity: 1; }
+.welcome { position: fixed; inset: 0; z-index: 100; min-height: 100dvh; padding: 24px; display: grid; place-items: center; background: #f5fbff; overflow: auto; }
+.welcomeContent { position: relative; z-index: 1; text-align: center; max-width: 600px; animation: enter .3s ease-out; }
+.welcomeContent > span { display: inline-grid; place-items: center; width: 84px; height: 84px; border-radius: 26px; background: #e4f3fc; font-size: 2.5rem; margin-bottom: 24px; }
+.welcomeContent p { color: #526575; font-size: 1.2rem; margin-bottom: 30px; }
+.confetti { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti i { position: absolute; top: -24px; left: var(--x); width: 9px; height: 16px; border-radius: 2px; background: var(--colour); animation: fall 2.4s cubic-bezier(.25,.1,.55,.85) var(--delay) both; }
+@keyframes fall { from { transform: translate3d(0,-24px,0) rotate(0); opacity: 1; } to { transform: translate3d(var(--drift), calc(100dvh + 48px),0) rotate(480deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } .confetti i, .welcomeContent { animation: none; } }
+

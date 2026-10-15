@@ -57,6 +57,12 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         </Link>
       )}
 
+      <section className={styles.application} aria-labelledby="personalise-heading">
+        <h2 id="personalise-heading">Personalise HolyHub</h2>
+        <p>Update what you’re interested in and finish your HolyHub setup.</p>
+        <Link className="button button-secondary" href="/account/setup?edit=1">Edit preferences</Link>
+      </section>
+
       <nav className={styles.actions} aria-label="Your account">
         <Link className={`${styles.action} ${styles.orders}`} href="/account/orders">
           <div><p className="eyebrow">Purchases &amp; delivery</p><h2>My purchases</h2><p>View products you’ve bought and track their delivery.</p><span className={styles.actionLabel}>View my purchases</span></div>

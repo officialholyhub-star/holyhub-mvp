@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEventHandler } from "react";
 import styles from "./password-input.module.css";
 
 type PasswordInputProps = {
@@ -9,9 +9,12 @@ type PasswordInputProps = {
   autoComplete: string;
   minLength?: number;
   required?: boolean;
+  maxLength?: number;
+  value?: string;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
 };
 
-export function PasswordInput({ id, name, autoComplete, minLength, required }: PasswordInputProps) {
+export function PasswordInput({ id, name, autoComplete, minLength, required, maxLength, value, onChange }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -22,6 +25,9 @@ export function PasswordInput({ id, name, autoComplete, minLength, required }: P
         type={visible ? "text" : "password"}
         autoComplete={autoComplete}
         minLength={minLength}
+        maxLength={maxLength}
+        value={value}
+        onChange={onChange}
         required={required}
         className={styles.input}
       />

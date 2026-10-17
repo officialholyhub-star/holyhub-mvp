@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { formatSellerAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
+import { formatRegisteredOffice, formatSellerAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
 import { useEffect, useState } from "react";
 
 type PublicSellerIdentity = SellerLegalInput & { user_id: string };
@@ -41,6 +41,7 @@ export function BasketSellerDetails({ sellerId, onStatusChange }: BasketSellerDe
 
   if (failed) return <p className="notice notice-error" role="alert">Seller details could not be verified. Checkout will stay unavailable until they can be confirmed.</p>;
   if (!seller) return <p className="muted-small">Checking seller details…</p>;
+  const registeredOffice = formatRegisteredOffice(seller);
 
   return <details>
     <summary>Seller legal details</summary>
@@ -51,6 +52,8 @@ export function BasketSellerDetails({ sellerId, onStatusChange }: BasketSellerDe
       <div><dt>Email</dt><dd><a href={`mailto:${seller.contact_email}`}>{seller.contact_email}</a></dd></div>
       {seller.contact_phone && <div><dt>Phone</dt><dd><a href={`tel:${seller.contact_phone}`}>{seller.contact_phone}</a></dd></div>}
       {seller.registration_number && <div><dt>Registration number</dt><dd>{seller.registration_number}</dd></div>}
+      {seller.registration_jurisdiction && <div><dt>Registered in</dt><dd>{seller.registration_jurisdiction}</dd></div>}
+      {registeredOffice && <div><dt>Registered office</dt><dd>{registeredOffice}</dd></div>}
       {seller.vat_number && <div><dt>VAT number</dt><dd>{seller.vat_number}</dd></div>}
     </dl>
   </details>;

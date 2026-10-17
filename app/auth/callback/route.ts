@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { authOrigin } from "@/lib/auth/origin";
 import { createRecoveryProof, INVALID_RECOVERY_LINK, RECOVERY_COOKIE, RECOVERY_MAX_AGE } from "@/lib/auth/recovery";
-const INVALID_SIGN_IN_LINK = "The sign-in link is invalid or has expired.";
+const INVALID_SIGN_IN_LINK = "That confirmation link is invalid or has expired.";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);

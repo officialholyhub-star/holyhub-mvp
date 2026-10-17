@@ -48,7 +48,7 @@ export default async function FavouritesPage() {
                 </div>
                 <Link href={`/products/${product.id}`}>
                   <div className="product-card-body">
-                    {storefront?.business_name && <p className="marketplace-lister">{storefront.business_name}</p>}
+                    {storefront?.business_name && <p className="marketplace-lister" style={{ fontSize: ".85rem" }}>{storefront.business_name}</p>}
                     <h3>{product.name}</h3>
                     <strong>£{Number(product.price).toFixed(2)}</strong>
                   </div>

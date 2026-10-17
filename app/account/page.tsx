@@ -30,11 +30,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       <header className={styles.welcome}>
           <p className="eyebrow">Your HolyHub space</p>
           <h1>Welcome back{firstName ? `, ${firstName}` : ""}.</h1>
-          <p className="lead">Your purchases, saved favourites and account settings, all in one place.</p>
-          <dl className={styles.summary} aria-label="Account summary">
-            <div><dt>Status</dt><dd>{accountStatus.charAt(0).toUpperCase() + accountStatus.slice(1)}</dd></div>
-            <div><dt>Access</dt><dd>{access}</dd></div>
-          </dl>
+          <p className="lead">A place to find good things, from people and brands you can believe in.</p>
       </header>
 
       {(profileError || rolesError || applicationError || storefrontError) && <p className="notice notice-error" role="alert">Some account details could not be loaded. Refresh before editing your profile or checking access.</p>}
@@ -48,9 +44,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <Link className={styles.listerShortcut} href="/lister">
           {storefront && <AccountListerBrand businessName={storefront.business_name} logoUrl={storefront.logo_url} />}
           <div className={styles.listerCopy}>
-            <p className="eyebrow">Your shop</p>
-            <h2>Lister space</h2>
-            <p>Manage your products, orders and storefront.</p>
+            <p className="eyebrow">Lister access</p>
+            <h2>Your lister space is ready.</h2>
             <span className={styles.listerCta}>Open lister space <span aria-hidden="true">→</span></span>
           </div>
           <span className={styles.listerArrow} aria-hidden="true">→</span>
@@ -65,26 +60,22 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
 
       <nav className={styles.actions} aria-label="Your account">
         <Link className={`${styles.action} ${styles.orders}`} href="/account/orders">
-          <div><p className="eyebrow">Purchases &amp; delivery</p><h2>My purchases</h2><p>View products you’ve bought and track their delivery.</p><span className={styles.actionLabel}>View my purchases</span></div>
+          <div><p className="eyebrow">Purchases &amp; delivery</p><h2>My orders</h2><p>Track your orders and delivery updates.</p><span className={styles.actionLabel}>View my orders</span></div>
           <span className={styles.actionArrow} aria-hidden="true">→</span>
         </Link>
         <Link className={styles.action} href="/account/favourites">
           <div><h2>Favourites</h2><p>Save products you want to come back to.</p><span className={styles.actionLabel}>View favourites</span></div>
           <span className={styles.actionArrow} aria-hidden="true">→</span>
         </Link>
-        <a className={styles.action} href="/auth/forgot-password">
-          <div><h2>Password / Security</h2><p>Keep your account secure by updating your password.</p><span className={styles.actionLabel}>Reset password</span></div>
-          <span className={styles.actionArrow} aria-hidden="true">→</span>
-        </a>
       </nav>
 
       {!rolesError && !applicationError && !isLister && (
         <section className={styles.application} aria-labelledby="lister-access-heading">
-          <h2 id="lister-access-heading">Lister access</h2>
+          <p className="eyebrow">Lister access</p>
           {listerApplication ? (
-            <p>Your application is <strong>{listerApplication.status === "pending" ? "awaiting review" : listerApplication.status}</strong>.</p>
+            <><h2 id="lister-access-heading">Lister access</h2><p>Your lister application is pending.</p></>
           ) : (
-            <p>Have a brand to share? <Link className="text-link" href="/lister/apply">Apply to become a lister <span aria-hidden="true">→</span></Link></p>
+            <><h2 id="lister-access-heading">Have a brand to share?</h2><Link className="text-link" href="/lister/apply">Apply to become a lister <span aria-hidden="true">→</span></Link></>
           )}
         </section>
       )}
@@ -116,6 +107,20 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
             <button className="button button-quiet" type="submit">Change email</button>
             <p className="muted-small">Email changes may require confirmation.</p>
           </DraftForm>
+        </section>
+
+        <section className={styles.settingsForm} aria-labelledby="details-heading">
+          <h3 id="details-heading">Account details</h3>
+          <dl className={styles.summary} aria-label="Account details">
+            <div><dt>Status</dt><dd>{accountStatus.charAt(0).toUpperCase() + accountStatus.slice(1)}</dd></div>
+            <div><dt>Access</dt><dd>{access}</dd></div>
+          </dl>
+        </section>
+
+        <section className={styles.settingsForm} aria-labelledby="password-heading">
+          <h3 id="password-heading">Password</h3>
+          <p>Change your password securely.</p>
+          <Link className="button button-quiet" href="/auth/forgot-password">Reset password</Link>
         </section>
         </div>
         <section className={styles.management} aria-labelledby="account-management-heading"><h3 id="account-management-heading">Account management</h3><p>Permanently close your HolyHub account. Personal account data will be deleted where possible; some records must be retained for order, payment or legal requirements. Deletion cannot be undone.</p><Link className="button button-secondary" href="/account/delete">Delete account</Link><p className="muted-small">Account closure is currently arranged by email. Your account stays active until deletion is completed.</p></section>

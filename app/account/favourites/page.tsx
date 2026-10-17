@@ -1,4 +1,5 @@
 import { withProductCover } from "@/lib/product-images";
+import { productCategoryLabel } from "@/lib/product-categories";
 import Image from "next/image";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
@@ -25,7 +26,7 @@ export default async function FavouritesPage() {
         <div>
           <p className="eyebrow">Your HolyHub space</p>
           <h1>Favourites</h1>
-          <p className="lead">The products and brands you want to remember.</p>
+          <p className="lead">Products and brands you want to come back to.</p>
         </div>
         <Link className="button button-primary" href="/marketplace">Explore Marketplace</Link>
       </div>
@@ -40,14 +41,14 @@ export default async function FavouritesPage() {
                   <Link href={`/products/${product.id}`}>
                     <div className="marketplace-card-image">
                       {product.image_url ? <Image src={product.image_url} alt={product.name} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
-                      <span>{product.category_type}</span>
+                      <span>{productCategoryLabel(product.category_type)}</span>
                     </div>
                   </Link>
                   <FavouriteButton productId={product.id} initialSaved />
                 </div>
                 <Link href={`/products/${product.id}`}>
                   <div className="product-card-body">
-                    <p className="marketplace-lister">{storefront?.business_name ?? "HolyHub lister"}</p>
+                    {storefront?.business_name && <p className="marketplace-lister">{storefront.business_name}</p>}
                     <h3>{product.name}</h3>
                     <strong>£{Number(product.price).toFixed(2)}</strong>
                   </div>

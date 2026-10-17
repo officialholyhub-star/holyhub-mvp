@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth/require-user";
 import Link from "next/link";
 import { AccountListerBrand } from "@/components/account-lister-brand";
 import { SUGGESTED_CATEGORY_PREFIX } from "@/lib/application-categories";
-import { formatRegisteredOffice, formatSellerAddress, sellerEntityLabel, sellerLegalProfileComplete, SELLER_LEGAL_FIELDS, type SellerLegalProfile } from "@/lib/seller-legal";
+import { formatRegisteredOffice, formatSellerAddress, formatServiceAddress, sellerEntityLabel, sellerLegalProfileComplete, SELLER_LEGAL_FIELDS, type SellerLegalProfile } from "@/lib/seller-legal";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +40,7 @@ export default async function AdminApplicationsPage({ searchParams }: { searchPa
     {error ? <div className="marketplace-status marketplace-status-error"><strong>Applications could not be loaded</strong><p>Please try again.</p></div> : applications?.length ? <div className="review-list">{applications.map((application) => {
       const legal = legalMap.get(application.user_id) ?? null;
       const legalComplete = sellerLegalProfileComplete(legal);
+      const serviceAddress = legal ? formatServiceAddress(legal) : "";
       const registeredOffice = legal ? formatRegisteredOffice(legal) : "";
       return <article className="review-card" key={application.id}>
         <div className="review-card-header"><div className={styles.brandHeading}><AccountListerBrand businessName={application.business_name} logoUrl={logos.get(application.user_id) ?? null} /><div className={styles.brandDetails}><h2>{application.business_name}</h2><p className="muted-small">{application.contact_name} · {application.email} · Submitted {new Date(application.created_at).toLocaleDateString("en-GB")}</p></div></div><span className="status-pill status-pending">Awaiting your review</span></div>
@@ -51,6 +52,7 @@ export default async function AdminApplicationsPage({ searchParams }: { searchPa
           <div><dt>Legal seller</dt><dd>{legal?.legal_name ?? "MISSING"}</dd></div>
           <div><dt>Legal structure</dt><dd>{legal ? sellerEntityLabel(legal.entity_type) : "MISSING"}</dd></div>
           <div><dt>Business / establishment address</dt><dd>{legal ? formatSellerAddress(legal) : "MISSING"}</dd></div>
+          <div><dt>Service address</dt><dd>{serviceAddress || "Same as business address"}</dd></div>
           <div><dt>Business contact</dt><dd>{legal?.contact_email ?? "MISSING"}{legal?.contact_phone ? ` · ${legal.contact_phone}` : ""}</dd></div>
           <div><dt>Registration number</dt><dd>{legal?.registration_number ?? "Not provided"}</dd></div>
           <div><dt>Registered in</dt><dd>{legal?.registration_jurisdiction ?? "Not provided"}</dd></div>

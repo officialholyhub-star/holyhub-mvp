@@ -6,6 +6,14 @@ import { requireUser } from "@/lib/auth/require-user";
 import { applicationCategoryValue } from "@/lib/application-categories";
 import { getListerApplication } from "@/lib/lister-applications";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  normalizeSellerLegalInput,
+  sellerLegalProfileMatches,
+  sellerLegalValidationError,
+  SELLER_LEGAL_FIELDS,
+  type SellerLegalInput,
+  type SellerLegalProfile,
+} from "@/lib/seller-legal";
 
 const MAX_EMAIL_LENGTH = 254;
 
@@ -17,8 +25,70 @@ function messageUrl(kind: "error" | "message", message: string) {
   return `/lister/apply?${kind === "error" ? "edit=1&" : ""}${kind}=${encodeURIComponent(message)}`;
 }
 
+function legalDetailsUrl(kind: "error" | "message", message: string) {
+  return `/lister/legal-details?${kind}=${encodeURIComponent(message)}`;
+}
+
 function isValidEmail(email: string) {
   return email.length <= MAX_EMAIL_LENGTH && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function sellerLegalFromFormData(formData: FormData): SellerLegalInput {
+  return normalizeSellerLegalInput({
+    legal_name: clean(formData.get("legal_name")),
+    entity_type: clean(formData.get("entity_type")),
+    address_line1: clean(formData.get("address_line1")),
+    address_line2: clean(formData.get("address_line2")),
+    city: clean(formData.get("city")),
+    postcode: clean(formData.get("postcode")),
+    country: clean(formData.get("country")),
+    contact_email: clean(formData.get("contact_email")),
+    contact_phone: clean(formData.get("contact_phone")),
+    registration_number: clean(formData.get("registration_number")),
+    vat_number: clean(formData.get("vat_number")),
+  });
+}
+
+async function saveLegalProfileForUser(userId: string, input: SellerLegalInput) {
+  const admin = createAdminClient();
+  const { data, error: lookupError } = await admin.from("seller_legal_profiles")
+    .select(SELLER_LEGAL_FIELDS).eq("user_id", userId).maybeSingle();
+  if (lookupError) return { error: lookupError, changed: false };
+
+  const existing = data as SellerLegalProfile | null;
+  if (sellerLegalProfileMatches(existing, input)) return { error: null, changed: false };
+
+  const { error } = await admin.from("seller_legal_profiles").upsert({
+    user_id: userId,
+    ...input,
+    verification_status: "pending",
+    verification_note: null,
+    verified_at: null,
+    verified_by: null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id" });
+  return { error, changed: !error };
+}
+
+export async function saveSellerLegalProfile(formData: FormData) {
+  const { user } = await requireUser();
+  const sellerLegal = sellerLegalFromFormData(formData);
+  const legalError = sellerLegalValidationError(sellerLegal);
+  if (legalError) redirect(legalDetailsUrl("error", legalError));
+
+  const saved = await saveLegalProfileForUser(user.id, sellerLegal);
+  if (saved.error) {
+    console.error("Seller legal profile save failed", { code: saved.error.code, message: saved.error.message });
+    redirect(legalDetailsUrl("error", "We couldn't save your seller details. Please try again."));
+  }
+
+  revalidatePath("/lister/legal-details");
+  revalidatePath("/lister");
+  revalidatePath("/marketplace");
+  revalidatePath(`/lister/storefront/${user.id}`);
+  revalidatePath("/admin/listers");
+  revalidatePath("/admin/applications");
+  redirect(legalDetailsUrl("message", saved.changed ? "Seller details saved and sent for review." : "Your seller details are already up to date."));
 }
 
 export async function submitListerApplication(formData: FormData) {
@@ -37,6 +107,8 @@ export async function submitListerApplication(formData: FormData) {
   const description = clean(formData.get("description"));
   const categoryType = applicationCategoryValue(clean(formData.get("category_type")), clean(formData.get("suggested_category")), application?.category_type);
   const acceptedListerTerms = formData.get("accept_lister_terms") === "on";
+  const sellerLegal = sellerLegalFromFormData(formData);
+  const legalError = sellerLegalValidationError(sellerLegal);
 
   if (!acceptedListerTerms) redirect(messageUrl("error", "Please agree to the HolyHub Lister Terms before applying."));
   if (!businessName || businessName.length > 150 || !contactName || contactName.length > 100) {
@@ -49,6 +121,7 @@ export async function submitListerApplication(formData: FormData) {
   if (!description || description.length > 500 || !categoryType) {
     redirect(messageUrl("error", "Complete the description and product/category type within the limits shown."));
   }
+  if (legalError) redirect(messageUrl("error", legalError));
 
   const values = {
     business_name: businessName,
@@ -59,9 +132,8 @@ export async function submitListerApplication(formData: FormData) {
     description,
     category_type: categoryType,
   };
-  // Applicant UPDATE is not allowed by RLS. Use the existing server-only admin
-  // client solely for a pending/rejected record read through the user's client.
-  // Ownership, status and version are checked again atomically in the UPDATE.
+  // Applicant UPDATE is not allowed by RLS. Use the server-only admin client
+  // after the current user's ownership/status/version have been checked.
   const result = application
     ? await createAdminClient().from("lister_applications").update({
         ...values, status: "pending", rejection_reason: null, reviewed_at: null,
@@ -91,6 +163,12 @@ export async function submitListerApplication(formData: FormData) {
     redirect(messageUrl("message", "You already have an active application under review."));
   }
   if (error) redirect(messageUrl("error", "We couldn't submit your application. Please try again."));
+
+  const legalSave = await saveLegalProfileForUser(user.id, sellerLegal);
+  if (legalSave.error) {
+    console.error("Seller legal profile save failed after application save", { code: legalSave.error.code, message: legalSave.error.message });
+    redirect(messageUrl("error", "Your application was saved, but your seller legal details were not. Please submit again before review."));
+  }
 
   revalidatePath("/lister/apply");
   revalidatePath("/account");

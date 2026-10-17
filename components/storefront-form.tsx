@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PRODUCT_CATEGORIES } from "@/lib/product-categories";
 import { OTHER_APPLICATION_CATEGORY, SUGGESTED_CATEGORY_PREFIX, MAX_SUGGESTED_CATEGORY_LENGTH } from "@/lib/application-categories";
+import { DISPATCH_WINDOW_LABELS, type DispatchWindow } from "@/lib/dispatch-timeframe";
 import { advanceOnboarding } from "@/app/lister/onboarding/actions";
 import { useActionState, useState, useEffect, useRef } from "react";
 import type { StorefrontFormState } from "@/app/lister/actions";
@@ -23,6 +24,8 @@ type StorefrontFormProps = {
     logo_url: string | null;
     delivery_option: string;
     delivery_charge: number | string;
+    dispatch_window: string | null;
+    dispatch_custom_timeframe: string | null;
   } | null;
 };
 
@@ -37,6 +40,8 @@ export function StorefrontForm({ action, userId, storefront, onboarding = false 
   const [instagramUrl, setInstagramUrl] = useState(storefront?.instagram_url ?? "");
   const [deliveryMode, setDeliveryMode] = useState(Number(storefront?.delivery_charge ?? 0) > 0 ? "flat" : "free");
   const [deliveryCharge, setDeliveryCharge] = useState(String(storefront?.delivery_charge ?? 0));
+  const [dispatchWindow, setDispatchWindow] = useState(storefront?.dispatch_window ?? "");
+  const [dispatchCustom, setDispatchCustom] = useState(storefront?.dispatch_custom_timeframe ?? "");
 
   const formRef = useRef<HTMLFormElement>(null);
   const [suggestion, setSuggestion] = useState(storefront?.category_type.startsWith(SUGGESTED_CATEGORY_PREFIX) ? storefront.category_type.slice(SUGGESTED_CATEGORY_PREFIX.length) : "");
@@ -44,28 +49,31 @@ export function StorefrontForm({ action, userId, storefront, onboarding = false 
   const [restored, setRestored] = useState(false);
   const [uploading, setUploading] = useState(false);
   useEffect(() => {
-
     const restore = window.setTimeout(() => {
-    try {
-      const draft = JSON.parse(sessionStorage.getItem(`hh-shop-draft-${userId}`) || "null");
-      if (draft) {
-        setBusinessName(draft.business_name ?? ""); setDescription(draft.description ?? "");
-        setCategoryType(draft.category_type ?? ""); setSuggestion(draft.suggested_category ?? "");
-        setWebsiteUrl(draft.website_url ?? ""); setInstagramUrl(draft.instagram_url ?? "");
-        setDeliveryCharge(draft.delivery_charge ?? "0"); setDeliveryMode(Number(draft.delivery_charge ?? 0) > 0 ? "flat" : "free"); setLogo(draft.logo_url || null);
-      }
-    } catch { /* Browser storage may be unavailable. */ }
-    setRestored(true);
+      try {
+        const draft = JSON.parse(sessionStorage.getItem(`hh-shop-draft-${userId}`) || "null");
+        if (draft) {
+          setBusinessName(draft.business_name ?? ""); setDescription(draft.description ?? "");
+          setCategoryType(draft.category_type ?? ""); setSuggestion(draft.suggested_category ?? "");
+          setWebsiteUrl(draft.website_url ?? ""); setInstagramUrl(draft.instagram_url ?? "");
+          setDeliveryCharge(draft.delivery_charge ?? "0"); setDeliveryMode(Number(draft.delivery_charge ?? 0) > 0 ? "flat" : "free"); setLogo(draft.logo_url || null);
+          setDispatchWindow(draft.dispatch_window ?? ""); setDispatchCustom(draft.dispatch_custom_timeframe ?? "");
+        }
+      } catch { /* Browser storage may be unavailable. */ }
+      setRestored(true);
     }, 0);
     return () => window.clearTimeout(restore);
-  }, [onboarding, userId]);
+  }, [userId]);
   function keepDraft() {
     if (!formRef.current) return;
     try { sessionStorage.setItem(`hh-shop-draft-${userId}`, JSON.stringify(Object.fromEntries(new FormData(formRef.current)))); } catch { /* Keep the form usable without storage. */ }
   }
+  const previewDispatch = dispatchWindow
+    ? dispatchWindow === "made-to-order" ? (dispatchCustom ? `Made to order — ${dispatchCustom}` : "Add your made-to-order timeframe") : DISPATCH_WINDOW_LABELS[dispatchWindow as DispatchWindow]
+    : "Choose a dispatch timeframe";
   return (
     <form ref={formRef} className="form" action={formAction} onChange={keepDraft} onSubmit={event => { keepDraft(); if (uploading) event.preventDefault(); }}>
-      {onboarding && <><input type="hidden" name="onboarding" value="1" /><aside className={setupStyles.preview} aria-label="Live shop preview"><p className="eyebrow">Your shop preview</p><h2>{businessName || "Your shop name"}</h2><p>{description || "A little about your shop"}</p><small>{categoryType === OTHER_APPLICATION_CATEGORY || categoryType.startsWith(SUGGESTED_CATEGORY_PREFIX) ? `Suggested category: ${suggestion || "Your suggestion"}` : categoryType || "Your category"} · Dispatch from: United Kingdom</small></aside></>}
+      {onboarding && <><input type="hidden" name="onboarding" value="1" /><aside className={setupStyles.preview} aria-label="Live shop preview"><p className="eyebrow">Your shop preview</p><h2>{businessName || "Your shop name"}</h2><p>{description || "A little about your shop"}</p><small>{categoryType === OTHER_APPLICATION_CATEGORY || categoryType.startsWith(SUGGESTED_CATEGORY_PREFIX) ? `Suggested category: ${suggestion || "Your suggestion"}` : categoryType || "Your category"} · Dispatch from: United Kingdom · {previewDispatch}</small></aside></>}
       {state.error && <p className="notice notice-error" role="alert">{state.error}</p>}
       {restored && <BrandLogoUploader userId={userId} initialLogoUrl={logo} onUploadingChange={setUploading} />}
       <div className="field">
@@ -93,7 +101,17 @@ export function StorefrontForm({ action, userId, storefront, onboarding = false 
         <label htmlFor="instagram_url">Instagram or social link <span className="muted-small">(optional)</span></label>
         <input id="instagram_url" name="instagram_url" type="url" value={instagramUrl} onChange={(event) => setInstagramUrl(event.currentTarget.value)} maxLength={500} placeholder="https://instagram.com/yourbrand" />
       </div>
-      <h2>Dispatch & delivery</h2><p>Dispatch from: United Kingdom</p><div className="field">
+      <h2>Dispatch & delivery</h2>
+      <p>Dispatch from: United Kingdom</p>
+      <div className="field">
+        <label htmlFor="dispatch_window">How quickly do you usually dispatch an order?</label>
+        <select id="dispatch_window" name="dispatch_window" value={dispatchWindow} onChange={event => { setDispatchWindow(event.currentTarget.value); if (event.currentTarget.value !== "made-to-order") setDispatchCustom(""); }} required>
+          <option value="" disabled>Choose a dispatch timeframe</option>
+          {(Object.entries(DISPATCH_WINDOW_LABELS) as [DispatchWindow, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+        </select>
+        {dispatchWindow === "made-to-order" && <><label htmlFor="dispatch_custom_timeframe">Made-to-order / longer timeframe</label><input id="dispatch_custom_timeframe" name="dispatch_custom_timeframe" value={dispatchCustom} onChange={event => setDispatchCustom(event.currentTarget.value)} maxLength={120} placeholder="e.g. Dispatch within 10–14 working days" required /><p className={styles.help}>Use the specific timeframe agreed with HolyHub. It will be shown to customers before purchase and saved with their order.</p></>}
+      </div>
+      <div className="field">
         <label htmlFor="delivery_mode">Delivery charge</label><select id="delivery_mode" value={deliveryMode} onChange={event => { setDeliveryMode(event.currentTarget.value); if (event.currentTarget.value === "free") setDeliveryCharge("0"); }}><option value="free">Free delivery</option><option value="flat">Set my own price</option></select>
         <label htmlFor="delivery_charge">Your price per order (£)</label>
         <input id="delivery_charge" name="delivery_charge" type="number" min={deliveryMode === "flat" ? "0.01" : "0"} readOnly={deliveryMode === "free"} step="0.01" value={deliveryMode === "free" ? "0" : deliveryCharge} onChange={(event) => setDeliveryCharge(event.currentTarget.value)} required />

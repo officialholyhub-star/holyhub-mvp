@@ -18,7 +18,7 @@ export function BasketSellerDetails({ sellerId, onStatusChange }: BasketSellerDe
   useEffect(() => {
     let cancelled = false;
     onStatusChange(sellerId, false);
-    void createClient().rpc("get_public_seller_identities", { p_user_ids: [sellerId] })
+    void Promise.resolve(createClient().rpc("get_public_seller_identities", { p_user_ids: [sellerId] }))
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error || !data?.[0]) {

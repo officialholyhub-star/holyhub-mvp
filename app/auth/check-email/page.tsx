@@ -11,8 +11,12 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
         <div className="check-email-icon" aria-hidden="true">✉</div>
         <p className="eyebrow">One more step</p>
         <h1>Check your email</h1>
-        <p className="lead">We’ve sent a confirmation link to your email address.</p>
-        <p>Click the link to activate your account, then come back and log in.</p>
+        <p className="lead">We sent a confirmation link to the email address you used.</p>
+        <ol>
+          <li>Open the email from HolyHub.</li>
+          <li>Click the confirmation link.</li>
+          <li>Return to HolyHub and log in.</li>
+        </ol>
         {isDevelopment && (
           <p className="notice notice-info">
             Testing in Codespaces? Open the link in the browser where you are signed in to GitHub, or make port 3000 public first.
@@ -21,7 +25,7 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
         {params.error && <p className="notice notice-error">{params.error}</p>}
         {params.message && <p className="notice notice-success">{params.message}</p>}
         <form className="confirmation-resend" action={resendSignupConfirmation}>
-          <label htmlFor="confirmation_email">Need another email?</label>
+          <label htmlFor="confirmation_email">Didn&apos;t receive the email?</label>
           <div>
             <input id="confirmation_email" name="email" type="email" autoComplete="email" placeholder="Enter your email" required />
             <button className="button button-secondary" type="submit">Resend email</button>
@@ -29,9 +33,9 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: P
         </form>
         <div className="button-row">
           <Link className="button button-primary" href="/auth/login">Go to login</Link>
-          <Link className="button button-quiet" href="/auth/forgot-password">Forgot password</Link>
+          <Link className="button button-quiet" href="/">Back to home</Link>
         </div>
-        <p className="muted-small">No email? Check your spam or junk folder, check that you entered the correct address, and wait a minute before resending. Already confirmed? Try signing in. If emails still don’t arrive, contact HolyHub.</p>
+        <p className="muted-small">No email? Check your spam or junk folder.</p>
       </div>
     </section>
   );

@@ -3,7 +3,6 @@ import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { AddToBasketButton } from "@/components/add-to-basket-button";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 import { FavouriteButton } from "@/components/favourite-button";
 import { demoProducts } from "@/lib/demo-products";
@@ -98,125 +97,37 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <button className="button button-primary" type="submit">Search</button>
         </div>
         <div className="marketplace-filter-row">
-          <label>
-            <span>Category</span>
-            <select id="category" name="category" defaultValue={category}>
-              <option value="">All categories</option>
-              {category && !isProductCategory(category) && <option value={category}>{category} (existing category)</option>}
-              {categoryOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Min price</span>
-            <input id="min" name="min" type="number" min="0" step="0.01" defaultValue={params.min ?? ""} placeholder="£0" />
-          </label>
-          <label>
-            <span>Max price</span>
-            <input id="max" name="max" type="number" min="0" step="0.01" defaultValue={params.max ?? ""} placeholder="Any" />
-          </label>
-          <label>
-            <span>Sort by</span>
-            <select id="sort" name="sort" defaultValue={sort}>
-              <option value="newest">Newest</option>
-              <option value="price-low">Price: low to high</option>
-              <option value="price-high">Price: high to low</option>
-            </select>
-          </label>
+          <label><span>Category</span><select id="category" name="category" defaultValue={category}><option value="">All categories</option>{category && !isProductCategory(category) && <option value={category}>{category} (existing category)</option>}{categoryOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label><span>Min price</span><input id="min" name="min" type="number" min="0" step="0.01" defaultValue={params.min ?? ""} placeholder="£0" /></label>
+          <label><span>Max price</span><input id="max" name="max" type="number" min="0" step="0.01" defaultValue={params.max ?? ""} placeholder="Any" /></label>
+          <label><span>Sort by</span><select id="sort" name="sort" defaultValue={sort}><option value="newest">Newest</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select></label>
           <Link className="marketplace-clear" href="/marketplace">Clear</Link>
         </div>
       </form>
 
       <div className="marketplace-categories" aria-label="Browse categories">
         <Link className={!category ? "active" : ""} href={marketplaceHref(params, "")}><HolyHubIcon name="marketplace" /><span>All</span></Link>
-        {featuredCategories.map((item) => (
-          <Link className={category === item.value ? "active" : ""} href={marketplaceHref(params, item.value)} key={item.value}><HolyHubIcon name={item.icon} /><span>{item.label}</span></Link>
-        ))}
+        {featuredCategories.map((item) => <Link className={category === item.value ? "active" : ""} href={marketplaceHref(params, item.value)} key={item.value}><HolyHubIcon name={item.icon} /><span>{item.label}</span></Link>)}
       </div>
 
-      <div className="marketplace-results-heading">
-        <div>
-          <p className="eyebrow">Curated for you</p>
-          <h2>{search ? `Results for “${search}”` : categoryShortcut?.label ?? (category || "Shop Christian brands")}</h2>
-        </div>
-        {!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p>}
-      </div>
+      <div className="marketplace-results-heading"><div><p className="eyebrow">Curated for you</p><h2>{search ? `Results for “${search}”` : categoryShortcut?.label ?? (category || "Shop Christian brands")}</h2></div>{!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p>}</div>
 
-      {error && (
-        <div className="marketplace-status marketplace-status-error">
-          <strong>We couldn&apos;t load the products.</strong>
-          <p>Please refresh the page in a moment.</p>
-        </div>
-      )}
+      {error && <div className="marketplace-status marketplace-status-error"><strong>We couldn&apos;t load the products.</strong><p>Please refresh the page in a moment.</p></div>}
       {!error && products?.length ? (
         <div className="product-grid marketplace-grid">
           {products.map((product) => {
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
-            return (
-              <article className="product-card marketplace-card" key={product.id}>
-                <div className="marketplace-card-media">
-                  <Link href={`/products/${product.id}`}>
-                    <div className="marketplace-card-image">
-                    {product.image_url ? <Image src={product.image_url} alt={decodeDisplayText(product.name)} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}
-                    <span>{productCategoryLabel(product.category_type)}</span>
-                    </div>
-                  </Link>
-                  <FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} />
-                </div>
-                <Link href={`/products/${product.id}`}>
-                  <div className="product-card-body">
-                    <p className="marketplace-lister">{storefront?.business_name ?? "HolyHub lister"}</p>
-                    <h3>{decodeDisplayText(product.name)}</h3>
-                    <strong>£{Number(product.price).toFixed(2)}</strong>
-                  </div>
-                </Link>
-                <div className="product-card-action"><AddToBasketButton showQuantity={false} id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={product.image_url} listerId={product.lister_user_id} listerName={storefront?.business_name ?? "HolyHub lister"} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} /></div>
-              </article>
-            );
+            return <article className="product-card marketplace-card" key={product.id}>
+              <div className="marketplace-card-media"><Link href={`/products/${product.id}`}><div className="marketplace-card-image">{product.image_url ? <Image src={product.image_url} alt={decodeDisplayText(product.name)} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}<span>{productCategoryLabel(product.category_type)}</span></div></Link><FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} /></div>
+              <Link href={`/products/${product.id}`}><div className="product-card-body">{storefront?.business_name && <p className="marketplace-lister">{storefront.business_name}</p>}<h3>{decodeDisplayText(product.name)}</h3><strong>£{Number(product.price).toFixed(2)}</strong></div></Link>
+            </article>;
           })}
         </div>
       ) : null}
 
-      {showDemoPreview && (
-        <>
-          <div className="demo-preview-banner demo-preview-marketplace">
-            <strong>Preview catalogue</strong>
-            <span>Filler products below are only here to preview the HolyHub look. They cannot be purchased.</span>
-          </div>
-          <div className="product-grid marketplace-grid">
-            {filteredDemoProducts.slice(0, Math.max(4, 8 - (products?.length ?? 0))).map((product) => (
-              <article className="product-card marketplace-card demo-product-card" key={product.id}>
-                <div>
-                  <div className="marketplace-card-image">
-                    <Image src={product.image_url} alt="" width={600} height={600} unoptimized />
-                    <span>{productCategoryLabel(product.category_type)}</span>
-                  </div>
-                  <div className="product-card-body">
-                    <p className="marketplace-lister">{product.listerName} · DEMO</p>
-                    <h3>{product.name}</h3>
-                    <strong>£{product.price.toFixed(2)}</strong>
-                  </div>
-                </div>
-                <div className="product-card-action">
-                  <span className="demo-preview-action">Preview only</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
+      {showDemoPreview && <><div className="demo-preview-banner demo-preview-marketplace"><strong>Preview catalogue</strong><span>Filler products below are only here to preview the HolyHub look. They cannot be purchased.</span></div><div className="product-grid marketplace-grid">{filteredDemoProducts.slice(0, Math.max(4, 8 - (products?.length ?? 0))).map((product) => <article className="product-card marketplace-card demo-product-card" key={product.id}><div><div className="marketplace-card-image"><Image src={product.image_url} alt="" width={600} height={600} unoptimized /><span>{productCategoryLabel(product.category_type)}</span></div><div className="product-card-body"><p className="marketplace-lister">{product.listerName} · DEMO</p><h3>{product.name}</h3><strong>£{product.price.toFixed(2)}</strong></div></div><div className="product-card-action"><span className="demo-preview-action">Preview only</span></div></article>)}</div></>}
 
-      {!error && !products?.length && !showDemoPreview ? (
-        <div className="marketplace-status">
-          {search || category || min !== null || max !== null ? <>
-            <strong>No products found</strong>
-            <p>Try another search or clear the filters.</p>
-            <Link className="button button-primary" href="/marketplace">View all products</Link>
-          </> : <>
-            <strong>Products are coming soon</strong>
-            <p>Our brands are getting ready. Please check back.</p>
-          </>}
-        </div>
-      ) : null}
+      {!error && !products?.length && !showDemoPreview ? <div className="marketplace-status">{search || category || min !== null || max !== null ? <><strong>No products found</strong><p>Try another search or clear the filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></> : <><strong>Products are coming soon</strong><p>Our brands are getting ready. Please check back.</p></>}</div> : null}
     </section>
   );
 }

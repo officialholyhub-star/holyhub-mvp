@@ -45,6 +45,12 @@ function sellerLegalFromFormData(formData: FormData): SellerLegalInput {
     contact_email: clean(formData.get("contact_email")),
     contact_phone: clean(formData.get("contact_phone")),
     registration_number: clean(formData.get("registration_number")),
+    registration_jurisdiction: clean(formData.get("registration_jurisdiction")),
+    registered_office_line1: clean(formData.get("registered_office_line1")),
+    registered_office_line2: clean(formData.get("registered_office_line2")),
+    registered_office_city: clean(formData.get("registered_office_city")),
+    registered_office_postcode: clean(formData.get("registered_office_postcode")),
+    registered_office_country: clean(formData.get("registered_office_country")),
     vat_number: clean(formData.get("vat_number")),
   });
 }
@@ -127,13 +133,10 @@ export async function submitListerApplication(formData: FormData) {
     business_name: businessName,
     contact_name: contactName,
     email,
-    // The existing database column requires a non-empty value.
     website_or_social: websiteOrSocial || "Not provided",
     description,
     category_type: categoryType,
   };
-  // Applicant UPDATE is not allowed by RLS. Use the server-only admin client
-  // after the current user's ownership/status/version have been checked.
   const result = application
     ? await createAdminClient().from("lister_applications").update({
         ...values, status: "pending", rejection_reason: null, reviewed_at: null,
@@ -142,26 +145,12 @@ export async function submitListerApplication(formData: FormData) {
         .eq("updated_at", application.updated_at).select("id").maybeSingle()
     : await supabase.from("lister_applications").insert({ ...values, user_id: user.id });
   const { error } = result;
-  if (application && !error && !result.data) redirect(messageUrl("error", "Your application changed during submission. Refresh to see its current status."));
+  if (application && !error && !result.data) redirect(messageUrl("error", "Your application changed. Refresh to see its current status."));
 
-  if (error) {
-    console.error("Lister application save failed", {
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-    });
-  }
-  if (error?.code === "PGRST205") {
-    redirect(messageUrl("error", "Lister applications are not set up yet. Please contact HolyHub support."));
-  }
-  if (error?.code === "42501") {
-    if (application) redirect(messageUrl("error", "We couldn't save your application. Please contact HolyHub support."));
-    redirect(messageUrl("error", "You do not have permission to submit a lister application."));
-  }
-  if (error?.code === "23505") {
-    redirect(messageUrl("message", "You already have an active application under review."));
-  }
+  if (error) console.error("Lister application save failed", { code: error.code, message: error.message, details: error.details, hint: error.hint });
+  if (error?.code === "PGRST205") redirect(messageUrl("error", "Lister applications are not set up yet. Please contact HolyHub support."));
+  if (error?.code === "42501") redirect(messageUrl("error", application ? "We couldn't save your application. Please contact HolyHub support." : "You do not have permission to submit a lister application."));
+  if (error?.code === "23505") redirect(messageUrl("message", "You already have an active application under review."));
   if (error) redirect(messageUrl("error", "We couldn't submit your application. Please try again."));
 
   const legalSave = await saveLegalProfileForUser(user.id, sellerLegal);

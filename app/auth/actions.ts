@@ -80,7 +80,6 @@ export async function signup(formData: FormData): Promise<{ error?: string; next
     password,
     options: {
       data: { full_name: fullName },
-      // With Supabase's normal confirmation email, PKCE returns an auth code here.
       emailRedirectTo: `${siteUrl}/auth/callback?next=/account`,
     },
   });
@@ -127,7 +126,6 @@ export async function requestPasswordReset(formData: FormData) {
 
   if (error) redirect(messageUrl("/auth/forgot-password", "error", "We couldn’t send the reset email. Please try again."));
 
-  // Supabase intentionally returns success for unknown addresses too.
   redirect(messageUrl("/auth/forgot-password", "message", "We’ve sent you a password reset link. Check your inbox and spam folder."));
 }
 
@@ -165,7 +163,7 @@ export async function updatePassword(formData: FormData) {
   cookieStore.set(RECOVERY_COOKIE, "", { path: "/auth", maxAge: 0 });
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
-  redirect(messageUrl("/auth/login", "message", "Password updated successfully."));
+  redirect(messageUrl("/auth/login", "message", "Your password has been updated."));
 }
 
 export async function logout() {

@@ -4,6 +4,7 @@ import { basketItemIssue, basketReviewLabel, reviewBasketItem, type BasketProduc
 import { createClient } from "@/lib/supabase/client";
 import { decodeDisplayText } from "@/lib/display-text";
 import { withProductCover } from "@/lib/product-images";
+import { BasketSellerDetails } from "@/components/basket-seller-details";
 
 import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
@@ -155,7 +156,6 @@ export function BasketView({ error }: BasketViewProps) {
   return (
     <section>
       <Link className="text-link" href="/marketplace">Continue shopping</Link>
-      <p className="eyebrow">Your HolyHub basket</p>
       <h1 className="page-title">Basket</h1>
       {storedBasket === "storage-unavailable" && <p role="alert" className="notice notice-error">Your basket could not be opened. Allow browser storage and refresh, or contact HolyHub.</p>}
       {error && <p className="notice notice-error">{error}</p>}
@@ -169,11 +169,12 @@ export function BasketView({ error }: BasketViewProps) {
               <div className="basket-lister-group" key={group.listerId || `lister-group-${groupIndex}`}>
                 <div className="basket-lister-header">
                   <div>
-                    <p className="eyebrow">Fulfilled by</p>
+                    <p className="eyebrow">Sold by</p>
                     <h2>{group.listerName}</h2>
                   </div>
                   <strong>{group.deliveryOption === "flat" ? `Delivery £${group.deliveryCharge.toFixed(2)}` : "Delivery free"}</strong>
                 </div>
+                <BasketSellerDetails sellerId={group.listerId} />
                 {group.items.map((item, itemIndex) => (
                   <article ref={firstIssueKey && lineKey(firstIssueKey) === lineKey(item) ? firstWarning : undefined} className={`basket-row${issues.get(lineKey(item)) ? " basket-row-warning" : ""}`} key={lineKey(item) || `${group.listerId || "lister"}-item-${itemIndex}`}>
                     <div className="basket-row-main">

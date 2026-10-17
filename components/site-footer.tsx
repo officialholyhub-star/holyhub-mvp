@@ -11,6 +11,7 @@ export function SiteFooter() {
           <small>{HOLYHUB_LEGAL.operator}</small>
         </div>
         <nav className="footer-links" aria-label="HolyHub legal and support">
+          <Link href="/updates">Get HolyHub updates</Link>
           <Link href="/terms">Customer Terms</Link>
           <Link href="/lister-terms">Lister Terms</Link>
           <Link href="/privacy">Privacy Notice</Link>

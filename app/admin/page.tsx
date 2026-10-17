@@ -34,12 +34,13 @@ export default async function AdminPage() {
         </div>
         <span className="admin-summary">{applicationUnavailable || productUnavailable ? "Review counts unavailable" : `${(applicationCount ?? 0) + (productCount ?? 0)} reviews waiting`}</span>
       </div>
-      <nav className="admin-tabs" aria-label="Admin workspace"><a href="/admin/orders">Orders</a>
+      <nav className="admin-tabs" aria-label="Admin workspace">
         <Link className="is-active" href="/admin" aria-current="page">Overview</Link>
+        <Link href="/admin/orders">Orders</Link>
+        <Link href="/admin/analytics">Launch metrics</Link>
         <Link href="/admin/applications">Lister Applications {!applicationUnavailable && applicationCount ? <strong>{applicationCount}</strong> : null}</Link>
         <Link href="/admin/listers">Listers</Link>
         <Link href="/admin/products">Product Listings {!productUnavailable && productCount ? <strong>{productCount}</strong> : null}</Link>
-
       </nav>
       <div className="admin-overview-grid">
         <Link className="admin-overview-card admin-overview-card-primary" href="/admin/products">
@@ -62,6 +63,7 @@ export default async function AdminPage() {
         </Link>)}
         <Link className="admin-overview-card" href="/admin/products?status=rejected"><span className="admin-card-kicker">Returned products</span><strong>{returned.error || returned.count == null ? "Unavailable" : returned.count}</strong><h2>Changes requested from listers</h2><p>{returned.error || returned.count == null ? "Count could not be loaded. Refresh to try again." : "View existing feedback. These products need lister edits before another review."}</p><span className="admin-card-link">View returned products →</span></Link>
         <Link className="admin-overview-card" href="/admin/listers"><span className="admin-card-kicker">Lister readiness</span><strong>{readiness ? readiness.total : "Unavailable"}</strong><h2>Approved applications / lister access</h2>{readiness ? <p>{readiness.setupNeeded} need shop setup · {readiness.notLive} shops have no live products · {readiness.live} shops have live products</p> : <p>Readiness could not be loaded. Refresh to try again.</p>}<span className="admin-card-link">View listers →</span></Link>
+        <Link className="admin-overview-card" href="/admin/analytics"><span className="admin-card-kicker">Launch measurement</span><strong>Core</strong><h2>Checkout & order metrics</h2><p>Check recorded checkout conversion, order value, commission, Stripe fee coverage and fulfilment states.</p><span className="admin-card-link">Open launch metrics →</span></Link>
       </div>
       <p className="muted-small">Refund tools are not available here. This overview does not detect overdue orders or refund issues.</p>
     </section>

@@ -71,7 +71,7 @@ export function CustomerOnboarding({ error, userId, editPreferences = false }: {
         <div className={styles.progress} aria-label={`${step} of 3`}><span>{step} of 3</span><div>{[1, 2, 3].map(n => <i key={n} className={n <= step ? styles.active : ""} />)}</div></div>
         <div key={step} className={styles.step} data-direction={direction}>
           {step === 3 && <p className="eyebrow">Join HolyHub</p>}
-          <h1 ref={heading} tabIndex={-1}>{step === 1 ? "What brings you to HolyHub? 💙" : step === 2 ? "What does your faith journey currently look like?" : "Create your account"}</h1>
+          <h1 ref={heading} tabIndex={-1}>{step === 1 ? "What brings you to HolyHub? 💙" : step === 2 ? "What does your faith journey currently look like?" : "Create your HolyHub account"}</h1>
           {step < 3 ? <>
             <p className={styles.helper}>{step === 1 ? "Choose as many as you like." : "Optional — choose an answer only if you’d like to."}</p>
             <div className={`${styles.options} ${step === 2 ? styles.single : ""}`} role={step === 2 ? "radiogroup" : "group"} aria-label={step === 1 ? "Your interests" : "Faith journey"}>
@@ -86,13 +86,13 @@ export function CustomerOnboarding({ error, userId, editPreferences = false }: {
             <div className={styles.actions}>{step === 2 && <button className="button button-quiet" onClick={() => go(1)}>Back</button>}<button className={`button button-primary ${styles.continue}`} disabled={step === 1 && chosen.length === 0} onClick={() => advance()}>Continue</button></div>
             <button className={styles.skip} onClick={() => advance(true)}>Skip for now</button>
           </> : <>
-            <p className={styles.helper}>One account for shopping now and, if approved later, selling too.</p>
+            <p className={styles.helper}>Shop, save your favourites and manage your orders in one place.</p>
             <form className="form" onSubmit={event => {
               event.preventDefault();
               const formData = new FormData(event.currentTarget);
               startTransition(() => formAction(formData));
             }}>
-              <div className="field"><label htmlFor="full_name">First name</label><input id="full_name" name="full_name" autoComplete="given-name" value={fields.full_name} onChange={event => setFields(current => ({ ...current, full_name: event.target.value }))} maxLength={100} required /></div>
+              <div className="field"><label htmlFor="full_name">Name</label><input id="full_name" name="full_name" autoComplete="name" value={fields.full_name} onChange={event => setFields(current => ({ ...current, full_name: event.target.value }))} maxLength={100} required /></div>
               <div className="field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" value={fields.email} onChange={event => setFields(current => ({ ...current, email: event.target.value }))} required /></div>
               <div className="field"><label htmlFor="password">Password</label><PasswordInput id="password" name="password" autoComplete="new-password" value={fields.password} onChange={event => setFields(current => ({ ...current, password: event.target.value }))} minLength={12} maxLength={128} required /><small>Use 12–128 characters.</small></div>
               <div className="field"><label htmlFor="confirm_password">Confirm password</label><PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" value={fields.confirm_password} onChange={event => setFields(current => ({ ...current, confirm_password: event.target.value }))} minLength={12} maxLength={128} required /></div>

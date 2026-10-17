@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
+import { prepareOrderConfirmationTrigger } from "@/lib/order-confirmation-trigger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { getStripeProcessingFee } from "@/lib/stripe-processing-fee";
@@ -50,7 +51,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
         const admin = createAdminClient();
 
         if (checkout.status === "pending") {
-          const { error } = await admin.rpc("process_checkout_payment", {
+          const { data: orderId, error } = await admin.rpc("process_checkout_payment", {
             p_stripe_session_id: session.id,
             p_status: "paid",
             p_payment_status: session.payment_status,
@@ -69,6 +70,14 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
           if (error) {
             unavailable = true;
             console.error("Checkout success reconciliation failed", { sessionId: session.id, code: error.code });
+          } else if (orderId) {
+            const confirmation = prepareOrderConfirmationTrigger(String(orderId));
+            console.info("Customer order confirmation recovery trigger reached", {
+              orderId: confirmation.orderId,
+              confirmationStatus: confirmation.status,
+              blockers: confirmation.blockers,
+              idempotencyKey: confirmation.idempotencyKey,
+            });
           }
         }
 

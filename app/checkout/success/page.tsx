@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
-import { prepareOrderConfirmationTrigger } from "@/lib/order-confirmation-trigger";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { getStripeProcessingFee } from "@/lib/stripe-processing-fee";
@@ -33,7 +32,8 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
   let checkout = initial.data;
 
   // Webhooks remain primary. This also recovers a paid order or fee breakdown
-  // when a development webhook is delayed or temporarily unreachable.
+  // when a development webhook is delayed or temporarily unreachable. The paid
+  // database transition atomically creates the C6 confirmation outbox entry.
   if (params.session_id && checkout && (checkout.status === "pending" || checkout.status === "paid")) {
     try {
       const session = await getStripe().checkout.sessions.retrieve(params.session_id);
@@ -51,7 +51,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
         const admin = createAdminClient();
 
         if (checkout.status === "pending") {
-          const { data: orderId, error } = await admin.rpc("process_checkout_payment", {
+          const { error } = await admin.rpc("process_checkout_payment", {
             p_stripe_session_id: session.id,
             p_status: "paid",
             p_payment_status: session.payment_status,
@@ -70,14 +70,6 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
           if (error) {
             unavailable = true;
             console.error("Checkout success reconciliation failed", { sessionId: session.id, code: error.code });
-          } else if (orderId) {
-            const confirmation = prepareOrderConfirmationTrigger(String(orderId));
-            console.info("Customer order confirmation recovery trigger reached", {
-              orderId: confirmation.orderId,
-              confirmationStatus: confirmation.status,
-              blockers: confirmation.blockers,
-              idempotencyKey: confirmation.idempotencyKey,
-            });
           }
         }
 
@@ -107,9 +99,9 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
     <section className="auth-wrap">
       <div className="card">
         <p className="eyebrow">HolyHub checkout</p>
-        <h2>{confirmed ? "Thank you for your payment" : unsuccessful ? "Checkout was not completed" : "We couldn’t confirm your payment yet."}</h2>
-        <p>{confirmed ? "Your payment has been confirmed." : unsuccessful ? "This checkout is marked as failed or cancelled. Check My Purchases before starting another checkout." : pending ? "Your payment is still being verified. Please wait, then refresh or check My Purchases. Do not pay again while its status is uncertain." : "Payment details are unavailable. Check My Purchases or contact HolyHub before trying another payment."}</p>
-        <div className="row-actions"><Link className="button button-primary" href="/account/orders">Check My Purchases</Link>{!confirmed && !unsuccessful && <a className="button button-quiet" href={params.session_id ? `/checkout/success?session_id=${encodeURIComponent(params.session_id)}` : "/checkout/success"}>Refresh</a>}{unsuccessful && <Link className="button button-quiet" href="/basket">Return to basket</Link>}{!confirmed && <Link className="text-link" href="/contact">Contact HolyHub</Link>}</div>
+        <h2>{confirmed ? "Thank you for your order" : unsuccessful ? "Checkout was not completed" : "Thank you for your order"}</h2>
+        <p>{confirmed ? "Your payment has been confirmed." : unsuccessful ? "This checkout is marked as failed or cancelled. Check My orders before starting another checkout." : pending ? "We’re confirming your payment. This usually only takes a moment." : "We couldn’t confirm your payment yet. Check My orders or contact HolyHub before trying another payment."}</p>
+        <div className="row-actions"><Link className="button button-primary" href="/account/orders">My orders</Link>{!confirmed && !unsuccessful && <a className="button button-quiet" href={params.session_id ? `/checkout/success?session_id=${encodeURIComponent(params.session_id)}` : "/checkout/success"}>Refresh</a>}{unsuccessful && <Link className="button button-quiet" href="/basket">Return to basket</Link>}{!confirmed && <Link className="text-link" href="/contact">Contact HolyHub</Link>}</div>
         <div className="button-row"><Link className="button button-primary" href="/marketplace">Continue shopping</Link><Link className="button button-quiet" href="/account">Back to account</Link></div>
       </div>
     </section>

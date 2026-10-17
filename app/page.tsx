@@ -4,7 +4,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VerseOfTheDay } from "@/components/verse-of-the-day";
 import { FavouriteButton } from "@/components/favourite-button";
-import { demoProducts } from "@/lib/demo-products";
 import { getFavouriteIds } from "@/lib/favourites";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +20,6 @@ export default async function HomePage() {
 
   const realProducts = (products ?? []).map(withProductCover);
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
-  const demoSlots = Math.max(0, 4 - realProducts.length);
-  const homepageDemoProducts = demoProducts.slice(0, demoSlots);
 
   return (
     <div className="home-page">
@@ -52,14 +49,7 @@ export default async function HomePage() {
           <Link className="section-link inline-section-link" href="/marketplace">See all products <span aria-hidden="true">→</span></Link>
         </div>
 
-        {homepageDemoProducts.length > 0 && (
-          <div className="demo-preview-banner">
-            <strong>Marketplace preview</strong>
-            <span>Demo products are filling the empty spaces so you can see the finished marketplace vibe.</span>
-          </div>
-        )}
-
-        <div className="home-product-grid">
+        {realProducts.length ? <div className="home-product-grid">
           {realProducts.map((product) => {
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
             return (
@@ -75,7 +65,7 @@ export default async function HomePage() {
                 </div>
                 <Link href={`/products/${product.id}`}>
                 <div className="home-product-copy">
-                  <small>{storefront?.business_name ?? "HolyHub lister"}</small>
+                  <small>{storefront?.business_name ?? "Independent seller"}</small>
                   <h3>{product.name}</h3>
                   <strong>£{Number(product.price).toFixed(2)}</strong>
                 </div>
@@ -83,21 +73,7 @@ export default async function HomePage() {
               </article>
             );
           })}
-
-          {homepageDemoProducts.map((product) => (
-            <article className="home-product-card demo-product-card" key={product.id}>
-              <div className="home-product-image">
-                <Image src={product.image_url} alt="" width={600} height={600} unoptimized />
-                <span>{product.category_type}</span>
-              </div>
-              <div className="home-product-copy">
-                <small>{product.listerName} · DEMO</small>
-                <h3>{product.name}</h3>
-                <strong>£{product.price.toFixed(2)}</strong>
-              </div>
-            </article>
-          ))}
-        </div>
+        </div> : !productsError ? <div className="marketplace-status"><strong>Products are coming soon</strong><p>We&apos;re onboarding our first sellers now. Check back shortly to discover faith-led products from independent Christian brands.</p></div> : null}
       </section>
 
       <section className="home-cta">

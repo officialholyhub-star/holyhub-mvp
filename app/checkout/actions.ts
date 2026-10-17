@@ -9,12 +9,9 @@ import { getStripe } from "@/lib/stripe";
 import { checkoutRedirectUrls } from "@/lib/checkout-origin";
 import { MAX_BASKET_ITEMS, MAX_BASKET_QUANTITY } from "@/lib/basket";
 import { calculateCheckoutTotals, calculateHolyHubCommission, toPence } from "@/lib/checkout-pricing";
+import { SELLER_LEGAL_FIELDS, sellerLegalProfileComplete, type SellerLegalProfile } from "@/lib/seller-legal";
 
-type SubmittedItem = {
-  id: unknown;
-  quantity: unknown;
-  variantId?: unknown;
-};
+type SubmittedItem = { id: unknown; quantity: unknown; variantId?: unknown };
 
 function checkoutError(message: string): never {
   redirect(`/basket?error=${encodeURIComponent(message)}`);
@@ -22,20 +19,13 @@ function checkoutError(message: string): never {
 
 function parseBasket(value: string) {
   let parsed: unknown;
-  try {
-    parsed = JSON.parse(value);
-  } catch {
-    return null;
-  }
+  try { parsed = JSON.parse(value); } catch { return null; }
   if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > MAX_BASKET_ITEMS) return null;
   const items = parsed.map((item: SubmittedItem) => {
     const id = typeof item?.id === "string" ? item.id : "";
     const variantId = typeof item?.variantId === "string" ? item.variantId : undefined;
     const quantity = Number(item?.quantity);
-    const isValidItem = /^[0-9a-f-]{36}$/i.test(id)
-      && Number.isInteger(quantity)
-      && quantity >= 1
-      && quantity <= MAX_BASKET_QUANTITY;
+    const isValidItem = /^[0-9a-f-]{36}$/i.test(id) && Number.isInteger(quantity) && quantity >= 1 && quantity <= MAX_BASKET_QUANTITY;
     return isValidItem && (!variantId || /^[0-9a-f-]{36}$/i.test(variantId)) ? { id, quantity, variantId } : null;
   });
   return items.every(Boolean) ? items as { id: string; quantity: number; variantId?: string }[] : null;
@@ -56,31 +46,33 @@ export async function startCheckout(formData: FormData) {
   }
   const normalizedBasket = Array.from(requestedQuantities.values());
   const productIds = [...new Set(normalizedBasket.map(({ id }) => id))];
-  const { data: products, error: productError } = await supabase
-    .from("products")
+  const { data: products, error: productError } = await supabase.from("products")
     .select("id, name, price, currency, lister_user_id, is_published, review_status, category_type, stock_quantity, product_variants(id, size, stock_quantity)")
-    .in("id", productIds)
-    .eq("is_published", true)
-    .eq("review_status", "approved");
-
-  if (productError || !products || products.length !== productIds.length) {
-    checkoutError("One or more products or seller settings are no longer available. Please review your basket.");
-  }
+    .in("id", productIds).eq("is_published", true).eq("review_status", "approved");
+  if (productError || !products || products.length !== productIds.length) checkoutError("One or more products or seller settings are no longer available. Please review your basket.");
 
   const productMap = new Map(products.map((product) => [product.id, product]));
   const listerIds = [...new Set(products.map(({ lister_user_id }) => lister_user_id))];
-  const { data: listerStorefronts, error: storefrontError } = await supabase
-    .from("lister_storefronts")
-    .select("user_id, business_name, delivery_option, delivery_charge, delivery_country")
-    .in("user_id", listerIds);
+  const { data: listerStorefronts, error: storefrontError } = await supabase.from("lister_storefronts")
+    .select("user_id, business_name, delivery_option, delivery_charge, delivery_country").in("user_id", listerIds);
   if (storefrontError || !listerStorefronts || listerStorefronts.length !== listerIds.length) checkoutError("One or more products or seller settings are no longer available. Please review your basket.");
   const storefrontMap = new Map(listerStorefronts.map((storefront) => [storefront.user_id, storefront]));
+
+  const admin = createAdminClient();
+  const { data: legalRows, error: legalError } = await admin.from("seller_legal_profiles")
+    .select(SELLER_LEGAL_FIELDS).in("user_id", listerIds).eq("verification_status", "verified");
+  const legalProfiles = (legalRows ?? []) as SellerLegalProfile[];
+  const legalMap = new Map(legalProfiles.map(profile => [profile.user_id, profile]));
+  if (legalError || legalProfiles.length !== listerIds.length || legalProfiles.some(profile => !sellerLegalProfileComplete(profile))) {
+    checkoutError("One or more sellers are not currently verified for customer sales. Please review your basket or try again later.");
+  }
+
   const lines = normalizedBasket.map(({ id, quantity, variantId }) => {
     const product = productMap.get(id);
     const listerId = product?.lister_user_id ?? "";
     const storefront = storefrontMap.get(listerId);
     const unitAmount = product ? toPence(product.price) : null;
-    if (!product || product.currency !== "GBP" || unitAmount === null) return null;
+    if (!product || product.currency !== "GBP" || unitAmount === null || !legalMap.has(listerId)) return null;
     const variants = product.product_variants ?? [];
     const selectedVariant = variantId ? variants.find((variant) => variant.id === variantId) : null;
     if (product.review_status !== "approved" || !product.is_published) return null;
@@ -100,7 +92,6 @@ export async function startCheckout(formData: FormData) {
   const totals = calculateCheckoutTotals(trustedLines);
   if (!totals) checkoutError("Your basket total is too large to process.");
   const { productSubtotal, deliveryGroups, deliveryTotal, total } = totals;
-
   const holyhubCommission = calculateHolyHubCommission(productSubtotal);
   if (holyhubCommission === null) checkoutError("Your basket total is too large to process.");
   const sellerAmount = productSubtotal - holyhubCommission;
@@ -110,28 +101,8 @@ export async function startCheckout(formData: FormData) {
   try {
     const requestHeaders = await headers();
     const redirectUrls = checkoutRedirectUrls(requestHeaders);
-
-    const lineItems = trustedLines.map(({ product, quantity, unitAmount, variantSize }) => ({
-      quantity,
-      price_data: {
-        currency: "gbp",
-        unit_amount: unitAmount,
-        product_data: { name: variantSize ? `${product.name} (${variantSize})` : product.name },
-      },
-    }));
-    const deliveryItems = Array.from(deliveryGroups.entries()).map(([listerId, charge]) => {
-      const storefront = storefrontMap.get(listerId);
-      const sellerName = storefront?.business_name ?? "HolyHub seller";
-      return {
-        quantity: 1,
-        price_data: {
-          currency: "gbp",
-          unit_amount: charge,
-          product_data: { name: `${sellerName} delivery` },
-        },
-      };
-    }).filter((item) => item.price_data.unit_amount > 0);
-
+    const lineItems = trustedLines.map(({ product, quantity, unitAmount, variantSize }) => ({ quantity, price_data: { currency: "gbp", unit_amount: unitAmount, product_data: { name: variantSize ? `${product.name} (${variantSize})` : product.name } } }));
+    const deliveryItems = Array.from(deliveryGroups.entries()).map(([listerId, charge]) => ({ quantity: 1, price_data: { currency: "gbp", unit_amount: charge, product_data: { name: `${storefrontMap.get(listerId)?.business_name ?? legalMap.get(listerId)?.legal_name ?? "Seller"} delivery` } } })).filter((item) => item.price_data.unit_amount > 0);
     session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [...lineItems, ...deliveryItems],
@@ -150,37 +121,60 @@ export async function startCheckout(formData: FormData) {
     console.error("Stripe Checkout Session creation failed", error);
     checkoutError("We couldn't start checkout. Please try again.");
   }
-
   if (!session.url) checkoutError("Stripe did not return a checkout URL. Please try again.");
 
-  const admin = createAdminClient();
-  const { data: checkoutRecord, error: checkoutErrorResult } = await admin
-    .from("checkout_sessions")
-    .insert({
-      user_id: user.id,
-      stripe_checkout_session_id: session.id,
-      amount_total: total,
-      currency: "GBP",
-      product_subtotal: productSubtotal,
-      delivery_total: deliveryTotal,
-      holyhub_commission: holyhubCommission,
-      seller_amount_total: sellerAmount,
-    })
-    .select("id")
-    .single();
+  // Re-check the same verified profile versions before persisting the contract snapshot.
+  const { data: currentLegalRows, error: currentLegalError } = await admin.from("seller_legal_profiles")
+    .select("user_id, verification_status, updated_at").in("user_id", listerIds);
+  const currentVersions = new Map((currentLegalRows ?? []).map(row => [row.user_id, row]));
+  const identityChanged = currentLegalError || listerIds.some(id => {
+    const before = legalMap.get(id);
+    const current = currentVersions.get(id);
+    return !before || !current || current.verification_status !== "verified" || current.updated_at !== before.updated_at;
+  });
+  if (identityChanged) {
+    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed after seller identity change", error); }
+    checkoutError("A seller's verified details changed while checkout was being prepared. Please try again.");
+  }
 
+  const { data: checkoutRecord, error: checkoutErrorResult } = await admin.from("checkout_sessions").insert({
+    user_id: user.id,
+    stripe_checkout_session_id: session.id,
+    amount_total: total,
+    currency: "GBP",
+    product_subtotal: productSubtotal,
+    delivery_total: deliveryTotal,
+    holyhub_commission: holyhubCommission,
+    seller_amount_total: sellerAmount,
+  }).select("id").single();
   if (checkoutErrorResult || !checkoutRecord) {
     console.error("Checkout session database insert failed", checkoutErrorResult);
     try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
     checkoutError("We couldn't prepare your checkout. Please try again.");
   }
 
-  const { error: sellerSnapshotError } = await admin.from("checkout_session_sellers").insert(Array.from(deliveryGroups.entries()).map(([listerId, deliveryAmount]) => ({
-    checkout_session_id: checkoutRecord.id,
-    lister_user_id: listerId,
-    seller_business_name: storefrontMap.get(listerId)?.business_name ?? "HolyHub seller",
-    delivery_total: deliveryAmount,
-  })));
+  const { error: sellerSnapshotError } = await admin.from("checkout_session_sellers").insert(Array.from(deliveryGroups.entries()).map(([listerId, deliveryAmount]) => {
+    const legal = legalMap.get(listerId)!;
+    return {
+      checkout_session_id: checkoutRecord.id,
+      lister_user_id: listerId,
+      seller_business_name: storefrontMap.get(listerId)?.business_name ?? legal.legal_name,
+      delivery_total: deliveryAmount,
+      seller_legal_name: legal.legal_name,
+      seller_entity_type: legal.entity_type,
+      seller_address_line1: legal.address_line1,
+      seller_address_line2: legal.address_line2,
+      seller_city: legal.city,
+      seller_postcode: legal.postcode,
+      seller_country: legal.country,
+      seller_contact_email: legal.contact_email,
+      seller_contact_phone: legal.contact_phone,
+      seller_registration_number: legal.registration_number,
+      seller_vat_number: legal.vat_number,
+      seller_identity_verified_at: legal.verified_at,
+      seller_identity_profile_updated_at: legal.updated_at,
+    };
+  }));
   if (sellerSnapshotError) {
     console.error("Checkout seller snapshot insert failed", sellerSnapshotError);
     try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }

@@ -7,8 +7,9 @@ export default async function ForgotPasswordPage({ searchParams }: { searchParam
     <section className="auth-wrap">
       <div className="card">
         <div className="card-header">
-          <h2>Reset your password</h2>
-          <p>Enter the email used for your HolyHub account.</p>
+          <p className="eyebrow">Password help</p>
+          <h2>Forgot your password?</h2>
+          <p>Enter your email and we’ll send you a secure reset link.</p>
         </div>
         {params.error && <p role="alert" className="notice notice-error">{params.error}</p>}
         {params.message && <p role="status" className="notice notice-success">{params.message}</p>}

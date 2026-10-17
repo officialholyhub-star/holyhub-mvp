@@ -1,13 +1,13 @@
 import { ErrorRecovery } from "@/components/error-recovery";
 import { requireRole } from "@/lib/auth/require-user";
-import { saveStorefront } from "@/app/lister/actions";
+import { saveStorefront } from "@/app/lister/storefront/actions";
 import { StorefrontForm } from "@/components/storefront-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function StorefrontPage() {
   const { supabase, user } = await requireRole("lister");
-  const { data: storefront, error } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_url, instagram_url, logo_url, delivery_option, delivery_charge").eq("user_id", user.id).maybeSingle();
+  const { data: storefront, error } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_url, instagram_url, logo_url, delivery_option, delivery_charge, dispatch_window, dispatch_custom_timeframe").eq("user_id", user.id).maybeSingle();
 
   if (error) return <ErrorRecovery title="We couldn’t load these details" message="Please refresh before editing or continuing. Your saved details could not be checked." href="/lister" label="Return to dashboard" />;
   return (

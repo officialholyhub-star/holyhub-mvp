@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VerseOfTheDay } from "@/components/verse-of-the-day";
 import { FavouriteButton } from "@/components/favourite-button";
+import { MarketingSignupShell } from "@/components/marketing-signup-shell";
 import { getFavouriteIds } from "@/lib/favourites";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,8 @@ export default async function HomePage() {
           })}
         </div>
       </section>}
+
+      <MarketingSignupShell source="homepage_signup" />
 
       <section className="home-cta">
         <div>

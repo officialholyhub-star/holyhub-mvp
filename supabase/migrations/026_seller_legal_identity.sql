@@ -38,6 +38,26 @@ revoke all on table public.seller_legal_profiles from public, anon, authenticate
 grant select on public.seller_legal_profiles to authenticated;
 grant select, insert, update on public.seller_legal_profiles to service_role;
 
+-- Public RLS needs a boolean check without granting anon direct SELECT access to
+-- the private seller profile table. Keep the helper deliberately narrow.
+create or replace function public.seller_identity_is_verified(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.seller_legal_profiles s
+    where s.user_id = p_user_id
+      and s.verification_status = 'verified'
+  );
+$$;
+
+revoke all on function public.seller_identity_is_verified(uuid) from public;
+grant execute on function public.seller_identity_is_verified(uuid) to anon, authenticated;
+
 -- Public customers may only retrieve the disclosure fields of a verified seller
 -- who currently has at least one approved, published product. The underlying
 -- private profile table remains unavailable to anon users.
@@ -99,11 +119,7 @@ to anon
 using (
   is_published = true
   and review_status = 'approved'
-  and exists (
-    select 1 from public.seller_legal_profiles s
-    where s.user_id = products.lister_user_id
-      and s.verification_status = 'verified'
-  )
+  and (select public.seller_identity_is_verified(lister_user_id))
 );
 
 drop policy if exists "products_select_authenticated" on public.products;
@@ -115,11 +131,7 @@ using (
   (
     is_published = true
     and review_status = 'approved'
-    and exists (
-      select 1 from public.seller_legal_profiles s
-      where s.user_id = products.lister_user_id
-        and s.verification_status = 'verified'
-    )
+    and (select public.seller_identity_is_verified(lister_user_id))
   )
   or (lister_user_id = (select auth.uid()) and (select private.has_role('lister')))
   or (select private.has_role('admin'))

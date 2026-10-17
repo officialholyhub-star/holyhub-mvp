@@ -30,9 +30,9 @@ export default async function AccountOrdersPage() {
   return (
     <section className="customer-orders-page">
       <Link className="text-link" href="/account">Back to account</Link>
-      <div className="page-heading"><div><p className="eyebrow">Your HolyHub space</p><h1>My purchases</h1><p className="lead">View products you’ve bought and track their delivery.</p></div></div>
-      {itemsError && <p role="alert" className="notice notice-error">Some order items could not be loaded. Refresh to see complete purchase details.</p>}
-      {error ? <p className="notice notice-error">Purchases could not be loaded.</p> : orders?.length ? (
+      <div className="page-heading"><div><p className="eyebrow">Your HolyHub space</p><h1>My orders</h1><p className="lead">Track your orders and delivery updates.</p></div></div>
+      {itemsError && <p role="alert" className="notice notice-error">Some order items could not be loaded. Refresh to see complete order details.</p>}
+      {error ? <p className="notice notice-error">Orders could not be loaded.</p> : orders?.length ? (
         <div className="customer-order-list">
           {orders.map((order) => (
             <article className="customer-order-card" key={order.id}>
@@ -53,7 +53,7 @@ export default async function AccountOrdersPage() {
             </article>
           ))}
         </div>
-      ) : <div className="card empty-state"><p>You have no purchases yet.</p><Link className="button button-primary" href="/marketplace">Browse marketplace</Link></div>}
+      ) : <div className="card empty-state"><p>You have no orders yet.</p><Link className="button button-primary" href="/marketplace">Browse marketplace</Link></div>}
     </section>
   );
 }

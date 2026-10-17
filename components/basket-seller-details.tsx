@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { formatRegisteredOffice, formatSellerAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
+import { formatRegisteredOffice, formatSellerAddress, formatServiceAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
 import { useEffect, useState } from "react";
 
 type PublicSellerIdentity = SellerLegalInput & { user_id: string };
@@ -41,6 +41,7 @@ export function BasketSellerDetails({ sellerId, onStatusChange }: BasketSellerDe
 
   if (failed) return <p className="notice notice-error" role="alert">Seller details could not be verified. Checkout will stay unavailable until they can be confirmed.</p>;
   if (!seller) return <p className="muted-small">Checking seller details…</p>;
+  const serviceAddress = formatServiceAddress(seller);
   const registeredOffice = formatRegisteredOffice(seller);
 
   return <details>
@@ -49,6 +50,7 @@ export function BasketSellerDetails({ sellerId, onStatusChange }: BasketSellerDe
       <div><dt>Legal seller</dt><dd>{seller.legal_name}</dd></div>
       <div><dt>Legal structure</dt><dd>{sellerEntityLabel(seller.entity_type)}</dd></div>
       <div><dt>Business address</dt><dd>{formatSellerAddress(seller)}</dd></div>
+      {serviceAddress && <div><dt>Service address</dt><dd>{serviceAddress}</dd></div>}
       <div><dt>Email</dt><dd><a href={`mailto:${seller.contact_email}`}>{seller.contact_email}</a></dd></div>
       {seller.contact_phone && <div><dt>Phone</dt><dd><a href={`tel:${seller.contact_phone}`}>{seller.contact_phone}</a></dd></div>}
       {seller.registration_number && <div><dt>Registration number</dt><dd>{seller.registration_number}</dd></div>}

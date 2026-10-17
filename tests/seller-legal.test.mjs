@@ -5,6 +5,7 @@ import { loadTypescript } from "./helpers/load-typescript.mjs";
 const {
   formatRegisteredOffice,
   formatSellerAddress,
+  formatServiceAddress,
   normalizeSellerLegalInput,
   sellerEntityLabel,
   sellerLegalProfileMatches,
@@ -20,6 +21,11 @@ function completeInput() {
     city: "London",
     postcode: "e1 1aa",
     country: "United Kingdom",
+    service_address_line1: "",
+    service_address_line2: "",
+    service_address_city: "",
+    service_address_postcode: "",
+    service_address_country: "",
     contact_email: " Help@Seller.Example ",
     contact_phone: "020 0000 0000",
     registration_number: "ab123456",
@@ -39,6 +45,7 @@ test("normalises and accepts a complete limited-company seller identity", () => 
   assert.equal(input.postcode, "E1 1AA");
   assert.equal(input.registration_number, "AB123456");
   assert.equal(input.registered_office_postcode, "EC1A 1BB");
+  assert.equal(input.service_address_line1, null);
   assert.equal(sellerLegalValidationError(input), null);
 });
 
@@ -49,6 +56,18 @@ test("requires registration and registered-office details for a limited company"
   const missingOffice = completeInput();
   missingOffice.registered_office_line1 = null;
   assert.match(sellerLegalValidationError(missingOffice), /registered office/i);
+});
+
+test("requires a complete service address if any service-address field is supplied", () => {
+  const input = completeInput();
+  input.service_address_line1 = "30 Service Street";
+  assert.match(sellerLegalValidationError(input), /complete the service address/i);
+
+  input.service_address_city = "London";
+  input.service_address_postcode = "SW1A 1AA";
+  input.service_address_country = "United Kingdom";
+  assert.equal(sellerLegalValidationError(input), null);
+  assert.equal(formatServiceAddress(input), "30 Service Street, London, SW1A 1AA, United Kingdom");
 });
 
 test("rejects an invalid business contact email", () => {
@@ -79,4 +98,5 @@ test("detects whether an edited legal profile materially changed", () => {
   assert.equal(sellerLegalProfileMatches(profile, input), true);
   assert.equal(sellerLegalProfileMatches(profile, { ...input, city: "Manchester" }), false);
   assert.equal(sellerLegalProfileMatches(profile, { ...input, registered_office_city: "Manchester" }), false);
+  assert.equal(sellerLegalProfileMatches(profile, { ...input, service_address_line1: "30 Service Street", service_address_city: "London", service_address_postcode: "SW1A 1AA", service_address_country: "United Kingdom" }), false);
 });

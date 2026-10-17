@@ -165,8 +165,7 @@ export function BasketView({ error }: BasketViewProps) {
   return (
     <section>
       <Link className="text-link" href="/marketplace">Continue shopping</Link>
-      <p className="eyebrow">Your basket</p>
-      <h1 className="page-title">Review your order</h1>
+      <h1 className="page-title">Basket</h1>
       {storedBasket === "storage-unavailable" && <p role="alert" className="notice notice-error">Your basket could not be opened. Allow browser storage and refresh, or contact HolyHub.</p>}
       {error && <p className="notice notice-error">{error}</p>}
       {checkoutError && <p className="notice notice-error">{checkoutError}</p>}

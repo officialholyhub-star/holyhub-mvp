@@ -1,6 +1,7 @@
 import { ErrorRecovery } from "@/components/error-recovery";
 import { ProductGallery } from "@/components/product-gallery";
 import { orderedProductImages } from "@/lib/product-images";
+import { productCategoryLabel } from "@/lib/product-categories";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -55,14 +56,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <Link className="eyebrow" href={`/lister/storefront/${storefront.user_id}`}>{storefront.business_name}</Link>
           <h1 className="page-title">{decodeDisplayText(product.name)}</h1>
           <div className="product-detail-price-row"><p className="product-price">£{Number(product.price).toFixed(2)}</p><FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} /></div>
-          <p className={styles.category}>{product.category_type}</p>
+          <p className={styles.category}>{productCategoryLabel(product.category_type)}</p>
           <p className={styles.description}>{product.description}</p>
           {product.size_guide_url && <p><a className="text-link" href={product.size_guide_url} target="_blank" rel="noopener noreferrer">View size guide</a></p>}
           <div className={styles.productFacts} aria-label="Product information"><p><span>Availability</span><strong>{stockMessage(availableStock)}</strong></p><p><span>Delivery</span><strong>{storefront.delivery_option === "flat" ? `£${Number(storefront.delivery_charge ?? 0).toFixed(2)}` : "Free"}</strong></p><p><span>Dispatch</span><strong>{dispatchPromise}</strong></p></div>
           <div className={styles.purchaseAction}><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={images[0] ?? null} listerId={product.lister_user_id} listerName={storefront.business_name || sellerIdentity.legal_name} deliveryOption={storefront.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} /></div>
           <p className={styles.secureNote}>Secure checkout</p>
           <p className={styles.returnsNote}>See our <Link className="text-link" href="/returns">returns policy</Link> for refund information.</p>
-          <div className={`${brandStyles.summary} ${styles.brandSection}`}><div className={brandStyles.brandHeader}>{storefront.logo_url && <Image className={brandStyles.logo} src={storefront.logo_url} alt={`${storefront.business_name} logo`} width={64} height={64} unoptimized />}<div className={brandStyles.brandTitle}><h2><Link href={`/lister/storefront/${storefront.user_id}`}>About {storefront.business_name}</Link></h2><p className="muted-small">{storefront.category_type}</p></div></div><p>{storefront.description}</p></div>
+          <div className={`${brandStyles.summary} ${styles.brandSection}`}><div className={brandStyles.brandHeader}>{storefront.logo_url && <Image className={brandStyles.logo} src={storefront.logo_url} alt={`${storefront.business_name} logo`} width={64} height={64} unoptimized />}<div className={brandStyles.brandTitle}><h2><Link href={`/lister/storefront/${storefront.user_id}`}>About {storefront.business_name}</Link></h2><p className="muted-small">{productCategoryLabel(storefront.category_type)}</p></div></div><p>{storefront.description}</p></div>
           <section className={`${brandStyles.summary} ${styles.brandSection}`} aria-labelledby="seller-details-heading">
             <h2 id="seller-details-heading">Seller details</h2>
             <dl className="review-details">

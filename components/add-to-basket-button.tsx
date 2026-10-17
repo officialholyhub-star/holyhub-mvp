@@ -72,7 +72,7 @@ export function AddToBasketButton(product: AddToBasketButtonProps) {
           <span>Choose size</span>
           <select value={selectedVariantId} onChange={(event) => { setSelectedVariantId(event.currentTarget.value); setQuantity(1); }}>
             <option value="" disabled>Select a size</option>
-            {product.variants?.map((variant) => <option key={variant.id} value={variant.id} disabled={variant.stock_quantity < 1}>{variant.size}{variant.stock_quantity < 1 ? " - sold out" : ""}</option>)}
+            {product.variants?.map((variant) => <option key={variant.id} value={variant.id} disabled={variant.stock_quantity < 1}>{variant.size}{variant.stock_quantity < 1 ? " — Sold out" : ""}</option>)}
           </select>
         </label>
       )}

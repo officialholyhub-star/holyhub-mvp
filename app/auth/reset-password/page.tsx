@@ -16,7 +16,8 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
     <section className="auth-wrap">
       <div className="card">
         <div className="card-header">
-          <h2>Set new password</h2>
+          <p className="eyebrow">Password help</p>
+          <h2>Set a new password</h2>
           <p>Use at least 12 characters.</p>
         </div>
         {params.error && <p role="alert" className="notice notice-error">{params.error}</p>}

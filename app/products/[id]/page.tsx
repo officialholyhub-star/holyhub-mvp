@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddToBasketButton } from "@/components/add-to-basket-button";
 import { FavouriteButton } from "@/components/favourite-button";
 import { getFavouriteIds } from "@/lib/favourites";
-import { formatRegisteredOffice, formatSellerAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
+import { formatRegisteredOffice, formatSellerAddress, formatServiceAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
 import brandStyles from "@/components/storefront-brand.module.css";
 import styles from "./product-detail.module.css";
 import { decodeDisplayText } from "@/lib/display-text";
@@ -40,6 +40,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const variantStock = (product.product_variants ?? []).reduce((total, variant) => total + variant.stock_quantity, 0);
   const availableStock = product.product_variants?.length ? variantStock : product.stock_quantity;
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
+  const serviceAddress = formatServiceAddress(sellerIdentity);
   const registeredOffice = formatRegisteredOffice(sellerIdentity);
 
   return (
@@ -66,6 +67,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <div><dt>Legal seller</dt><dd>{sellerIdentity.legal_name}</dd></div>
               <div><dt>Legal structure</dt><dd>{sellerEntityLabel(sellerIdentity.entity_type)}</dd></div>
               <div><dt>Business address</dt><dd>{formatSellerAddress(sellerIdentity)}</dd></div>
+              {serviceAddress && <div><dt>Service address</dt><dd>{serviceAddress}</dd></div>}
               <div><dt>Email</dt><dd><a href={`mailto:${sellerIdentity.contact_email}`}>{sellerIdentity.contact_email}</a></dd></div>
               {sellerIdentity.contact_phone && <div><dt>Phone</dt><dd><a href={`tel:${sellerIdentity.contact_phone}`}>{sellerIdentity.contact_phone}</a></dd></div>}
               {sellerIdentity.registration_number && <div><dt>Registration number</dt><dd>{sellerIdentity.registration_number}</dd></div>}

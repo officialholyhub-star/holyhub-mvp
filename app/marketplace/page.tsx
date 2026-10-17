@@ -1,4 +1,4 @@
-import { PRODUCT_CATEGORIES, isProductCategory, marketplaceCategoryValues, productCategoryLabel } from "@/lib/product-categories";
+import { CUSTOMER_PRODUCT_CATEGORIES, isCustomerProductCategory, marketplaceCategoryValues, productCategoryLabel } from "@/lib/product-categories";
 import { withProductCover } from "@/lib/product-images";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,10 +13,14 @@ export const dynamic = "force-dynamic";
 type MarketplaceParams = { q?: string; category?: string; min?: string; max?: string; sort?: string };
 
 const categoryIcons = {
-  Apparel: "activity", Bookmarks: "bible", Gifts: "festival", Books: "bible",
-  Jewellery: "community", "Home & Living": "home", Arts: "opportunities",
+  "Clothing & Accessories": "activity",
+  Jewellery: "community",
+  "Books & Stationery": "bible",
+  Gifts: "festival",
+  "Home & Living": "home",
+  "Art & Prints": "opportunities",
 } as const;
-const featuredCategories = PRODUCT_CATEGORIES.map(value => ({ label: value, value, icon: categoryIcons[value] }));
+const featuredCategories = CUSTOMER_PRODUCT_CATEGORIES.map(value => ({ label: value, value, icon: categoryIcons[value] }));
 
 function parseOptionalPrice(value?: string) {
   const trimmed = value?.trim() ?? "";
@@ -39,7 +43,8 @@ function marketplaceHref(params: MarketplaceParams, category: string) {
 export default async function MarketplacePage({ searchParams }: { searchParams: Promise<MarketplaceParams> }) {
   const params = await searchParams;
   const search = (params.q?.trim() ?? "").replace(/[,%()]/g, " ").replace(/\s+/g, " ").trim();
-  const category = productCategoryLabel(params.category?.trim() ?? "");
+  const mappedCategory = productCategoryLabel(params.category?.trim() ?? "");
+  const category = isCustomerProductCategory(mappedCategory) ? mappedCategory : "";
   const min = parseOptionalPrice(params.min);
   const max = parseOptionalPrice(params.max);
   const sort = params.sort ?? "newest";
@@ -56,21 +61,16 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   else query = query.order("created_at", { ascending: false });
   const { data: rawProducts, error } = await query;
   const products = rawProducts?.map(withProductCover);
-  const categoryOptions = PRODUCT_CATEGORIES;
   const hasFilters = Boolean(search || category || min !== null || max !== null);
-  const resultsHeading = search
-    ? { eyebrow: "Search results", title: `Results for “${search}”`, support: "Explore products matching your search." }
-    : category
-      ? { eyebrow: "Category", title: category, support: "Browse products in this category." }
-      : { eyebrow: "Shop Christian brands", title: "All products", support: "Discover faith-led products from independent sellers." };
+  const resultsTitle = search ? `Results for “${search}”` : category || "Discover Christian brands";
 
   return (
     <section className="marketplace-page">
       <div className="marketplace-hero">
         <div>
-          <p className="eyebrow">The HolyHub marketplace</p>
+          <p className="eyebrow">The HolyHub Marketplace</p>
           <h1>Discover Christian brands you&apos;ll love</h1>
-          <p>Shop clothing, gifts, books and more from Christian businesses—all in one place.</p>
+          <p>Shop clothing, gifts, books and more from Christian businesses, all in one place.</p>
         </div>
       </div>
 
@@ -82,11 +82,11 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
           <button className="button button-primary" type="submit">Search</button>
         </div>
         <div className="marketplace-filter-row">
-          <label><span>Category</span><select id="category" name="category" defaultValue={category}><option value="">All categories</option>{category && !isProductCategory(category) && <option value={category}>{category} (existing category)</option>}{categoryOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label><span>Category</span><select id="category" name="category" defaultValue={category}><option value="">All categories</option>{CUSTOMER_PRODUCT_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label><span>Min price</span><input id="min" name="min" type="number" min="0" step="0.01" defaultValue={params.min ?? ""} placeholder="£0" /></label>
           <label><span>Max price</span><input id="max" name="max" type="number" min="0" step="0.01" defaultValue={params.max ?? ""} placeholder="Any" /></label>
           <label><span>Sort by</span><select id="sort" name="sort" defaultValue={sort}><option value="newest">Newest</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option></select></label>
-          <Link className="marketplace-clear" href="/marketplace">Clear</Link>
+          <Link className="marketplace-clear" href="/marketplace">Clear filters</Link>
         </div>
       </form>
 
@@ -95,9 +95,9 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         {featuredCategories.map((item) => <Link className={category === item.value ? "active" : ""} href={marketplaceHref(params, item.value)} key={item.value}><HolyHubIcon name={item.icon} /><span>{item.label}</span></Link>)}
       </div>
 
-      {!error && <div className="marketplace-results-heading"><div><p className="eyebrow">{resultsHeading.eyebrow}</p><h2>{resultsHeading.title}</h2><p>{resultsHeading.support}</p></div><p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p></div>}
+      {!error && <div className="marketplace-results-heading"><div><p className="eyebrow">Explore the marketplace</p><h2>{resultsTitle}</h2></div><p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p></div>}
 
-      {error && <div className="marketplace-status marketplace-status-error"><p className="eyebrow">Marketplace</p><strong>We couldn&apos;t load products</strong><p>Please refresh the page and try again.</p><div className="button-row"><a className="button button-primary" href="/marketplace">Try again</a><Link className="button button-quiet" href="/">Back to home</Link></div></div>}
+      {error && <div className="marketplace-status marketplace-status-error"><strong>Oops... looks like something went wrong.</strong><p>Please refresh the page in a moment.</p><div className="button-row"><a className="button button-primary" href="/marketplace">Try again</a><Link className="button button-quiet" href="/">Back to home</Link></div></div>}
       {!error && products?.length ? (
         <div className="product-grid marketplace-grid">
           {products.map((product) => {
@@ -110,7 +110,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         </div>
       ) : null}
 
-      {!error && !products?.length ? <div className="marketplace-status">{hasFilters ? <><p className="eyebrow">Search results</p><strong>No products found</strong><p>Try another search, category or price range.</p><Link className="button button-primary" href="/marketplace">View all products</Link></> : <><p className="eyebrow">Marketplace</p><strong>Products are coming soon</strong><p>We&apos;re onboarding our first sellers now. Check back shortly to discover faith-led products from independent Christian brands.</p></>}</div> : null}
+      {!error && !products?.length ? <div className="marketplace-status">{hasFilters ? <><strong>Nothing matched your search</strong><p>Try another search, browse a different category or clear your filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></> : null}</div> : null}
     </section>
   );
 }

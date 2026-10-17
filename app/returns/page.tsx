@@ -4,14 +4,14 @@ export default function ReturnsPage() {
   return (
     <LegalPage
       title="Returns & Refunds Policy"
-      intro="The lister who sold the product is responsible for the goods. HolyHub can help support the marketplace process when needed."
+      intro="The seller who sold the product is responsible for the goods. HolyHub can help support the marketplace process when needed."
     >
       <LegalSection title="1. Change-of-mind cancellations">
         <p>For most eligible goods bought online, a UK consumer can notify the seller that they want to cancel within 14 days after receiving the goods. They then normally have a further 14 days to return the goods.</p>
       </LegalSection>
 
       <LegalSection title="2. Where to return products">
-        <p>Products must normally be returned to the lister who sold them, using the return address or instructions provided for that order. <strong>Do not send product returns to HolyHub&apos;s business contact address unless HolyHub specifically instructs you to do so.</strong></p>
+        <p>Products must normally be returned to the seller who sold them, using the return address or instructions provided for that order. <strong>Do not send product returns to HolyHub&apos;s business contact address unless HolyHub specifically instructs you to do so.</strong></p>
       </LegalSection>
 
       <LegalSection title="3. Return postage">
@@ -27,11 +27,24 @@ export default function ReturnsPage() {
       </LegalSection>
 
       <LegalSection title="6. Faulty, damaged or misdescribed goods">
-        <p>Customers retain their statutory rights. If a product is faulty, damaged, unsafe, not as described or otherwise fails to meet legal requirements, contact the lister or HolyHub support with the order details and relevant information.</p>
+        <p>Customers retain their statutory rights. If a product is faulty, damaged, unsafe, not as described or otherwise fails to meet legal requirements, contact the seller or HolyHub support with the order details and relevant information.</p>
       </LegalSection>
 
-      <LegalSection title="7. How to request help">
-        <p>Until HolyHub&apos;s in-app refund workflow is launched, marketplace support can be requested by emailing <a className="text-link" href="mailto:Official.holyhub@gmail.com">Official.holyhub@gmail.com</a>. Include your order details and the lister or product involved.</p>
+      <LegalSection title="7. Model cancellation form">
+        <p>You may use the form below to tell the seller that you are cancelling an eligible contract, but using the form is not obligatory. You can instead make any other clear statement that you want to cancel.</p>
+        <p><strong>To:</strong> [Seller name and geographical address provided for your order]</p>
+        <p>I/We [*] hereby give notice that I/We [*] cancel my/our [*] contract of sale of the following goods [*]:</p>
+        <p>[Goods]</p>
+        <p>Ordered on [*] / received on [*]:</p>
+        <p>Name of consumer(s):</p>
+        <p>Address of consumer(s):</p>
+        <p>Signature of consumer(s) (only if this form is notified on paper):</p>
+        <p>Date:</p>
+        <p>[*] Delete as appropriate.</p>
+      </LegalSection>
+
+      <LegalSection title="8. How to request help">
+        <p>Until HolyHub&apos;s in-app refund workflow is launched, marketplace support can be requested by emailing <a className="text-link" href="mailto:Official.holyhub@gmail.com">Official.holyhub@gmail.com</a>. Include your order details and the seller or product involved.</p>
       </LegalSection>
     </LegalPage>
   );

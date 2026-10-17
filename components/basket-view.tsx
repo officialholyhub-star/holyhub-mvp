@@ -12,7 +12,7 @@ import Link from "next/link";
 import { startCheckout } from "@/app/checkout/actions";
 import { BASKET_STORAGE_KEY, MAX_BASKET_QUANTITY, type BasketItem } from "@/lib/basket";
 import { variantLineKey } from "@/lib/product-variants";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 type BasketViewProps = { error?: string };
 async function loadAvailability(ids: string[]) {
@@ -51,6 +51,7 @@ export function BasketView({ error }: BasketViewProps) {
   const [checking, setChecking] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string>();
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [sellerDetailsReady, setSellerDetailsReady] = useState<Record<string, boolean>>({});
   const firstWarning = useRef<HTMLElement | null>(null);
   const issues = useMemo(() => new Map(items.map(item => [variantLineKey(item.id, item.variantId), availableProducts ? basketItemIssue(item, availableProducts) : null])), [items, availableProducts]);
   const [covers, setCovers] = useState<Record<string, string | null>>({});
@@ -95,6 +96,11 @@ export function BasketView({ error }: BasketViewProps) {
     return Array.from(groups.values());
   }, [items]);
 
+  const handleSellerDetailStatus = useCallback((sellerId: string, ready: boolean) => {
+    setSellerDetailsReady(current => current[sellerId] === ready ? current : { ...current, [sellerId]: ready });
+  }, []);
+  const allSellerDetailsReady = groupedItems.length > 0 && groupedItems.every(group => sellerDetailsReady[group.listerId] === true);
+
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
   const deliveryTotal = useMemo(
     () => groupedItems.reduce((sum, group) => sum + (group.deliveryOption === "flat" ? group.deliveryCharge : 0), 0),
@@ -133,6 +139,10 @@ export function BasketView({ error }: BasketViewProps) {
   }
 
   async function checkout(formData: FormData) {
+    if (!allSellerDetailsReady) {
+      setCheckoutError("Seller details must be verified before checkout.");
+      return;
+    }
     setChecking(true);
     setCheckoutError(undefined);
     try {
@@ -174,7 +184,7 @@ export function BasketView({ error }: BasketViewProps) {
                   </div>
                   <strong>{group.deliveryOption === "flat" ? `Delivery £${group.deliveryCharge.toFixed(2)}` : "Delivery free"}</strong>
                 </div>
-                <BasketSellerDetails sellerId={group.listerId} />
+                <BasketSellerDetails sellerId={group.listerId} onStatusChange={handleSellerDetailStatus} />
                 {group.items.map((item, itemIndex) => (
                   <article ref={firstIssueKey && lineKey(firstIssueKey) === lineKey(item) ? firstWarning : undefined} className={`basket-row${issues.get(lineKey(item)) ? " basket-row-warning" : ""}`} key={lineKey(item) || `${group.listerId || "lister"}-item-${itemIndex}`}>
                     <div className="basket-row-main">
@@ -203,7 +213,7 @@ export function BasketView({ error }: BasketViewProps) {
                 <input type="checkbox" name="accept_terms" checked={termsAccepted} onChange={event => setTermsAccepted(event.target.checked)} required />
                 <span>I agree to the <Link href="/terms">Customer Terms</Link>, <Link href="/shipping">Shipping Policy</Link> and <Link href="/returns">Returns Policy</Link>.</span>
               </label>
-              <button className="button button-primary checkout-button" type="submit" disabled={checking}>{checking ? "Checking basket…" : "Proceed to secure checkout"}</button>
+              <button className="button button-primary checkout-button" type="submit" disabled={checking || !allSellerDetailsReady}>{checking ? "Checking basket…" : !allSellerDetailsReady ? "Checking seller details…" : "Proceed to secure checkout"}</button>
             </form>
             <p className="muted-small">Prices are rechecked securely before payment.</p>
           </aside>

@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddToBasketButton } from "@/components/add-to-basket-button";
 import { FavouriteButton } from "@/components/favourite-button";
 import { getFavouriteIds } from "@/lib/favourites";
-import { formatSellerAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
+import { formatRegisteredOffice, formatSellerAddress, sellerEntityLabel, type SellerLegalInput } from "@/lib/seller-legal";
 import brandStyles from "@/components/storefront-brand.module.css";
 import styles from "./product-detail.module.css";
 import { decodeDisplayText } from "@/lib/display-text";
@@ -40,6 +40,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const variantStock = (product.product_variants ?? []).reduce((total, variant) => total + variant.stock_quantity, 0);
   const availableStock = product.product_variants?.length ? variantStock : product.stock_quantity;
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
+  const registeredOffice = formatRegisteredOffice(sellerIdentity);
 
   return (
     <section className="product-detail">
@@ -53,10 +54,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <p className={styles.category}>{product.category_type}</p>
           <p className={styles.description}>{product.description}</p>
           {product.size_guide_url && <p><a className="text-link" href={product.size_guide_url} target="_blank" rel="noopener noreferrer">View size guide</a></p>}
-          <div className={styles.productFacts} aria-label="Product information">
-            <p><span>Availability</span><strong>{stockMessage(availableStock)}</strong></p>
-            <p><span>Delivery</span><strong>{storefront?.delivery_option === "flat" ? `£${Number(storefront.delivery_charge ?? 0).toFixed(2)}` : "Free"}</strong></p>
-          </div>
+          <div className={styles.productFacts} aria-label="Product information"><p><span>Availability</span><strong>{stockMessage(availableStock)}</strong></p><p><span>Delivery</span><strong>{storefront?.delivery_option === "flat" ? `£${Number(storefront.delivery_charge ?? 0).toFixed(2)}` : "Free"}</strong></p></div>
           <div className={styles.purchaseAction}><AddToBasketButton id={product.id} name={product.name} price={Number(product.price)} currency="GBP" imageUrl={images[0] ?? null} listerId={product.lister_user_id} listerName={storefront?.business_name ?? sellerIdentity.legal_name} deliveryOption={storefront?.delivery_option === "flat" ? "flat" : "free"} deliveryCharge={Number(storefront?.delivery_charge ?? 0)} stockQuantity={product.stock_quantity} variants={product.product_variants ?? []} /></div>
           <p className={styles.secureNote}>Secure checkout</p>
           <p className={styles.returnsNote}>See our <Link className="text-link" href="/returns">returns policy</Link> for refund information.</p>
@@ -71,6 +69,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <div><dt>Email</dt><dd><a href={`mailto:${sellerIdentity.contact_email}`}>{sellerIdentity.contact_email}</a></dd></div>
               {sellerIdentity.contact_phone && <div><dt>Phone</dt><dd><a href={`tel:${sellerIdentity.contact_phone}`}>{sellerIdentity.contact_phone}</a></dd></div>}
               {sellerIdentity.registration_number && <div><dt>Registration number</dt><dd>{sellerIdentity.registration_number}</dd></div>}
+              {sellerIdentity.registration_jurisdiction && <div><dt>Registered in</dt><dd>{sellerIdentity.registration_jurisdiction}</dd></div>}
+              {registeredOffice && <div><dt>Registered office</dt><dd>{registeredOffice}</dd></div>}
               {sellerIdentity.vat_number && <div><dt>VAT number</dt><dd>{sellerIdentity.vat_number}</dd></div>}
             </dl>
           </section>

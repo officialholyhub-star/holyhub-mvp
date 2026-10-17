@@ -123,7 +123,6 @@ export async function startCheckout(formData: FormData) {
   }
   if (!session.url) checkoutError("Stripe did not return a checkout URL. Please try again.");
 
-  // Re-check the same verified profile versions before persisting the contract snapshot.
   const { data: currentLegalRows, error: currentLegalError } = await admin.from("seller_legal_profiles")
     .select("user_id, verification_status, updated_at").in("user_id", listerIds);
   const currentVersions = new Map((currentLegalRows ?? []).map(row => [row.user_id, row]));
@@ -170,6 +169,12 @@ export async function startCheckout(formData: FormData) {
       seller_contact_email: legal.contact_email,
       seller_contact_phone: legal.contact_phone,
       seller_registration_number: legal.registration_number,
+      seller_registration_jurisdiction: legal.registration_jurisdiction,
+      seller_registered_office_line1: legal.registered_office_line1,
+      seller_registered_office_line2: legal.registered_office_line2,
+      seller_registered_office_city: legal.registered_office_city,
+      seller_registered_office_postcode: legal.registered_office_postcode,
+      seller_registered_office_country: legal.registered_office_country,
       seller_vat_number: legal.vat_number,
       seller_identity_verified_at: legal.verified_at,
       seller_identity_profile_updated_at: legal.updated_at,

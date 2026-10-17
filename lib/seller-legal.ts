@@ -17,6 +17,11 @@ export type SellerLegalInput = {
   city: string;
   postcode: string;
   country: string;
+  service_address_line1: string | null;
+  service_address_line2: string | null;
+  service_address_city: string | null;
+  service_address_postcode: string | null;
+  service_address_country: string | null;
   contact_email: string;
   contact_phone: string | null;
   registration_number: string | null;
@@ -39,7 +44,7 @@ export type SellerLegalProfile = SellerLegalInput & {
   updated_at: string;
 };
 
-export const SELLER_LEGAL_FIELDS = "user_id, legal_name, entity_type, address_line1, address_line2, city, postcode, country, contact_email, contact_phone, registration_number, registration_jurisdiction, registered_office_line1, registered_office_line2, registered_office_city, registered_office_postcode, registered_office_country, vat_number, verification_status, verification_note, verified_at, verified_by, created_at, updated_at";
+export const SELLER_LEGAL_FIELDS = "user_id, legal_name, entity_type, address_line1, address_line2, city, postcode, country, service_address_line1, service_address_line2, service_address_city, service_address_postcode, service_address_country, contact_email, contact_phone, registration_number, registration_jurisdiction, registered_office_line1, registered_office_line2, registered_office_city, registered_office_postcode, registered_office_country, vat_number, verification_status, verification_note, verified_at, verified_by, created_at, updated_at";
 
 function clean(value: string | null | undefined) {
   return value?.trim() ?? "";
@@ -54,6 +59,11 @@ export function normalizeSellerLegalInput(input: Record<keyof SellerLegalInput, 
     city: clean(input.city),
     postcode: clean(input.postcode).toUpperCase(),
     country: clean(input.country),
+    service_address_line1: clean(input.service_address_line1) || null,
+    service_address_line2: clean(input.service_address_line2) || null,
+    service_address_city: clean(input.service_address_city) || null,
+    service_address_postcode: clean(input.service_address_postcode).toUpperCase() || null,
+    service_address_country: clean(input.service_address_country) || null,
     contact_email: clean(input.contact_email).toLowerCase(),
     contact_phone: clean(input.contact_phone) || null,
     registration_number: clean(input.registration_number).toUpperCase() || null,
@@ -76,6 +86,9 @@ export function sellerLegalValidationError(input: SellerLegalInput) {
   if ((input.contact_phone?.length ?? 0) > 50) return "Enter a shorter business phone number.";
   if ((input.registration_number?.length ?? 0) > 100 || (input.registration_jurisdiction?.length ?? 0) > 100 || (input.vat_number?.length ?? 0) > 100) return "Enter shorter registration or VAT details.";
   if ((input.registered_office_line1?.length ?? 0) > 200 || (input.registered_office_line2?.length ?? 0) > 200 || (input.registered_office_city?.length ?? 0) > 120 || (input.registered_office_postcode?.length ?? 0) > 30 || (input.registered_office_country?.length ?? 0) > 100) return "Enter a valid registered office address.";
+  const hasAnyServiceAddress = Boolean(input.service_address_line1 || input.service_address_line2 || input.service_address_city || input.service_address_postcode || input.service_address_country);
+  if ((input.service_address_line1?.length ?? 0) > 200 || (input.service_address_line2?.length ?? 0) > 200 || (input.service_address_city?.length ?? 0) > 120 || (input.service_address_postcode?.length ?? 0) > 30 || (input.service_address_country?.length ?? 0) > 100) return "Enter a valid service address.";
+  if (hasAnyServiceAddress && (!input.service_address_line1 || !input.service_address_city || !input.service_address_postcode || !input.service_address_country)) return "Complete the service address or leave all service-address fields blank if it is the same as the business address.";
   if (input.entity_type === "limited_company" || input.entity_type === "llp") {
     if (!input.registration_number) return "Enter the registration number for the company or LLP.";
     if (!input.registration_jurisdiction) return "Enter where the company or LLP is registered.";
@@ -98,6 +111,11 @@ export function sellerLegalProfileMatches(profile: SellerLegalProfile | null | u
     && profile.city === input.city
     && profile.postcode === input.postcode
     && profile.country === input.country
+    && (profile.service_address_line1 ?? null) === input.service_address_line1
+    && (profile.service_address_line2 ?? null) === input.service_address_line2
+    && (profile.service_address_city ?? null) === input.service_address_city
+    && (profile.service_address_postcode ?? null) === input.service_address_postcode
+    && (profile.service_address_country ?? null) === input.service_address_country
     && profile.contact_email === input.contact_email
     && (profile.contact_phone ?? null) === input.contact_phone
     && (profile.registration_number ?? null) === input.registration_number
@@ -124,14 +142,15 @@ export function sellerEntityLabel(entityType: string) {
 
 export function formatSellerAddress(profile: Pick<SellerLegalInput, "address_line1" | "address_line2" | "city" | "postcode" | "country">) {
   return [profile.address_line1, profile.address_line2, profile.city, profile.postcode, profile.country]
-    .map(clean)
-    .filter(Boolean)
-    .join(", ");
+    .map(clean).filter(Boolean).join(", ");
+}
+
+export function formatServiceAddress(profile: Pick<SellerLegalInput, "service_address_line1" | "service_address_line2" | "service_address_city" | "service_address_postcode" | "service_address_country">) {
+  return [profile.service_address_line1, profile.service_address_line2, profile.service_address_city, profile.service_address_postcode, profile.service_address_country]
+    .map(clean).filter(Boolean).join(", ");
 }
 
 export function formatRegisteredOffice(profile: Pick<SellerLegalInput, "registered_office_line1" | "registered_office_line2" | "registered_office_city" | "registered_office_postcode" | "registered_office_country">) {
   return [profile.registered_office_line1, profile.registered_office_line2, profile.registered_office_city, profile.registered_office_postcode, profile.registered_office_country]
-    .map(clean)
-    .filter(Boolean)
-    .join(", ");
+    .map(clean).filter(Boolean).join(", ");
 }

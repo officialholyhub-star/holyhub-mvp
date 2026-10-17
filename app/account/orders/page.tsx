@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/require-user";
-import { formatDeliveryAddress, FULFILMENT_STATUS_LABELS, type FulfilmentStatus } from "@/lib/fulfilment";
+import { formatDeliveryAddress, type FulfilmentStatus } from "@/lib/fulfilment";
 import { decodeDisplayText } from "@/lib/display-text";
 
 function safeTrackingUrl(value: string | null) {
@@ -10,6 +10,17 @@ function safeTrackingUrl(value: string | null) {
     return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
   } catch {
     return null;
+  }
+}
+
+function customerStatusLabel(status: FulfilmentStatus) {
+  switch (status) {
+    case "pending": return "Order received";
+    case "packed": return "Processing";
+    case "dispatched": return "Dispatched";
+    case "delivered": return "Delivered";
+    case "cancelled": return "Cancelled";
+    default: return status;
   }
 }
 
@@ -42,11 +53,11 @@ export default async function AccountOrdersPage() {
                 const trackingUrl = safeTrackingUrl(sellerOrder.tracking_url);
                 return (
                   <div className="customer-seller-order" key={sellerOrder.id}>
-                    <div className="customer-seller-order-heading"><h2>{decodeDisplayText(sellerOrder.seller_business_name)}</h2><span className={`status-pill status-${status}`}>{status === "pending" ? "Awaiting preparation" : FULFILMENT_STATUS_LABELS[status] ?? status}</span></div>
+                    <div className="customer-seller-order-heading"><h2>{decodeDisplayText(sellerOrder.seller_business_name)}</h2><span className={`status-pill status-${status}`}>{customerStatusLabel(status)}</span></div>
                     {status === "cancelled" && <p>This order has been cancelled.</p>}
                     <div className="customer-order-items">{(itemsByOrder.get(order.id) ?? []).filter((item) => item.seller_user_id === sellerOrder.seller_user_id).map((item, index) => <p key={`${item.product_name}-${index}`}>{decodeDisplayText(item.product_name)}{item.variant_size ? ` · Size ${decodeDisplayText(item.variant_size)}` : ""} · Qty {item.quantity}</p>)}</div>
                     {sellerOrder.fulfilment_status === "dispatched" && !sellerOrder.tracking_number && !trackingUrl && <p>No tracking details have been added.</p>}
-                    {(sellerOrder.carrier || sellerOrder.tracking_number || trackingUrl || sellerOrder.dispatched_at) && <div className="customer-tracking"><strong>Delivery</strong>{sellerOrder.carrier && <span>{sellerOrder.carrier === "Other" ? sellerOrder.carrier_other : sellerOrder.carrier}</span>}{sellerOrder.tracking_number && <span>Tracking: {sellerOrder.tracking_number}</span>}{sellerOrder.dispatched_at && <span>Dispatched {new Date(sellerOrder.dispatched_at).toLocaleDateString("en-GB")}</span>}{trackingUrl && <a href={trackingUrl} target="_blank" rel="noopener noreferrer">Open tracking link</a>}</div>}
+                    {(sellerOrder.carrier || sellerOrder.tracking_number || trackingUrl || sellerOrder.dispatched_at) && <div className="customer-tracking"><strong>Delivery</strong>{sellerOrder.carrier && <span>Carrier: {sellerOrder.carrier === "Other" ? sellerOrder.carrier_other : sellerOrder.carrier}</span>}{sellerOrder.tracking_number && <span>Tracking: {sellerOrder.tracking_number}</span>}{sellerOrder.dispatched_at && <span>Dispatched: {new Date(sellerOrder.dispatched_at).toLocaleDateString("en-GB")}</span>}{trackingUrl && <a href={trackingUrl} target="_blank" rel="noopener noreferrer">Track your order</a>}</div>}
                   </div>
                 );
               })}

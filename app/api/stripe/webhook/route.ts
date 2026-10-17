@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prepareOrderConfirmationTrigger } from "@/lib/order-confirmation-trigger";
 import { getStripe } from "@/lib/stripe";
 import { getStripeProcessingFee } from "@/lib/stripe-processing-fee";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -146,16 +145,6 @@ export async function POST(request: Request) {
           console.error("Stripe fee reconciliation failed", { sessionId: session.id, code: feeError.code });
           return NextResponse.json({ error: "Could not record payment fee." }, { status: 500 });
         }
-      }
-
-      if (orderId) {
-        const confirmation = prepareOrderConfirmationTrigger(String(orderId));
-        console.info("Customer order confirmation trigger reached", {
-          orderId: confirmation.orderId,
-          confirmationStatus: confirmation.status,
-          blockers: confirmation.blockers,
-          idempotencyKey: confirmation.idempotencyKey,
-        });
       }
     }
     console.info("Stripe webhook processed", { ...context, status, orderId: orderId ?? null });

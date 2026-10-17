@@ -18,7 +18,7 @@ export default async function ListerTermsAcceptancePage({ searchParams }: { sear
   const current = (Array.isArray(currentResult.data) ? currentResult.data[0] : null) as CurrentTerms | null;
 
   let accepted = false;
-  let acceptanceError = null as unknown;
+  let acceptanceError = false;
   if (current) {
     const acceptance = await supabase.from("lister_terms_acceptances")
       .select("terms_version, terms_sha256, accepted_at")
@@ -27,7 +27,7 @@ export default async function ListerTermsAcceptancePage({ searchParams }: { sear
       .eq("terms_sha256", current.content_sha256)
       .maybeSingle();
     accepted = Boolean(acceptance.data);
-    acceptanceError = acceptance.error;
+    acceptanceError = Boolean(acceptance.error);
   }
 
   return <section className="auth-wrap">

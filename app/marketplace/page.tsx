@@ -5,7 +5,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 import { FavouriteButton } from "@/components/favourite-button";
-import { demoProducts } from "@/lib/demo-products";
 import { getFavouriteIds } from "@/lib/favourites";
 import { decodeDisplayText } from "@/lib/display-text";
 
@@ -44,7 +43,6 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const min = parseOptionalPrice(params.min);
   const max = parseOptionalPrice(params.max);
   const sort = params.sort ?? "newest";
-  const categoryShortcut = featuredCategories.find((item) => item.value === category);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const favouriteIds = await getFavouriteIds(supabase, user?.id);
@@ -59,25 +57,12 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const { data: rawProducts, error } = await query;
   const products = rawProducts?.map(withProductCover);
   const categoryOptions = PRODUCT_CATEGORIES;
-
-  const filteredDemoProducts = !error
-    ? demoProducts
-        .filter((product) => {
-          const matchesSearch = !search || [product.name, product.listerName, product.category_type]
-            .some((value) => value.toLowerCase().includes(search.toLowerCase()));
-          const matchesCategory = !category || product.category_type === category;
-          const matchesMin = min === null || product.price >= min;
-          const matchesMax = max === null || product.price <= max;
-          return matchesSearch && matchesCategory && matchesMin && matchesMax;
-        })
-        .sort((a, b) => {
-          if (sort === "price-low") return a.price - b.price;
-          if (sort === "price-high") return b.price - a.price;
-          return 0;
-        })
-    : [];
-
-  const showDemoPreview = process.env.NODE_ENV === "development" && !error && (products?.length ?? 0) < 8 && filteredDemoProducts.length > 0;
+  const hasFilters = Boolean(search || category || min !== null || max !== null);
+  const resultsHeading = search
+    ? { eyebrow: "Search results", title: `Results for “${search}”`, support: "Explore products matching your search." }
+    : category
+      ? { eyebrow: "Category", title: category, support: "Browse products in this category." }
+      : { eyebrow: "Shop Christian brands", title: "All products", support: "Discover faith-led products from independent sellers." };
 
   return (
     <section className="marketplace-page">
@@ -110,9 +95,9 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         {featuredCategories.map((item) => <Link className={category === item.value ? "active" : ""} href={marketplaceHref(params, item.value)} key={item.value}><HolyHubIcon name={item.icon} /><span>{item.label}</span></Link>)}
       </div>
 
-      <div className="marketplace-results-heading"><div><p className="eyebrow">Curated for you</p><h2>{search ? `Results for “${search}”` : categoryShortcut?.label ?? (category || "Shop Christian brands")}</h2></div>{!error && <p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p>}</div>
+      {!error && <div className="marketplace-results-heading"><div><p className="eyebrow">{resultsHeading.eyebrow}</p><h2>{resultsHeading.title}</h2><p>{resultsHeading.support}</p></div><p>{products?.length ?? 0} {(products?.length ?? 0) === 1 ? "product" : "products"}</p></div>}
 
-      {error && <div className="marketplace-status marketplace-status-error"><strong>We couldn&apos;t load the products.</strong><p>Please refresh the page in a moment.</p></div>}
+      {error && <div className="marketplace-status marketplace-status-error"><p className="eyebrow">Marketplace</p><strong>We couldn&apos;t load products</strong><p>Please refresh the page and try again.</p><div className="button-row"><a className="button button-primary" href="/marketplace">Try again</a><Link className="button button-quiet" href="/">Back to home</Link></div></div>}
       {!error && products?.length ? (
         <div className="product-grid marketplace-grid">
           {products.map((product) => {
@@ -125,9 +110,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         </div>
       ) : null}
 
-      {showDemoPreview && <><div className="demo-preview-banner demo-preview-marketplace"><strong>Preview catalogue</strong><span>Filler products below are only here to preview the HolyHub look. They cannot be purchased.</span></div><div className="product-grid marketplace-grid">{filteredDemoProducts.slice(0, Math.max(4, 8 - (products?.length ?? 0))).map((product) => <article className="product-card marketplace-card demo-product-card" key={product.id}><div><div className="marketplace-card-image"><Image src={product.image_url} alt="" width={600} height={600} unoptimized /><span>{productCategoryLabel(product.category_type)}</span></div><div className="product-card-body"><p className="marketplace-lister">{product.listerName} · DEMO</p><h3>{product.name}</h3><strong>£{product.price.toFixed(2)}</strong></div></div><div className="product-card-action"><span className="demo-preview-action">Preview only</span></div></article>)}</div></>}
-
-      {!error && !products?.length && !showDemoPreview ? <div className="marketplace-status">{search || category || min !== null || max !== null ? <><strong>No products found</strong><p>Try another search or clear the filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></> : <><strong>Products are coming soon</strong><p>Our brands are getting ready. Please check back.</p></>}</div> : null}
+      {!error && !products?.length ? <div className="marketplace-status">{hasFilters ? <><p className="eyebrow">Search results</p><strong>No products found</strong><p>Try another search, category or price range.</p><Link className="button button-primary" href="/marketplace">View all products</Link></> : <><p className="eyebrow">Marketplace</p><strong>Products are coming soon</strong><p>We&apos;re onboarding our first sellers now. Check back shortly to discover faith-led products from independent Christian brands.</p></>}</div> : null}
     </section>
   );
 }

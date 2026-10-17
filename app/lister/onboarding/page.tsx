@@ -6,12 +6,12 @@ import { cookies } from "next/headers";
 import { requireRole } from "@/lib/auth/require-user";
 import { onboardingCookie, onboardingStep } from "@/lib/lister-onboarding";
 import { advanceOnboarding } from "./actions";
-import { saveStorefront } from "@/app/lister/actions";
+import { saveStorefront } from "@/app/lister/storefront/actions";
 import { StorefrontForm } from "@/components/storefront-form";
 import styles from "@/components/lister-onboarding.module.css";
 export default async function OnboardingPage() {
   const { user, supabase } = await requireRole("lister");
-  const { data: shop, error } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_url, instagram_url, logo_url, delivery_option, delivery_charge").eq("user_id", user.id).maybeSingle();
+  const { data: shop, error } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_url, instagram_url, logo_url, delivery_option, delivery_charge, dispatch_window, dispatch_custom_timeframe").eq("user_id", user.id).maybeSingle();
   if (error) return <section className={styles.shell}><h1>Your shop</h1><p role="alert">We couldn’t load your shop. Please refresh to try again.</p><Link href="/lister">Go to dashboard</Link></section>;
   const savedStep = onboardingStep((await cookies()).get(onboardingCookie(user.id))?.value);
   if (shop) {

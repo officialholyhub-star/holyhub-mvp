@@ -76,7 +76,12 @@ test("renders order, seller, registration, dispatch and cancellation details", (
   assert.match(rendered.text, /Dispatch within 3–5 working days/);
   assert.match(rendered.text, /Total paid: £33\.50/);
   assert.match(rendered.text, /legal duty to supply goods that conform to the contract/);
-  assert.match(rendered.text, /within 14 days after receiving the goods/);
+  assert.match(rendered.text, /up to 14 days after the day you receive the goods/);
+  assert.match(rendered.text, /no later than 14 days after telling the seller that you are cancelling/);
+  assert.match(rendered.text, /least expensive common and generally acceptable delivery option/);
+  assert.match(rendered.text, /14 days after the seller receives the goods back/);
+  assert.match(rendered.text, /same payment method unless you expressly agree otherwise/);
+  assert.match(rendered.text, /no refund fee may be imposed/);
   assert.match(rendered.text, /Model cancellation form — Seller 1/);
   assert.match(rendered.text, /To: Grace Trading Ltd, 10 Seller Street/);
 });

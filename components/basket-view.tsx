@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { decodeDisplayText } from "@/lib/display-text";
 import { withProductCover } from "@/lib/product-images";
 import { BasketSellerDetails } from "@/components/basket-seller-details";
-
 import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
 import Link from "next/link";
@@ -158,7 +157,7 @@ export function BasketView({ error }: BasketViewProps) {
     finally { setChecking(false); }
     setChecking(true);
     try { await startCheckout(formData); }
-    catch (error) { unstable_rethrow(error); setCheckoutError("We couldn’t open checkout. Your basket is still here. Check My Purchases before trying again if you already entered payment details."); }
+    catch (error) { unstable_rethrow(error); setCheckoutError("We couldn’t open checkout. Your basket is still here. Check My orders before trying again if you already entered payment details."); }
     finally { setChecking(false); }
   }
 
@@ -166,7 +165,8 @@ export function BasketView({ error }: BasketViewProps) {
   return (
     <section>
       <Link className="text-link" href="/marketplace">Continue shopping</Link>
-      <h1 className="page-title">Basket</h1>
+      <p className="eyebrow">Your basket</p>
+      <h1 className="page-title">Review your order</h1>
       {storedBasket === "storage-unavailable" && <p role="alert" className="notice notice-error">Your basket could not be opened. Allow browser storage and refresh, or contact HolyHub.</p>}
       {error && <p className="notice notice-error">{error}</p>}
       {checkoutError && <p className="notice notice-error">{checkoutError}</p>}
@@ -203,7 +203,7 @@ export function BasketView({ error }: BasketViewProps) {
             ))}
           </div>
           <aside className="card basket-summary">
-            <h2>Order total</h2>
+            <h2>Order summary</h2>
             <div className="meta-row"><span className="meta-label">Subtotal</span><strong>£{subtotal.toFixed(2)}</strong></div>
             <div className="meta-row"><span className="meta-label">Delivery</span><strong>{deliveryTotal > 0 ? `£${deliveryTotal.toFixed(2)}` : "Free"}</strong></div>
             <div className="meta-row"><span className="meta-label">Total</span><strong>£{total.toFixed(2)}</strong></div>

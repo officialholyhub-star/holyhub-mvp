@@ -1,4 +1,5 @@
 import { withProductCover } from "@/lib/product-images";
+import { productCategoryLabel } from "@/lib/product-categories";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -40,7 +41,7 @@ export default async function HomePage() {
         <div className="home-verse-panel"><VerseOfTheDay hero /></div>
       </section>
 
-      <section className="home-products" aria-labelledby="home-products-title">
+      {realProducts.length > 0 && <section className="home-products" aria-labelledby="home-products-title">
         <div className="section-heading section-heading-split">
           <div>
             <p className="eyebrow">Marketplace</p>
@@ -49,7 +50,7 @@ export default async function HomePage() {
           <Link className="section-link inline-section-link" href="/marketplace">See all products <span aria-hidden="true">→</span></Link>
         </div>
 
-        {realProducts.length ? <div className="home-product-grid">
+        <div className="home-product-grid">
           {realProducts.map((product) => {
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
             return (
@@ -58,14 +59,14 @@ export default async function HomePage() {
                   <Link href={`/products/${product.id}`}>
                     <div className="home-product-image">
                       {product.image_url ? <Image src={product.image_url} alt={product.name} width={600} height={600} unoptimized /> : <div className="product-placeholder">HolyHub</div>}
-                      <span>{product.category_type}</span>
+                      <span>{productCategoryLabel(product.category_type)}</span>
                     </div>
                   </Link>
                   <FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} />
                 </div>
                 <Link href={`/products/${product.id}`}>
                 <div className="home-product-copy">
-                  <small>{storefront?.business_name ?? "Independent seller"}</small>
+                  {storefront?.business_name && <small>{storefront.business_name}</small>}
                   <h3>{product.name}</h3>
                   <strong>£{Number(product.price).toFixed(2)}</strong>
                 </div>
@@ -73,8 +74,8 @@ export default async function HomePage() {
               </article>
             );
           })}
-        </div> : !productsError ? <div className="marketplace-status"><strong>Products are coming soon</strong><p>We&apos;re onboarding our first sellers now. Check back shortly to discover faith-led products from independent Christian brands.</p></div> : null}
-      </section>
+        </div>
+      </section>}
 
       <section className="home-cta">
         <div>

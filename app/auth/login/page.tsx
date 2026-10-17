@@ -9,8 +9,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <section className="auth-wrap">
       <div className="card">
         <div className="card-header">
-          <h2>Log in</h2>
-          <p>Welcome back to HolyHub.</p>
+          <p className="eyebrow">Welcome back</p>
+          <h2>Log in to HolyHub</h2>
         </div>
         {params.error && <p className="notice notice-error">{params.error}</p>}
         {params.message && <p role="status" className="notice notice-info">{params.message}</p>}
@@ -29,7 +29,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="form-footer">
           <Link className="text-link" href="/auth/forgot-password">Forgot password?</Link>
           <Link className="text-link" href="/auth/check-email">Resend confirmation email</Link>
-          <Link className="text-link" href="/auth/signup">Create account</Link>
+          <span>New here? <Link className="text-link" href="/auth/signup">Create an account</Link></span>
         </div>
       </div>
     </section>

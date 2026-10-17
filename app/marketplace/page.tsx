@@ -104,13 +104,13 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
             const storefront = Array.isArray(product.lister_storefronts) ? product.lister_storefronts[0] : product.lister_storefronts;
             return <article className="product-card marketplace-card" key={product.id}>
               <div className="marketplace-card-media"><Link href={`/products/${product.id}`}><div className="marketplace-card-image">{product.image_url ? <Image src={product.image_url} alt={decodeDisplayText(product.name)} width={600} height={600} unoptimized /> : <div className="product-placeholder" aria-hidden="true">HolyHub</div>}<span>{productCategoryLabel(product.category_type)}</span></div></Link><FavouriteButton productId={product.id} initialSaved={favouriteIds.has(product.id)} /></div>
-              <Link href={`/products/${product.id}`}><div className="product-card-body">{storefront?.business_name && <p className="marketplace-lister">{storefront.business_name}</p>}<h3>{decodeDisplayText(product.name)}</h3><strong>£{Number(product.price).toFixed(2)}</strong></div></Link>
+              <Link href={`/products/${product.id}`}><div className="product-card-body">{storefront?.business_name && <p className="marketplace-lister" style={{ fontSize: ".85rem" }}>{storefront.business_name}</p>}<h3>{decodeDisplayText(product.name)}</h3><strong>£{Number(product.price).toFixed(2)}</strong></div></Link>
             </article>;
           })}
         </div>
       ) : null}
 
-      {!error && !products?.length ? <div className="marketplace-status">{hasFilters ? <><strong>Nothing matched your search</strong><p>Try another search, browse a different category or clear your filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></> : null}</div> : null}
+      {!error && !products?.length && hasFilters ? <div className="marketplace-status"><strong>Nothing matched your search</strong><p>Try another search, browse a different category or clear your filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></div> : null}
     </section>
   );
 }

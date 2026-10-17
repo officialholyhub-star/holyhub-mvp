@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireRole, requireUser } from "@/lib/auth/require-user";
 import { applicationCategoryValue } from "@/lib/application-categories";
 import { getListerApplication } from "@/lib/lister-applications";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -71,7 +71,7 @@ async function saveLegalProfileForUser(userId: string, input: SellerLegalInput) 
 }
 
 export async function saveSellerLegalProfile(formData: FormData) {
-  const { user } = await requireUser();
+  const { user } = await requireRole("lister");
   const sellerLegal = sellerLegalFromFormData(formData);
   const legalError = sellerLegalValidationError(sellerLegal);
   if (legalError) redirect(legalDetailsUrl("error", legalError));

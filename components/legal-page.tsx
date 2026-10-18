@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import { HOLYHUB_LEGAL } from "@/lib/legal";
 
-export function LegalPage({ title, intro, children }: { title: string; intro: string; children: ReactNode }) {
+export function LegalPage({ title, intro, lastUpdated, children }: { title: string; intro: string; lastUpdated?: string; children: ReactNode }) {
   return (
     <article className="legal-page">
       <header className="legal-hero">
         <p className="eyebrow">HolyHub legal</p>
         <h1>{title}</h1>
         <p className="lead">{intro}</p>
-        <p className="legal-updated">Last updated: {HOLYHUB_LEGAL.lastUpdated}</p>
+        {lastUpdated && <p className="legal-updated">Last updated: {lastUpdated}</p>}
       </header>
       <div className="legal-content">{children}</div>
     </article>

@@ -112,7 +112,7 @@ export async function submitListerApplication(formData: FormData) {
   const websiteOrSocial = clean(formData.get("website_or_social"));
   const description = clean(formData.get("description"));
   const categoryType = applicationCategoryValue(clean(formData.get("category_type")), clean(formData.get("suggested_category")), application?.category_type);
-  const acknowledgedListerTermsProcess = formData.get("acknowledge_lister_terms_process") === "on";
+  const acknowledgedListerTermsProcess = formData.get("acknowledge_lister_terms_process") === "on" || formData.get("accept_lister_terms") === "on";
   const sellerLegal = sellerLegalFromFormData(formData);
   const legalError = sellerLegalValidationError(sellerLegal);
 

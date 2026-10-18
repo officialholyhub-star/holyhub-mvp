@@ -13,7 +13,9 @@ function clean(value: FormDataEntryValue | null) {
 export async function verifySellerLegalProfile(formData: FormData) {
   const { user } = await requireRole("admin");
   const sellerUserId = clean(formData.get("seller_user_id"));
+  const verificationNote = clean(formData.get("verification_note"));
   if (!/^[0-9a-f-]{36}$/i.test(sellerUserId)) redirect("/admin/listers?error=Invalid%20seller%20account.");
+  if (verificationNote.length < 10 || verificationNote.length > 1000) redirect("/admin/listers?error=Record%20the%20verification%20evidence%20or%20checks%20completed%20before%20approving.");
 
   const admin = createAdminClient();
   const { data, error } = await admin.from("seller_legal_profiles").select(SELLER_LEGAL_FIELDS).eq("user_id", sellerUserId).maybeSingle();
@@ -23,7 +25,7 @@ export async function verifySellerLegalProfile(formData: FormData) {
   const now = new Date().toISOString();
   const { data: verified, error: verifyError } = await admin.from("seller_legal_profiles").update({
     verification_status: "verified",
-    verification_note: null,
+    verification_note: verificationNote,
     verified_at: now,
     verified_by: user.id,
     updated_at: now,

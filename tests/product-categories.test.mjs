@@ -20,9 +20,9 @@ test('only the unchanged saved legacy category is allowed on edit', () => {
  assert.equal(isAllowedProductCategory('clothes'),false);
  assert.equal(isAllowedProductCategory('Arts','clothes'),true);
 });
-test('Arts filtering includes existing Art products without rewriting their records', () => {
- assert.deepEqual(Array.from(marketplaceCategoryValues('Arts')),['Arts','Art']);
- assert.equal(productCategoryLabel('Art'),'Arts');
+test('Art & Prints filtering includes existing Art products without rewriting their records', () => {
+ assert.deepEqual(Array.from(marketplaceCategoryValues('Art & Prints')),['Arts','Art']);
+ assert.equal(productCategoryLabel('Art'),'Art & Prints');
  assert.equal(productCategoryLabel('marketing'),'marketing');
- assert.deepEqual(Array.from(marketplaceCategoryValues('Apparel')),['Apparel']);
+ assert.deepEqual(Array.from(marketplaceCategoryValues('Clothing & Accessories')),['Apparel']);
 });

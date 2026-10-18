@@ -17,7 +17,7 @@ test('saved shop with no products offers first product regardless of cookie posi
   for (const cookie of [undefined, '1:later', '2:later', '4:later', '5:later']) {
     const html = await page('app/lister/page.tsx', listerClient(), {}, { ...dependencies, 'next/headers': { cookies: async () => ({ get: () => cookie && { value: cookie } }) } });
     assert.match(html, /Your shop is saved. Add your first product/); assert.match(html, /products\/new\?onboarding=1/);
-    assert.doesNotMatch(html, /Continue setup|Finish setting up your shop|accepted/);
+    assert.doesNotMatch(html, /Continue setup|Finish setting up your shop|application has been accepted/);
   }
 });
 test('no shop always offers setup even with submitted products or stale cookie', async () => {

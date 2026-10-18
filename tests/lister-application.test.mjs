@@ -10,8 +10,9 @@ import { loadTypescript } from './helpers/load-typescript.mjs';
 const require = createRequire(import.meta.url);
 const categories = ['Apparel','Bookmarks','Gifts','Books','Jewellery','Home & Living','Arts'];
 const saved = (status='rejected', extra={}) => ({id:'existing',user_id:'fixture',business_name:'Saved brand',contact_name:'Saved contact',email:'saved@example.test',website_or_social:'@savedbrand',description:'Saved description',category_type:'Books',status,rejection_reason:'Please improve the description',reviewed_at:'2026-10-01T00:00:00Z',created_at:'2026-09-01T00:00:00Z',updated_at:'2026-10-01T00:00:00Z',...extra});
-function fixture({applications=[],readError=null,saveError=null,race=false}={}) {
- const rows=applications.map(row=>({...row})); const inserts=[]; const updates=[]; const queries=[]; let adminCalls=0;
+const sellerLegal = (extra={}) => ({user_id:'fixture',legal_name:'Fixture Seller',entity_type:'sole_trader',address_line1:'1 Test Road',address_line2:null,city:'London',postcode:'E1 1AA',country:'GB',service_address_line1:null,service_address_line2:null,service_address_city:null,service_address_postcode:null,service_address_country:null,contact_email:'alex@example.test',contact_phone:null,registration_number:null,registration_jurisdiction:null,registered_office_line1:null,registered_office_line2:null,registered_office_city:null,registered_office_postcode:null,registered_office_country:null,vat_number:null,verification_status:'pending',verification_note:null,verified_at:null,verified_by:null,created_at:'2026-10-01T00:00:00Z',updated_at:'2026-10-01T00:00:00Z',...extra});
+function fixture({applications=[],readError=null,saveError=null,race=false,legal=null}={}) {
+ const rows=applications.map(row=>({...row})); const inserts=[]; const updates=[]; const queries=[]; let adminCalls=0; let legalRow=legal?{...legal}:null; const legalWrites=[];
  function builder(privileged=false) {
   const filters=[]; let values; let descending=false; let limit; let operation='read';
   const query={
@@ -35,19 +36,25 @@ function fixture({applications=[],readError=null,saveError=null,race=false}={}) 
    },
   }; return query;
  }
+ function legalBuilder(){
+  const query={
+   select(){return query;},eq(){return query;},maybeSingle:async()=>({data:legalRow?{...legalRow}:null,error:null}),
+   upsert:async values=>{legalWrites.push(values);legalRow={...sellerLegal(),...values};return {error:null};},
+  };return query;
+ }
  const supabase={from:table=>{assert.equal(table,'lister_applications');return builder();}};
  const dependencies={
   'next/navigation':{redirect:path=>{throw new Error(path);}},
   'next/cache':{revalidatePath(){}},
   '@/lib/auth/require-user':{requireUser:async()=>({user:{id:'fixture'},supabase})},
-  '@/lib/supabase/admin':{createAdminClient:()=>{adminCalls++;return {from:table=>{assert.equal(table,'lister_applications');return builder(true);}};}},
+  '@/lib/supabase/admin':{createAdminClient:()=>{adminCalls++;return {from:table=>table==='lister_applications'?builder(true):table==='seller_legal_profiles'?legalBuilder():(()=>{throw new Error(`Unexpected table ${table}`)})()};}},
  };
  const {submitListerApplication}=loadTypescript('app/lister/apply/actions.ts',dependencies);
- return {rows,inserts,updates,queries,supabase,submit:submitListerApplication,adminCalls:()=>adminCalls};
+ return {rows,inserts,updates,queries,supabase,submit:submitListerApplication,adminCalls:()=>adminCalls,legalWrites,legal:()=>legalRow};
 }
 function form(category='Books', application) {
  const data=new FormData();
- for(const [key,value] of Object.entries({business_name:'Updated brand',contact_name:'Alex',email:'alex@example.test',description:'Updated description',category_type:category,accept_lister_terms:'on'}))data.set(key,value);
+ for(const [key,value] of Object.entries({business_name:'Updated brand',contact_name:'Alex',email:'alex@example.test',description:'Updated description',category_type:category,acknowledge_lister_terms_process:'on',legal_name:'Fixture Seller',entity_type:'sole_trader',address_line1:'1 Test Road',city:'London',postcode:'E1 1AA',country:'GB',contact_email:'alex@example.test'}))data.set(key,value);
  if(application){data.set('application_id',application.id);data.set('application_version',application.updated_at);}
  return data;
 }
@@ -59,12 +66,15 @@ function loadComponent(file, dependencies) {
 }
 async function renderApplication(application, readError, params={}) {
  const f=fixture({applications:application?[application]:[],readError});
+ const legalModule=loadTypescript('lib/seller-legal.ts');
  const dependencies={
   '@/components/draft-form':{DraftForm:'form',ClearDraft:()=>null},
   'next/link':{default:props=>React.createElement('a',props),__esModule:true},
-  '@/lib/auth/require-user':{requireUser:async()=>({user:{id:'fixture',email:'alex@example.test'},supabase:{from:table=>table==='profiles'?{select(){return this;},eq(){return this;},single:async()=>({data:{full_name:'Alex'}})}:f.supabase.from(table)}})},
+  '@/lib/auth/require-user':{requireUser:async()=>({user:{id:'fixture',email:'alex@example.test'},supabase:{from:table=>table==='profiles'?{select(){return this;},eq(){return this;},single:async()=>({data:{full_name:'Alex'}})}:table==='seller_legal_profiles'?{select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null,error:null})}:f.supabase.from(table)}})},
   '@/lib/product-categories':loadTypescript('lib/product-categories.ts'),
   '@/lib/lister-applications':loadTypescript('lib/lister-applications.ts'),
+  '@/lib/seller-legal':legalModule,
+  '@/components/seller-legal-fields':{SellerLegalFields:()=>React.createElement('div',{'data-testid':'seller-legal-fields'})},
   '@/components/application-category-field':loadComponent('components/application-category-field.tsx',{'@/components/draft-form':{FormRecovery:()=>null},'@/lib/form-drafts':{readDraft:()=>null},'@/lib/product-categories':loadTypescript('lib/product-categories.ts'),'@/lib/application-categories':loadTypescript('lib/application-categories.ts')}),
   './actions':{submitListerApplication:async()=>{}},
  };
@@ -80,6 +90,7 @@ test('new/rejected applications render the exact dropdown and rejected details a
   assert.ok(select);assert.doesNotMatch(html,/<input[^>]*name="category_type"/);
   assert.deepEqual([...select.matchAll(/<option[^>]*value="([^"]+)"/g)].map(match=>match[1].replaceAll('&amp;','&')),[...categories,'__other__']);
   assert.match(html,/Website or social media link \(optional\)/);
+  assert.match(html,/final HolyHub Lister Terms/);
   if(application){assert.match(html,/value="Saved brand"/);assert.match(html,/Saved description/);assert.match(html,/Save &amp; resubmit application/);assert.match(html,/name="application_version"/);}
  }
 });
@@ -95,15 +106,15 @@ test('legacy rejected category is preserved and optional missing link displays b
  assert.match(html,/name="website_or_social"[^>]*value=""/);
 });
 test('lookup errors never render a new application form',async()=>{assert.doesNotMatch(await renderApplication(null,{code:'503'}),/<form/);});
-test('new submissions accept fixed categories and leave links optional',async()=>{
- for(const category of categories){const f=fixture();await assert.rejects(f.submit(form(category)),/submitted%20for%20review/);assert.equal(f.inserts[0].category_type,category);assert.equal(f.adminCalls(),0);}
- for(const category of ['','clothes','Art','marketing']){const f=fixture();await assert.rejects(f.submit(form(category)),/Complete%20the%20description/);assert.equal(f.inserts.length,0);}
+test('new submissions accept fixed categories, save legal details and leave links optional',async()=>{
+ for(const category of categories){const f=fixture();await assert.rejects(f.submit(form(category)),/submitted%20for%20review/);assert.equal(f.inserts[0].category_type,category);assert.equal(f.adminCalls(),1);assert.equal(f.legalWrites.length,1);}
+ for(const category of ['','clothes','Art','marketing']){const f=fixture();await assert.rejects(f.submit(form(category)),/Complete%20the%20description/);assert.equal(f.inserts.length,0);assert.equal(f.adminCalls(),0);}
 });
 test('rejected application is updated in place, reset to pending and cannot be submitted twice',async()=>{
  const application=saved();const f=fixture({applications:[application]});
  await assert.rejects(f.submit(form('Arts',application)),/resubmitted%20for%20review/);
  assert.equal(f.inserts.length,0);assert.equal(f.rows.length,1);assert.equal(f.rows[0].id,application.id);assert.equal(f.rows[0].created_at,application.created_at);
- assert.equal(f.rows[0].status,'pending');assert.equal(f.rows[0].reviewed_at,null);assert.equal(f.rows[0].rejection_reason,null);assert.equal(f.rows[0].description,'Updated description');
+ assert.equal(f.rows[0].status,'pending');assert.equal(f.rows[0].reviewed_at,null);assert.equal(f.rows[0].rejection_reason,null);assert.equal(f.rows[0].description,'Updated description');assert.equal(f.legalWrites.length,1);
  for(const [key,value] of [['id',application.id],['user_id','fixture'],['status','rejected'],['updated_at',application.updated_at]])assert.ok(f.updates[0].filters.some(filter=>filter[0]===key && filter[1]===value));
  await assert.rejects(f.submit(form('Books',application)),/Refresh%20this%20page/);assert.equal(f.updates.length,1);
 });
@@ -117,7 +128,7 @@ test('pending applications have an edit button and a prefilled edit form',async(
 });
 test('pending edits update the same record and remain under review',async()=>{
  const application=saved('pending');const f=fixture({applications:[application]});await assert.rejects(f.submit(form('Arts',application)),/changes%20have%20been%20saved/);
- assert.equal(f.inserts.length,0);assert.equal(f.rows.length,1);assert.equal(f.rows[0].id,application.id);assert.equal(f.rows[0].created_at,application.created_at);assert.equal(f.rows[0].status,'pending');assert.equal(f.rows[0].category_type,'Arts');assert.ok(f.rows[0].updated_at!==application.updated_at);
+ assert.equal(f.inserts.length,0);assert.equal(f.rows.length,1);assert.equal(f.rows[0].id,application.id);assert.equal(f.rows[0].created_at,application.created_at);assert.equal(f.rows[0].status,'pending');assert.equal(f.rows[0].category_type,'Arts');assert.ok(f.rows[0].updated_at!==application.updated_at);assert.equal(f.legalWrites.length,1);
  assert.ok(f.updates[0].filters.some(([key,value])=>key==='status'&&value==='pending'));
  await assert.rejects(f.submit(form('Books',application)),/Refresh%20this%20page/);assert.equal(f.updates.length,1);
 });
@@ -164,6 +175,7 @@ test('Other category text is saved and restored for pending and rejected applica
    './actions':{reviewListerApplication:async()=>{}},
    '@/lib/auth/require-user':{requireRole:async role=>{assert.equal(role,'admin');return {user:{id:'admin-fixture'},supabase:{from:()=>query}};}},
    '@/lib/application-categories':loadTypescript('lib/application-categories.ts'),
+   '@/lib/seller-legal':loadTypescript('lib/seller-legal.ts'),
    '@/components/account-lister-brand':{AccountListerBrand:()=>null},
    './page.module.css':{default:{},__esModule:true},
    'next/link':{default:props=>React.createElement('a',props),__esModule:true},

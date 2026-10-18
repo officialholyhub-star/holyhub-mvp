@@ -30,16 +30,22 @@ test('directory includes role-enabled listers without applications and never mer
   products.push({ review_status: 'approved', is_published: false }, { review_status: 'pending', is_published: true }, { review_status: 'rejected', is_published: false });
   assert.deepEqual(JSON.parse(JSON.stringify(catalogueCounts(products))), { total: 17, live: 8, pending: 1 });
 });
-test('actual admin page includes full 14-product role-only catalogue, preserving separate one-product account', async () => {
+test('actual admin page includes full 14-product ready catalogue, preserving separate one-product account', async () => {
+  const readyLegal = user_id => ({ user_id, legal_name: `${user_id} Seller`, entity_type: 'sole_trader', address_line1: '1 Test Road', address_line2: null, city: 'London', postcode: 'E1 1AA', country: 'GB', service_address_line1: null, service_address_line2: null, service_address_city: null, service_address_postcode: null, service_address_country: null, contact_email: `${user_id}@example.test`, contact_phone: null, registration_number: null, registration_jurisdiction: null, registered_office_line1: null, registered_office_line2: null, registered_office_city: null, registered_office_postcode: null, registered_office_country: null, vat_number: null, verification_status: 'verified', verification_note: 'Fixture verification evidence', verified_at: '2026-10-01T00:00:00Z', verified_by: 'admin', created_at: '2026-09-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z' });
   const data = {
     lister_applications: [{ id: 'a', user_id: 'one', business_name: 'Same shop', status: 'approved', category_type: 'Books' }],
-    lister_storefronts: ['one', 'fourteen'].map(user_id => ({ user_id, business_name: 'Same shop', category_type: 'Books', delivery_charge: 0 })),
-    products: [{ id: 'one', lister_user_id: 'one', name: 'Other account', review_status: 'approved', is_published: true }, ...Array.from({ length: 14 }, (_, i) => ({ id: `p${i}`, name: `Own product ${i}`, lister_user_id: 'fourteen', review_status: i < 8 ? 'approved' : 'draft', is_published: i < 8, stock_quantity: 3 }))],
-    seller_orders: [], user_roles: [{ user_id: 'one' }, { user_id: 'fourteen' }],
+    lister_storefronts: ['one', 'fourteen'].map(user_id => ({ user_id, business_name: 'Same shop', category_type: 'Books', delivery_charge: 0, dispatch_window: '2-3-working-days', dispatch_custom_timeframe: null })),
+    products: [{ id: 'one', lister_user_id: 'one', name: 'Other account', review_status: 'approved', is_published: true, stock_quantity: 3 }, ...Array.from({ length: 14 }, (_, i) => ({ id: `p${i}`, name: `Own product ${i}`, lister_user_id: 'fourteen', review_status: i < 8 ? 'approved' : 'draft', is_published: i < 8, stock_quantity: 3 }))],
+    seller_orders: [], user_roles: [{ user_id: 'one' }, { user_id: 'fourteen' }], seller_legal_profiles: [readyLegal('one'), readyLegal('fourteen')],
+    lister_terms_acceptances: ['one', 'fourteen'].map(user_id => ({ user_id, terms_version: 'v1', terms_sha256: 'a'.repeat(64), accepted_at: '2026-10-01T00:00:00Z' })),
   };
-  const supabase = { from: table => { const q = { select() { return q; }, eq() { return q; }, in() { return q; }, order() { return q; }, range() { return q; }, then(resolve) { resolve({ data: data[table], error: null }); } }; return q; } };
+  const supabase = {
+    from: table => { const q = { select() { return q; }, eq() { return q; }, in() { return q; }, order() { return q; }, range() { return q; }, then(resolve) { resolve({ data: data[table] ?? [], error: null }); } }; return q; },
+    rpc: async name => { assert.equal(name, 'get_current_lister_terms'); return { data: [{ version: 'v1', content_sha256: 'a'.repeat(64) }], error: null }; },
+  };
   const { default: Page } = ui('app/admin/listers/page.tsx', {
     '@/lib/auth/require-user': { requireRole: async role => { assert.equal(role, 'admin'); return { supabase }; } },
+    './actions': { verifySellerLegalProfile() {} },
     'next/link': props => React.createElement('a', props), '@/components/lister-onboarding.module.css': {},
   });
   const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }));

@@ -131,7 +131,7 @@ export async function submitListerApplication(formData: FormData) {
       }).eq("id", application.id).eq("user_id", user.id).eq("status", application.status).eq("updated_at", application.updated_at).select("id").maybeSingle()
     : await supabase.from("lister_applications").insert({ ...values, user_id: user.id });
   const { error } = result;
-  if (application && !error && !result.data) redirect(messageUrl("error", "Your application changed. Refresh to see its current status."));
+  if (application && !error && !result.data) redirect(messageUrl("error", "Your application changed during submission. Refresh to see its current status."));
   if (error) console.error("Lister application save failed", { code: error.code, message: error.message, details: error.details, hint: error.hint });
   if (error?.code === "PGRST205") redirect(messageUrl("error", "Lister applications are not set up yet. Please contact HolyHub support."));
   if (error?.code === "42501") redirect(messageUrl("error", application ? "We couldn't save your application. Please contact HolyHub support." : "You do not have permission to submit a lister application."));

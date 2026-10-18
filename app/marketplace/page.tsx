@@ -110,7 +110,8 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
         </div>
       ) : null}
 
-      {!error && !products?.length && hasFilters ? <div className="marketplace-status"><strong>Nothing matched your search</strong><p>Try another search, browse a different category or clear your filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></div> : null}
+      {!error && !products?.length && hasFilters ? <div className="marketplace-status"><strong>No products found</strong><p>Try another search, browse a different category or clear your filters.</p><Link className="button button-primary" href="/marketplace">View all products</Link></div> : null}
+      {!error && !products?.length && !hasFilters ? <div className="marketplace-status"><strong>Products are coming soon</strong><p>We’re getting the first approved Christian brands ready for the marketplace.</p></div> : null}
     </section>
   );
 }

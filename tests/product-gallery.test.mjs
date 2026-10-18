@@ -161,8 +161,8 @@ test('all cover contexts use galleries, product buying page has internal brand l
   const detail = fs.readFileSync('app/products/[id]/page.tsx', 'utf8');
   assert.ok(!detail.includes('website_url')); assert.ok(!detail.includes('instagram_url')); assert.ok(detail.includes('href={`/lister/storefront/'));
   const storefront = fs.readFileSync('app/lister/storefront/[id]/page.tsx', 'utf8');
-  assert.ok(storefront.indexOf('storefront-products-title') < storefront.indexOf('Instagram or social ↗'));
-  assert.ok(storefront.indexOf('Instagram or social ↗') < storefront.indexOf('Visit brand website ↗'));
+  assert.ok(storefront.indexOf('storefront-products-title') < storefront.indexOf('Visit Instagram ↗'));
+  assert.ok(storefront.indexOf('Visit Instagram ↗') < storefront.indexOf('Visit brand website ↗'));
   assert.ok(storefront.includes('target="_blank" rel="noopener noreferrer"'));
 });
 

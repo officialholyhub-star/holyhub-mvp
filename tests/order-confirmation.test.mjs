@@ -3,6 +3,7 @@ import test from "node:test";
 import { loadTypescript } from "./helpers/load-typescript.mjs";
 
 const {
+  ORDER_CONFIRMATION_TEMPLATE_VERSION,
   orderConfirmationIdempotencyKey,
   renderOrderConfirmation,
   validateOrderConfirmation,
@@ -113,6 +114,22 @@ test("escapes seller and product supplied HTML", () => {
 });
 
 test("uses a stable versioned per-order idempotency key", () => {
+  assert.equal(ORDER_CONFIRMATION_TEMPLATE_VERSION, 1);
   assert.equal(orderConfirmationIdempotencyKey(" order_123 "), "order:order_123:customer-confirmation:v1");
   assert.equal(orderConfirmationIdempotencyKey("order_123"), orderConfirmationIdempotencyKey("order_123"));
+});
+
+test("locks queued confirmations to the supported template version", () => {
+  const v1 = completeInput();
+  v1.templateVersion = 1;
+  const rendered = renderOrderConfirmation(v1);
+  assert.equal(rendered.ok, true);
+  assert.match(rendered.text, /HolyHub is the marketplace connecting customers with independent Christian brands/);
+
+  const unknown = completeInput();
+  unknown.templateVersion = 2;
+  assert.ok(validateOrderConfirmation(unknown).includes("unsupported_template_version"));
+  const blocked = renderOrderConfirmation(unknown);
+  assert.equal(blocked.ok, false);
+  assert.ok(blocked.blockers.includes("unsupported_template_version"));
 });

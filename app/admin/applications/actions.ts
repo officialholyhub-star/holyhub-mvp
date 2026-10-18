@@ -17,11 +17,15 @@ export async function reviewListerApplication(formData: FormData) {
   const expectedVersion = clean(formData.get("application_version"));
   const decision = clean(formData.get("decision"));
   const rejectionReason = clean(formData.get("rejection_reason"));
+  const verificationNote = clean(formData.get("verification_note"));
   if (!applicationId || !expectedVersion || !["approve", "reject"].includes(decision)) {
     redirect("/admin/applications?error=That review could not be completed.");
   }
   if (decision === "reject" && (!rejectionReason || rejectionReason.length > 1000)) {
     redirect("/admin/applications?error=Add a short reason before rejecting an application.");
+  }
+  if (decision === "approve" && (verificationNote.length < 10 || verificationNote.length > 1000)) {
+    redirect("/admin/applications?error=Record%20the%20verification%20evidence%20or%20checks%20completed%20before%20approving.");
   }
 
   const admin = createAdminClient();
@@ -66,7 +70,7 @@ export async function reviewListerApplication(formData: FormData) {
   if (decision === "approve") {
     const { data: verified, error: verifyError } = await admin.from("seller_legal_profiles").update({
       verification_status: "verified",
-      verification_note: null,
+      verification_note: verificationNote,
       verified_at: reviewedAt,
       verified_by: user.id,
       updated_at: reviewedAt,

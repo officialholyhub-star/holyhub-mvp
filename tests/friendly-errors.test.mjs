@@ -42,13 +42,15 @@ async function payment(status, { error = null, stripePaid = false, rpcError = nu
 test('payment presentation separates confirmed, pending, failed, cancelled and unavailable without changing processing', async () => {
   for (const status of ['pending', 'failed', 'cancelled', null]) {
     const result = await payment(status);
-    assert.doesNotMatch(result.html, /Thank you for your payment|Your payment has been confirmed/);
-    assert.match(result.html, /Check My Purchases/);
+    assert.doesNotMatch(result.html, /Your payment has been confirmed/);
+    assert.match(result.html, /My orders/);
+    if (status === 'pending') assert.match(result.html, /Thank you for your order/);
+    else assert.doesNotMatch(result.html, /Thank you for your order/);
     assert.equal(result.rpcCalls.length, 0);
     if (status === 'pending' || status === null) assert.doesNotMatch(result.html, /Return to basket/);
   }
   const confirmed = await payment('paid');
-  assert.match(confirmed.html, /Thank you for your payment/);
+  assert.match(confirmed.html, /Thank you for your order/);
   assert.match(confirmed.html, /Your payment has been confirmed/);
   assert.equal(confirmed.retrieves, 1);
   assert.equal(confirmed.rpcCalls.length, 0);

@@ -3,15 +3,15 @@ import test from "node:test";
 import { renderAccount, elements } from "./helpers/render-account.mjs";
 import { loadTypescript } from "./helpers/load-typescript.mjs";
 
-test("customer account prioritises orders, removes fragmented cards, and keeps personal forms last", async () => {
+test("customer account prioritises orders and keeps personal settings after customer actions", async () => {
   const { html, tree, actions } = await renderAccount({ fullName: "  Alex Customer" });
   assert.match(html, /Welcome back, Alex/);
   assert.match(html, /<dt>Status<\/dt><dd>Active/);
   assert.match(html, /<dt>Access<\/dt><dd>Customer/);
-  assert.doesNotMatch(html, /Explore Marketplace|Account details|fulfilment|seller order|class="card/);
-  assert.ok(html.indexOf("My purchases") < html.indexOf("Favourites</h2>"));
-  assert.ok(html.indexOf("Favourites</h2>") < html.indexOf("Password / Security"));
-  assert.ok(html.indexOf("Password / Security") < html.indexOf('id="profile-heading"'));
+  assert.doesNotMatch(html, /Explore Marketplace|fulfilment|seller order|class="card/);
+  assert.ok(html.indexOf("My orders") < html.indexOf("Favourites</h2>"));
+  assert.ok(html.indexOf("Favourites</h2>") < html.indexOf('id="profile-heading"'));
+  assert.ok(html.indexOf('id="profile-heading"') < html.indexOf('id="password-heading"'));
   const links = elements(tree, element => element.props?.href).map(element => element.props.href);
   for (const href of ["/account/orders", "/account/favourites", "/auth/forgot-password", "/lister/apply"]) assert.ok(links.includes(href));
   assert.ok(!links.includes("/lister"));
@@ -31,10 +31,10 @@ test("lister shortcut appears before customer actions and carries the whole-sect
   const { html, queries } = await renderAccount({ roles: [{ role: "customer" }, { role: "lister" }, { role: "admin" }], storefront: { business_name: "Alex Shop", logo_url: null } });
   assert.match(html, /Customer \/ Lister \/ Admin/);
   assert.match(html, /class="listerShortcut" href="\/lister"/);
-  assert.match(html, /Manage your products, orders and storefront/);
+  assert.match(html, /Your lister space is ready/);
   assert.match(html, /Open lister space/);
   assert.match(html, /Alex Shop brand logo/);
-  assert.ok(html.indexOf("Lister space") < html.indexOf("My purchases"));
+  assert.ok(html.indexOf("Your lister space is ready") < html.indexOf("My orders"));
   assert.doesNotMatch(html, /Apply to become a lister/);
   assert.ok(queries.some(query => query.table === "lister_storefronts"));
 });
@@ -42,7 +42,7 @@ test("lister shortcut appears before customer actions and carries the whole-sect
 test("pending and approved applications do not grant a lister shortcut without the lister role", async () => {
   for (const status of ["pending", "approved"]) {
     const { html, queries } = await renderAccount({ application: { status } });
-    assert.match(html, status === "pending" ? /awaiting review/ : /approved/);
+    assert.match(html, status === "pending" ? /application is pending/ : /approved/);
     assert.doesNotMatch(html, /href="\/lister"|Apply to become a lister/);
     assert.ok(!queries.some(query => query.table === "lister_storefronts"));
     for (const query of queries) assert.ok(query.filters.some(([field, value]) => ["id", "user_id"].includes(field) && value === "account-user"));

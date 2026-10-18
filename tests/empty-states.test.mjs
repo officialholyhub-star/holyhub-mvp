@@ -28,7 +28,7 @@ function query(result) {
 }
 const render = element => renderToStaticMarkup(element);
 const role = supabase => ({ requireRole: async () => ({ supabase, user: { id: 'owner' } }) });
-const client = result => ({ from: () => query(result), auth: { getUser: async () => ({ data: { user: null } }) } });
+const client = result => ({ from: () => query(result), rpc: async () => ({ data: [], error: null }), auth: { getUser: async () => ({ data: { user: null } }) } });
 async function page(file, supabase, params = {}, dependencies = {}) {
   return render(await load(file, { '@/lib/auth/require-user': role(supabase), '@/lib/supabase/server': { createClient: async () => supabase }, ...dependencies }).default({ searchParams: Promise.resolve(params), params: Promise.resolve({ id: 'shop' }) }));
 }
@@ -132,7 +132,7 @@ test('dispatched purchases without tracking explain its absence; tracked portion
   for (const tracking_url of [null, 'https://example.com/tracking']) {
     const supabase = { from: table => query({ data: table === 'orders' ? [{ id: 'order', total_amount: 1200, order_status: 'paid', created_at: '2026-10-01', seller_orders: [{ id: 'portion', seller_user_id: 'seller', seller_business_name: 'Shop', fulfilment_status: 'dispatched', tracking_url }] }] : [] }) };
     const html = await page('app/account/orders/page.tsx', supabase, {}, { '@/lib/auth/require-user': { requireUser: async () => ({ supabase, user: { id: 'customer' } }) } });
-    if (tracking_url) { assert.match(html, /Open tracking link/); assert.doesNotMatch(html, /No tracking details have been added/); }
+    if (tracking_url) { assert.match(html, /Track your order/); assert.doesNotMatch(html, /No tracking details have been added/); }
     else assert.match(html, /No tracking details have been added/);
   }
 });

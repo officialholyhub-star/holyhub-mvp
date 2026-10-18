@@ -45,8 +45,8 @@ export default async function AdminApplicationsPage({ searchParams }: { searchPa
       return <article className="review-card" key={application.id}>
         <div className="review-card-header"><div className={styles.brandHeading}><AccountListerBrand businessName={application.business_name} logoUrl={logos.get(application.user_id) ?? null} /><div className={styles.brandDetails}><h2>{application.business_name}</h2><p className="muted-small">{application.contact_name} · {application.email} · Submitted {new Date(application.created_at).toLocaleDateString("en-GB")}</p></div></div><span className="status-pill status-pending">Awaiting your review</span></div>
         <dl className="review-details">
-          <div><dt>Selected category</dt><dd>{application.category_type.startsWith(SUGGESTED_CATEGORY_PREFIX) ? "Other" : application.category_type}</dd></div>
-          {application.category_type.startsWith(SUGGESTED_CATEGORY_PREFIX) && <div><dt>Suggested category</dt><dd className={styles.suggestedCategory}>{application.category_type.slice(SUGGESTED_CATEGORY_PREFIX.length)}</dd></div>}
+          <div><dt>Selected category:</dt><dd>{application.category_type.startsWith(SUGGESTED_CATEGORY_PREFIX) ? "Other" : application.category_type}</dd></div>
+          {application.category_type.startsWith(SUGGESTED_CATEGORY_PREFIX) && <div><dt>Suggested category:</dt><dd className={styles.suggestedCategory}>{application.category_type.slice(SUGGESTED_CATEGORY_PREFIX.length)}</dd></div>}
           <div><dt>Website or social</dt><dd>{application.website_or_social === "Not provided" ? "Not provided" : <a href={application.website_or_social} target="_blank" rel="noreferrer">{application.website_or_social}</a>}</dd></div>
           <div><dt>About the business</dt><dd>{application.description}</dd></div>
           <div><dt>Legal seller</dt><dd>{legal?.legal_name ?? "MISSING"}</dd></div>

@@ -74,8 +74,8 @@ export default async function ListerApplicationPage({ searchParams }: { searchPa
             <ApplicationCategoryField draftKey={`hh-application-${user.id}`} savedCategory={application?.category_type} />
             {!sellerLegalResult.error && <SellerLegalFields profile={sellerLegal} defaultEmail={application?.email ?? user.email ?? ""} />}
             <label className="terms-consent">
-              <input type="checkbox" name="accept_lister_terms" required />
-              <span>I agree to the <Link href="/lister-terms">HolyHub Lister Terms</Link> and <Link href="/privacy">Privacy Notice</Link>.</span>
+              <input type="checkbox" name="acknowledge_lister_terms_process" required />
+              <span>I understand that approval does not activate selling. Before selling, I&apos;ll need to review and accept the final HolyHub Lister Terms. I acknowledge the <Link href="/privacy">Privacy Notice</Link>.</span>
             </label>
             <button className="button button-primary" type="submit" disabled={Boolean(sellerLegalResult.error)}>{application?.status === "pending" ? "Save changes" : application ? "Save & resubmit application" : "Submit application"}</button>
             {application?.status === "pending" && <Link className="button button-quiet" href="/lister/apply">Cancel</Link>}

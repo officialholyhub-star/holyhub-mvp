@@ -112,11 +112,11 @@ export async function submitListerApplication(formData: FormData) {
   const websiteOrSocial = clean(formData.get("website_or_social"));
   const description = clean(formData.get("description"));
   const categoryType = applicationCategoryValue(clean(formData.get("category_type")), clean(formData.get("suggested_category")), application?.category_type);
-  const acceptedListerTerms = formData.get("accept_lister_terms") === "on";
+  const acknowledgedListerTermsProcess = formData.get("acknowledge_lister_terms_process") === "on";
   const sellerLegal = sellerLegalFromFormData(formData);
   const legalError = sellerLegalValidationError(sellerLegal);
 
-  if (!acceptedListerTerms) redirect(messageUrl("error", "Please agree to the HolyHub Lister Terms before applying."));
+  if (!acknowledgedListerTermsProcess) redirect(messageUrl("error", "Please confirm that you understand the final Lister Terms must be accepted before selling."));
   if (!businessName || businessName.length > 150 || !contactName || contactName.length > 100) redirect(messageUrl("error", "Enter a business name and contact name within the limits shown."));
   if (!isValidEmail(email)) redirect(messageUrl("error", "Enter a valid email address."));
   if (websiteOrSocial.length > 500) redirect(messageUrl("error", "Enter a website or social media link within the limit shown."));

@@ -28,10 +28,13 @@ const render = element => renderToStaticMarkup(element);
 const role = supabase => ({ requireRole: async () => ({ supabase, user: { id: 'owner' } }) });
 const client = result => ({
   from: () => query(result),
-  rpc: async () => ({ data: [], error: null }),
+  rpc: async () => ({ data: true, error: null }),
   auth: { getUser: async () => ({ data: { user: null } }) },
 });
 async function page(file, supabase, params = {}, dependencies = {}) {
+  // Older fixtures pre-date the C9 readiness RPC. Add the successful current-
+  // terms result to the same object so identity-sensitive tests remain valid.
+  if (typeof supabase.rpc !== 'function') supabase.rpc = async () => ({ data: true, error: null });
   return render(await load(file, { '@/lib/auth/require-user': role(supabase), '@/lib/supabase/server': { createClient: async () => supabase }, ...dependencies }).default({ searchParams: Promise.resolve(params), params: Promise.resolve({ id: 'shop' }) }));
 }
 

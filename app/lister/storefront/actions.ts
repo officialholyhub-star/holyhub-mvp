@@ -116,7 +116,7 @@ export async function saveStorefront(
     delivery_charge: deliveryCharge,
     delivery_country: "GB",
     dispatch_window: dispatchWindow,
-    dispatch_custom_timeframe: dispatchWindow === "made-to-order" ? dispatchCustomTimeframe : null,
+    dispatch_custom_timeframe: dispatchWindow === "working-days" || dispatchWindow === "made-to-order" ? dispatchCustomTimeframe : null,
     updated_at: new Date().toISOString(),
   };
 

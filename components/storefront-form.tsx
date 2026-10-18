@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { PRODUCT_CATEGORIES } from "@/lib/product-categories";
 import { OTHER_APPLICATION_CATEGORY, SUGGESTED_CATEGORY_PREFIX, MAX_SUGGESTED_CATEGORY_LENGTH } from "@/lib/application-categories";
-import { DISPATCH_WINDOW_LABELS, type DispatchWindow } from "@/lib/dispatch-timeframe";
+import { DISPATCH_WINDOW_LABELS, dispatchTerms, isLegacyDispatchWindow } from "@/lib/dispatch-timeframe";
 import { advanceOnboarding } from "@/app/lister/onboarding/actions";
 import { useActionState, useState, useEffect, useRef } from "react";
 import type { StorefrontFormState } from "@/app/lister/actions";
@@ -68,9 +68,11 @@ export function StorefrontForm({ action, userId, storefront, onboarding = false 
     if (!formRef.current) return;
     try { sessionStorage.setItem(`hh-shop-draft-${userId}`, JSON.stringify(Object.fromEntries(new FormData(formRef.current)))); } catch { /* Keep the form usable without storage. */ }
   }
-  const previewDispatch = dispatchWindow
-    ? dispatchWindow === "made-to-order" ? (dispatchCustom ? `Made to order — ${dispatchCustom}` : "Add your made-to-order timeframe") : DISPATCH_WINDOW_LABELS[dispatchWindow as DispatchWindow]
-    : "Choose a dispatch timeframe";
+  const previewDispatch = dispatchTerms(dispatchWindow, dispatchCustom)
+    ?? (dispatchWindow === "working-days" ? "Choose your number of working days"
+      : dispatchWindow === "made-to-order" ? "Add your made-to-order timeframe"
+      : "Choose a dispatch timeframe");
+  const legacyDispatch = isLegacyDispatchWindow(dispatchWindow) ? dispatchWindow : null;
   return (
     <form ref={formRef} className="form" action={formAction} onChange={keepDraft} onSubmit={event => { keepDraft(); if (uploading) event.preventDefault(); }}>
       {onboarding && <><input type="hidden" name="onboarding" value="1" /><aside className={setupStyles.preview} aria-label="Live shop preview"><p className="eyebrow">Your shop preview</p><h2>{businessName || "Your shop name"}</h2><p>{description || "A little about your shop"}</p><small>{categoryType === OTHER_APPLICATION_CATEGORY || categoryType.startsWith(SUGGESTED_CATEGORY_PREFIX) ? `Suggested category: ${suggestion || "Your suggestion"}` : categoryType || "Your category"} · Dispatch from: United Kingdom · {previewDispatch}</small></aside></>}
@@ -104,12 +106,23 @@ export function StorefrontForm({ action, userId, storefront, onboarding = false 
       <h2>Dispatch & delivery</h2>
       <p>Dispatch from: United Kingdom</p>
       <div className="field">
-        <label htmlFor="dispatch_window">How quickly do you usually dispatch an order?</label>
-        <select id="dispatch_window" name="dispatch_window" value={dispatchWindow} onChange={event => { setDispatchWindow(event.currentTarget.value); if (event.currentTarget.value !== "made-to-order") setDispatchCustom(""); }} required>
+        <label htmlFor="dispatch_window">How do you want to set your dispatch timeframe?</label>
+        <select id="dispatch_window" name="dispatch_window" value={dispatchWindow} onChange={event => { const next = event.currentTarget.value; setDispatchWindow(next); if (next !== "working-days" && next !== "made-to-order") setDispatchCustom(""); else if (next !== dispatchWindow) setDispatchCustom(""); }} required>
           <option value="" disabled>Choose a dispatch timeframe</option>
-          {(Object.entries(DISPATCH_WINDOW_LABELS) as [DispatchWindow, string][]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          {legacyDispatch && <option value={legacyDispatch}>{DISPATCH_WINDOW_LABELS[legacyDispatch]} (current setting)</option>}
+          <option value="working-days">Choose my number of working days</option>
+          <option value="made-to-order">Made to order / longer dispatch</option>
         </select>
-        {dispatchWindow === "made-to-order" && <><label htmlFor="dispatch_custom_timeframe">Made-to-order / longer timeframe</label><input id="dispatch_custom_timeframe" name="dispatch_custom_timeframe" value={dispatchCustom} onChange={event => setDispatchCustom(event.currentTarget.value)} maxLength={120} placeholder="e.g. Dispatch within 10–14 working days" required /><p className={styles.help}>Use the specific timeframe agreed with HolyHub. It will be shown to customers before purchase and saved with their order.</p></>}
+        {dispatchWindow === "working-days" && <>
+          <label htmlFor="dispatch_custom_timeframe">Dispatch within how many working days?</label>
+          <input id="dispatch_custom_timeframe" name="dispatch_custom_timeframe" type="number" inputMode="numeric" min="1" max="30" step="1" value={dispatchCustom} onChange={event => setDispatchCustom(event.currentTarget.value)} placeholder="e.g. 4" required />
+          <p className={styles.help}>Choose 1–30 working days. Customers will see this exact dispatch promise before purchase and it will be saved with their order.</p>
+        </>}
+        {dispatchWindow === "made-to-order" && <>
+          <label htmlFor="dispatch_custom_timeframe">Made-to-order / longer timeframe</label>
+          <input id="dispatch_custom_timeframe" name="dispatch_custom_timeframe" value={dispatchCustom} onChange={event => setDispatchCustom(event.currentTarget.value)} maxLength={120} placeholder="e.g. Dispatch within 10–14 working days" required />
+          <p className={styles.help}>Enter the specific timeframe customers should expect. It will be shown before purchase and saved with their order.</p>
+        </>}
       </div>
       <div className="field">
         <label htmlFor="delivery_mode">Delivery charge</label><select id="delivery_mode" value={deliveryMode} onChange={event => { setDeliveryMode(event.currentTarget.value); if (event.currentTarget.value === "free") setDeliveryCharge("0"); }}><option value="free">Free delivery</option><option value="flat">Set my own price</option></select>

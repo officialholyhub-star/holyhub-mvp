@@ -28,8 +28,9 @@ function query(result) {
 }
 const render = element => renderToStaticMarkup(element);
 const role = supabase => ({ requireRole: async () => ({ supabase, user: { id: 'owner' } }) });
-const client = result => ({ from: () => query(result), rpc: async () => ({ data: [], error: null }), auth: { getUser: async () => ({ data: { user: null } }) } });
+const client = result => ({ from: () => query(result), rpc: async () => ({ data: true, error: null }), auth: { getUser: async () => ({ data: { user: null } }) } });
 async function page(file, supabase, params = {}, dependencies = {}) {
+  if (typeof supabase.rpc !== 'function') supabase.rpc = async () => ({ data: true, error: null });
   return render(await load(file, { '@/lib/auth/require-user': role(supabase), '@/lib/supabase/server': { createClient: async () => supabase }, ...dependencies }).default({ searchParams: Promise.resolve(params), params: Promise.resolve({ id: 'shop' }) }));
 }
 const image = { default: props => React.createElement('img', props), __esModule: true };

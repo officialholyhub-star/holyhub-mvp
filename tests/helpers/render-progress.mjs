@@ -26,7 +26,11 @@ function query(result) {
 }
 const render = element => renderToStaticMarkup(element);
 const role = supabase => ({ requireRole: async () => ({ supabase, user: { id: 'owner' } }) });
-const client = result => ({ from: () => query(result), auth: { getUser: async () => ({ data: { user: null } }) } });
+const client = result => ({
+  from: () => query(result),
+  rpc: async () => ({ data: [], error: null }),
+  auth: { getUser: async () => ({ data: { user: null } }) },
+});
 async function page(file, supabase, params = {}, dependencies = {}) {
   return render(await load(file, { '@/lib/auth/require-user': role(supabase), '@/lib/supabase/server': { createClient: async () => supabase }, ...dependencies }).default({ searchParams: Promise.resolve(params), params: Promise.resolve({ id: 'shop' }) }));
 }

@@ -55,7 +55,7 @@ test('send failures show a useful error', async () => {
 });
 test('password validation preserves proof and never calls update for invalid input', async () => {
   const { actions, calls, jar } = setup();
-  assert.equal((await destination(actions.updatePassword, { ...passwords, password: 'short' })).searchParams.get('error'), 'Your password must be at least 8 characters.');
+  assert.equal((await destination(actions.updatePassword, { ...passwords, password: 'short' })).searchParams.get('error'), 'Your password must be at least 12 characters.');
   assert.equal((await destination(actions.updatePassword, { ...passwords, confirm_password: 'different' })).searchParams.get('error'), 'Your passwords don’t match.');
   assert.equal(calls.length, 0);
   assert.ok(jar.has(recovery.RECOVERY_COOKIE));
@@ -71,7 +71,7 @@ test('success updates, removes proof, signs out and returns to login with succes
   const { actions, calls, jar } = setup();
   const result = await destination(actions.updatePassword, passwords);
   assert.equal(result.pathname, '/auth/login');
-  assert.equal(result.searchParams.get('message'), 'Password updated successfully.');
+  assert.equal(result.searchParams.get('message'), 'Your password has been updated.');
   assert.equal(calls[0][0], 'update');
   assert.equal(calls[0][1].password, passwords.password);
   assert.equal(calls[1][0], 'signOut');

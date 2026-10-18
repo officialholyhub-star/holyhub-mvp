@@ -73,7 +73,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
         <section className={styles.application} aria-labelledby="lister-access-heading">
           <p className="eyebrow">Lister access</p>
           {listerApplication ? (
-            <><h2 id="lister-access-heading">Lister access</h2><p>Your lister application is pending.</p></>
+            <><h2 id="lister-access-heading">Lister access</h2><p>{listerApplication.status === "approved" ? "Your lister application has been approved. Lister access is still being activated." : "Your lister application is pending."}</p></>
           ) : (
             <><h2 id="lister-access-heading">Have a brand to share?</h2><Link className="text-link" href="/lister/apply">Apply to become a lister <span aria-hidden="true">→</span></Link></>
           )}

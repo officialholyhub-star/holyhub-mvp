@@ -25,6 +25,20 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Generate CRM migration artifact
+        if: github.ref == 'refs/heads/anais/n18-crm-sandbox'
+        env:
+          CRM_DATABASE_URL: postgresql://crm:crm@localhost:5432/holyhub_crm
+        run: npm run crm:generate
+
+      - name: Upload generated CRM migration artifact
+        if: github.ref == 'refs/heads/anais/n18-crm-sandbox'
+        uses: actions/upload-artifact@v4
+        with:
+          name: n18-crm-generated-migrations
+          path: db/crm/migrations
+          if-no-files-found: error
+
       - name: Contract and unit tests
         run: node --test tests/*.test.mjs
 

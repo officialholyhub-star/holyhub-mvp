@@ -2,7 +2,7 @@ name: HolyHub CI
 
 on:
   push:
-    branches: [main, alea/stage4-payments]
+    branches: [main, alea/stage4-payments, anais/n18-crm-sandbox]
   workflow_dispatch:
 
 jobs:
@@ -12,6 +12,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: https://ueqwzpuiuidihzhtbmvo.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_gqqRT-QTD1D1gAWLWr5Wig_LNMx7B44
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      CRM_ENVIRONMENT: sandbox
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

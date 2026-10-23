@@ -10,11 +10,16 @@
     "dev:codespace": "NEXT_PUBLIC_SITE_URL=https://${CODESPACE_NAME}-3000.app.github.dev next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "crm:generate": "drizzle-kit generate --config=drizzle.crm.config.ts",
+    "crm:migrate": "drizzle-kit migrate --config=drizzle.crm.config.ts",
+    "crm:check": "drizzle-kit check --config=drizzle.crm.config.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "1.2.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.116.0",
+    "drizzle-orm": "0.45.4",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -25,6 +30,7 @@
     "@types/node": "^22.15.30",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "drizzle-kit": "0.31.11",
     "eslint": "^9.35.0",
     "eslint-config-next": "16.3.4",
     "typescript": "^5.9.2"

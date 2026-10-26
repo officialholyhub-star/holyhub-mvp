@@ -35,6 +35,7 @@ export default async function AdminPage() {
         <span className="admin-summary">{applicationUnavailable || productUnavailable ? "Review counts unavailable" : `${(applicationCount ?? 0) + (productCount ?? 0)} reviews waiting`}</span>
       </div>
       <nav className="admin-tabs" aria-label="Admin workspace">
+        <Link href="/admin/security">Account security</Link>
         <Link className="is-active" href="/admin" aria-current="page">Overview</Link>
         <Link href="/admin/orders">Orders</Link>
         <Link href="/admin/analytics">Launch metrics</Link>

@@ -4,6 +4,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const protectedPrefixes = ["/account", "/lister", "/admin"];
 
 export async function updateSession(request: NextRequest) {
+  // Always overwrite caller-supplied values. Used only as a safe return path, never authorization.
+  request.headers.set("x-holyhub-request-path", `${request.nextUrl.pathname}${request.nextUrl.search}`);
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

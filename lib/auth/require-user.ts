@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { safeInternalPath } from "@/lib/auth/redirect";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { adminNextPath, getAdminMfaState, mfaPath } from "@/lib/auth/admin-mfa";
 
 export type AppRole = "customer" | "lister" | "admin";
 
@@ -34,7 +35,7 @@ export async function requireUser() {
   return { supabase, user };
 }
 
-export async function requireRole(role: AppRole) {
+async function requireRoleIdentity(role: AppRole) {
   const context = await requireUser();
   const { data, error } = await context.supabase
     .from("user_roles")
@@ -48,5 +49,23 @@ export async function requireRole(role: AppRole) {
     redirect("/account?error=You%20do%20not%20have%20access%20to%20that%20area.");
   }
 
+  return context;
+}
+
+// Bootstrap permission for MFA pages/actions ONLY; never use for admin data or mutations.
+export async function requireAdminMfaIdentity() {
+  return requireRoleIdentity("admin");
+}
+
+export async function requireRole(role: AppRole) {
+  const context = await requireRoleIdentity(role);
+  if (role === "admin") {
+    const state = await getAdminMfaState(context.supabase);
+    if (!state.isAal2) {
+      const requestHeaders = await headers();
+      const next = adminNextPath(requestHeaders.get("x-holyhub-request-path"));
+      redirect(mfaPath(state.factors.length ? "challenge" : "setup", next));
+    }
+  }
   return context;
 }

@@ -9,15 +9,18 @@ async function visit(path, signedIn = false) {
   const exports = {};
   vm.runInNewContext(code, { exports, process: { env: {} }, require: name => {
     if (name === '@supabase/ssr') return { createServerClient: () => ({ auth: { getClaims: async () => ({ data: { claims: signedIn ? { sub: 'user' } : {} } }) } }) };
-    if (name === 'next/server') return { NextResponse: { next: () => ({ status: 200 }), redirect: url => ({ status: 307, location: url.toString() }) } };
+    if (name === 'next/server') return { NextResponse: { next: ({ request }) => ({ status: 200, requestPath: request.headers.get('x-holyhub-request-path') }), redirect: url => ({ status: 307, location: url.toString() }) } };
     throw new Error(`Unexpected import ${name}`);
   } });
   const url = new URL(path, 'https://example.com');
   url.clone = () => new URL(url);
-  return exports.updateSession({ nextUrl: url, cookies: { getAll: () => [] } });
+  return exports.updateSession({ nextUrl: url, headers: new Headers({ 'x-holyhub-request-path': '//evil.test' }), cookies: { getAll: () => [] } });
 }
 test('anonymous visitors can view the public storefront with or without a trailing slash', async () => {
   for (const path of ['/lister/storefront/seller-id', '/lister/storefront/seller-id/']) assert.equal((await visit(path)).status, 200);
+});
+test('proxy overwrites spoofed MFA return path with the current route and query', async () => {
+  assert.equal((await visit('/admin/products?status=pending', true)).requestPath, '/admin/products?status=pending');
 });
 test('storefront editing and all other lister/admin/customer account routes remain protected', async () => {
   for (const path of ['/lister', '/lister/storefront', '/lister/storefront/', '/lister/storefront/id/edit', '/lister/orders', '/lister/products/new', '/admin/products', '/account/orders']) {

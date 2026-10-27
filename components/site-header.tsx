@@ -23,7 +23,7 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header">
-      {user && <CustomerSetupReminder userId={user.id} />}
+      {user && <CustomerSetupReminder userId={user.id} setupComplete={user.user_metadata?.customer_setup_complete === true} />}
       <div className="site-header-inner">
         <Link className="home-nav-button" href="/" aria-label="Home">
           <HolyHubIcon name="home" />

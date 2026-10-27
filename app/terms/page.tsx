@@ -5,7 +5,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Customer Terms & Conditions"
-      intro="These terms explain how HolyHub works, who you are buying from and the rules that apply when you use the marketplace."
+      intro="Pre-launch draft, subject to professional legal review before launch. These terms explain how HolyHub works, who you are buying from and the rules that apply when you use the marketplace."
     >
       <LegalSection title="1. Who operates HolyHub">
         <p>HolyHub is operated by Alea Daniel, a sole trader trading as HolyHub.</p>
@@ -26,7 +26,7 @@ export default function TermsPage() {
       </LegalSection>
 
       <LegalSection title="5. Payment">
-        <p>Payments are processed securely through HolyHub&apos;s payment provider. HolyHub may receive customer payment on behalf of the relevant lister and account to that lister after applicable HolyHub fees, refunds, chargebacks and reserves.</p>
+        <p>Payments are processed through Stripe. A basket containing products from several listers uses one customer payment. HolyHub uses Stripe Connect separate charges and transfers, with a separate allocation for each seller. Eligible seller proceeds are transferred only after that seller’s portion is confirmed delivered or completed; another seller’s completion does not release those proceeds.</p>
       </LegalSection>
 
       <LegalSection title="6. Delivery">
@@ -36,6 +36,7 @@ export default function TermsPage() {
 
       <LegalSection title="7. Cancellations, returns and refunds">
         <p>Your legal rights are not reduced by these terms. For eligible online purchases, you may have a right to cancel after delivery. Separate rules and exceptions apply to some products, including personalised, perishable and certain sealed hygiene goods.</p>
+        <p>A partial refund applies to the affected seller, product or delivery amount. HolyHub’s 5% product commission is credited proportionally when product value is refunded; delivery-only refunds do not change commission. Seller transfers, recovery and internal fees do not reduce a refund properly due to you or your statutory rights.</p>
         <p>Physical returns are normally sent to the lister who sold the product, using the return address or instructions they provide. Do not send product returns to HolyHub&apos;s business contact address unless HolyHub specifically tells you to do so.</p>
         <p>See our <Link className="text-link" href="/returns">Returns & Refunds Policy</Link>.</p>
       </LegalSection>

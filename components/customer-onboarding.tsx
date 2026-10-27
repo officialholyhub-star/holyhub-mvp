@@ -53,7 +53,7 @@ export function CustomerOnboarding({ error, userId, editPreferences = false }: {
   function go(next: number) { setDirection(next < step ? "backward" : "forward"); setStep(next); }
   function advance(skip = false) {
     if (step === 1 && !skip && chosen.length === 0) return;
-    const progress = { ...done, [step === 1 ? "interests" : "faith"]: !skip && (step === 1 ? chosen.length > 0 : faith !== null) };
+    const progress = { ...done, [step === 1 ? "interests" : "faith"]: true };
     setDone(progress);
     if (skip) { if (step === 1) setChosen([]); else setFaith(null); }
     if (userId && step === 2) {
@@ -90,6 +90,7 @@ export function CustomerOnboarding({ error, userId, editPreferences = false }: {
             <form className="form" onSubmit={event => {
               event.preventDefault();
               const formData = new FormData(event.currentTarget);
+              formData.set("customer_setup_complete", String(done.interests && done.faith));
               startTransition(() => formAction(formData));
             }}>
               <div className="field"><label htmlFor="full_name">Name</label><input id="full_name" name="full_name" autoComplete="name" value={fields.full_name} onChange={event => setFields(current => ({ ...current, full_name: event.target.value }))} maxLength={100} required /></div>

@@ -1,3 +1,4 @@
+import { loadListerActivation } from "@/lib/lister-activation";
 import { ListingStage } from "@/components/listing-stage";
 import { ClearDraft } from "@/components/draft-form";
 import Link from "next/link";
@@ -36,7 +37,7 @@ export default async function ListerProductsPage({ searchParams }: { searchParam
       {countError || productCount == null ? <p role="alert">Listing count unavailable. Refresh to try again.</p> : <p className="notice notice-info">{(productCount ?? 0) < 10 ? `${productCount ?? 0} of your 10 free listings used · ${10 - (productCount ?? 0)} remaining.` : productCount === 10 ? "Your 10 free listings are used." : `Your first 10 listings are free; ${(productCount ?? 0) - 10} ${(productCount ?? 0) - 10 === 1 ? "listing is" : "listings are"} beyond your free allowance.`} Additional listings are £0.20 each; billing is not enabled in this stage.</p>}
       {productsError ? <p className="notice notice-error" role="alert">Your products could not be loaded. Please refresh to try again.</p> : products?.length ? (
         <div className="product-list">
-          <ListingStage products={products} />
+          <ListingStage products={products} publiclyAvailable={(await loadListerActivation(supabase, user.id)).ready} />
           {products.map((product) => (
             <article className="product-row" key={product.id}>
               <div>

@@ -11,6 +11,8 @@ import { MAX_BASKET_ITEMS, MAX_BASKET_QUANTITY } from "@/lib/basket";
 import { calculateCheckoutTotals, calculateHolyHubCommission, toPence } from "@/lib/checkout-pricing";
 import { SELLER_LEGAL_FIELDS, sellerLegalProfileComplete, type SellerLegalProfile } from "@/lib/seller-legal";
 
+import { deliveryPostcode, NI_DELIVERY_MESSAGE, readDeliveryAddress, singleText } from "@/lib/delivery-territory";
+
 type SubmittedItem = { id: unknown; quantity: unknown; variantId?: unknown };
 
 function checkoutError(message: string): never {
@@ -32,9 +34,16 @@ function parseBasket(value: string) {
 }
 
 export async function startCheckout(formData: FormData) {
-  if (formData.get("accept_terms") !== "on") checkoutError("Please agree to the HolyHub terms before checkout.");
-  const basket = parseBasket(typeof formData.get("basket") === "string" ? formData.get("basket") as string : "");
+  if (singleText(formData, "accept_terms") !== "on") checkoutError("Please agree to the HolyHub terms before checkout.");
+  const basket = parseBasket(singleText(formData, "basket") ?? "");
   if (!basket) checkoutError("Your basket is invalid. Please review it and try again.");
+
+  const postcode = singleText(formData, "delivery_postcode");
+  if (postcode && deliveryPostcode(postcode).territory === "ni") {
+    checkoutError(`${NI_DELIVERY_MESSAGE} HolyHub is launching delivery to England, Scotland and Wales first. Request Northern Ireland shipping from your basket.`);
+  }
+  const deliveryAddress = readDeliveryAddress(formData);
+  if (!deliveryAddress) checkoutError("Please enter a valid delivery address in England, Scotland or Wales. Other delivery territories are not supported yet.");
 
   const { supabase, user } = await requireUser();
   const requestedQuantities = new Map<string, { id: string; quantity: number; variantId?: string }>();
@@ -67,6 +76,19 @@ export async function startCheckout(formData: FormData) {
     checkoutError("One or more sellers are not currently verified for customer sales. Please review your basket or try again later.");
   }
 
+  // Use database gates independently of product RLS: listers/admins can read
+  // products that are unavailable to ordinary customers.
+  const readiness = await Promise.all(listerIds.map(async id => {
+    const [dispatch, terms] = await Promise.all([
+      supabase.rpc("seller_dispatch_is_ready", { p_user_id: id }),
+      supabase.rpc("seller_terms_are_current", { p_user_id: id }),
+    ]);
+    return !dispatch.error && dispatch.data === true && !terms.error && terms.data === true;
+  }));
+  if (readiness.some(ready => !ready)) {
+    checkoutError("One or more sellers are not currently ready for customer sales. Please review your basket or try again later.");
+  }
+
   const lines = normalizedBasket.map(({ id, quantity, variantId }) => {
     const product = productMap.get(id);
     const listerId = product?.lister_user_id ?? "";
@@ -92,8 +114,10 @@ export async function startCheckout(formData: FormData) {
   const totals = calculateCheckoutTotals(trustedLines);
   if (!totals) checkoutError("Your basket total is too large to process.");
   const { productSubtotal, deliveryGroups, deliveryTotal, total } = totals;
-  const holyhubCommission = calculateHolyHubCommission(productSubtotal);
-  if (holyhubCommission === null) checkoutError("Your basket total is too large to process.");
+  const sellerProductTotals = new Map<string, number>();
+  for (const line of trustedLines) sellerProductTotals.set(line.listerId, (sellerProductTotals.get(line.listerId) ?? 0) + line.lineTotal);
+  const holyhubCommission = [...sellerProductTotals.values()].reduce((sum, value) => sum + (calculateHolyHubCommission(value) ?? NaN), 0);
+  if (!Number.isSafeInteger(holyhubCommission)) checkoutError("Your basket total is too large to process.");
   const sellerAmount = productSubtotal - holyhubCommission;
 
   const stripe = getStripe();
@@ -107,7 +131,6 @@ export async function startCheckout(formData: FormData) {
       mode: "payment",
       line_items: [...lineItems, ...deliveryItems],
       customer_email: user.email ?? undefined,
-      shipping_address_collection: { allowed_countries: ["GB"] },
       ...redirectUrls,
       metadata: {
         holyhub_user_id: user.id,
@@ -138,6 +161,7 @@ export async function startCheckout(formData: FormData) {
 
   const { data: checkoutRecord, error: checkoutErrorResult } = await admin.from("checkout_sessions").insert({
     user_id: user.id,
+    delivery_address: deliveryAddress,
     stripe_checkout_session_id: session.id,
     amount_total: total,
     currency: "GBP",
@@ -147,7 +171,7 @@ export async function startCheckout(formData: FormData) {
     seller_amount_total: sellerAmount,
   }).select("id").single();
   if (checkoutErrorResult || !checkoutRecord) {
-    console.error("Checkout session database insert failed", checkoutErrorResult);
+    console.error("Checkout session database insert failed", { code: checkoutErrorResult?.code });
     try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
     checkoutError("We couldn't prepare your checkout. Please try again.");
   }

@@ -4,8 +4,9 @@ import { loadTypescript } from "./helpers/load-typescript.mjs";
 
 function actionFor(owner = "seller-a", existing = { fulfilment_status: "packed", dispatched_at: null, delivered_at: null }) {
   const updates = [];
+  const refunds = [];
   const invalidated = [];
-  const db = { from(table) {
+  const db = { rpc: async (name, args) => { refunds.push({ name, args }); return { data: "refund-operation", error: null }; }, from(table) {
     assert.equal(table, "seller_orders");
     const filters = {};
     let values;
@@ -26,7 +27,7 @@ function actionFor(owner = "seller-a", existing = { fulfilment_status: "packed",
     "next/cache": { revalidatePath: path => invalidated.push(path) },
     "next/navigation": { redirect: location => { throw new Error(location); } },
   });
-  return { run: updateSellerFulfilment, updates, invalidated };
+  return { run: updateSellerFulfilment, updates, invalidated, refunds };
 }
 
 function form(status = "packed") {
@@ -36,7 +37,7 @@ function form(status = "packed") {
 }
 
 test("status actions preserve stored enums and ownership; only dispatch writes delivery fields", async () => {
-  for (const [current, status] of [["pending", "packed"], ["packed", "dispatched"], ["dispatched", "delivered"], ["packed", "cancelled"]]) {
+  for (const [current, status] of [["pending", "packed"], ["packed", "dispatched"], ["dispatched", "delivered"]]) {
     const action = actionFor("seller-a", { fulfilment_status: current });
     await assert.rejects(action.run(form(status)), /Fulfilment%20updated/);
     const { values, filters } = action.updates[0];
@@ -157,9 +158,11 @@ test("cancellation needs a valid reason, custom explanation for Other, and final
     assert.equal(action.updates.length, 0);
   }
   const action = actionFor(); const data = form("cancelled"); data.set("cancellation_reason", "other"); data.set("cancellation_custom_reason", "Wrong item ordered");
-  await assert.rejects(action.run(data), /Fulfilment%20updated/);
-  assert.equal(action.updates[0].values.fulfilment_status, "cancelled");
-  assert.equal("fulfilment_note" in action.updates[0].values, false);
+  await assert.rejects(action.run(data), /Refund%20queued/);
+  assert.equal(action.updates.length, 0);
+  assert.deepEqual(JSON.parse(JSON.stringify(action.refunds[0])), { name: "cancel_seller_order_with_refund", args: {
+    p_seller_order_id: "order-a", p_expected_status: "packed", p_reason: "other: Wrong item ordered",
+  } });
 });
 
 test("cancelled orders cannot be restored through status or correction actions", async () => {

@@ -22,11 +22,11 @@ export function catalogueCounts(products: { review_status: string; is_published:
 export function listerReadiness(applications: { user_id: string }[], roles: { user_id: string }[], shops: { user_id: string }[], products: { lister_user_id: string; review_status: string; is_published: boolean }[]) {
   const accounts = new Set([...applications, ...roles].map(row => row.user_id));
   const savedShops = new Set(shops.map(row => row.user_id));
-  const liveAccounts = new Set(products.filter(row => row.review_status === "approved" && row.is_published).map(row => row.lister_user_id));
+  const preparedAccounts = new Set(products.filter(row => row.review_status === "approved" && row.is_published).map(row => row.lister_user_id));
   return {
     total: accounts.size,
     setupNeeded: [...accounts].filter(id => !savedShops.has(id)).length,
-    live: [...accounts].filter(id => savedShops.has(id) && liveAccounts.has(id)).length,
-    notLive: [...accounts].filter(id => savedShops.has(id) && !liveAccounts.has(id)).length,
+    prepared: [...accounts].filter(id => savedShops.has(id) && preparedAccounts.has(id)).length,
+    notPrepared: [...accounts].filter(id => savedShops.has(id) && !preparedAccounts.has(id)).length,
   };
 }

@@ -79,7 +79,9 @@ export async function signup(formData: FormData): Promise<{ error?: string; next
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      // Participation only: optional answers never leave the signup component.
+      // Saved with the user before email confirmation; independent of browser storage.
+      data: { full_name: fullName, customer_setup_complete: formData.get("customer_setup_complete") === "true" },
       emailRedirectTo: `${siteUrl}/auth/callback?next=/account`,
     },
   });

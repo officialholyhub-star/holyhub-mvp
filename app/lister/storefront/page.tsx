@@ -5,7 +5,8 @@ import { StorefrontForm } from "@/components/storefront-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function StorefrontPage() {
+export default async function StorefrontPage({ searchParams }: { searchParams: Promise<{ onboarding?: string }> }) {
+  const params = await searchParams;
   const { supabase, user } = await requireRole("lister");
   const { data: storefront, error } = await supabase.from("lister_storefronts").select("business_name, description, category_type, website_url, instagram_url, logo_url, delivery_option, delivery_charge, dispatch_window, dispatch_custom_timeframe").eq("user_id", user.id).maybeSingle();
 
@@ -18,7 +19,7 @@ export default async function StorefrontPage() {
           <h2>{storefront ? "Storefront details" : "Set up your shop"}</h2>
           <p>{storefront ? "This information is shown with your published products." : "Add your shop name, description and delivery details before listing your first product."}</p>
         </div>
-        <StorefrontForm action={saveStorefront} userId={user.id} storefront={storefront} />
+        <StorefrontForm action={saveStorefront} userId={user.id} storefront={storefront} onboarding={params.onboarding === "1"} />
       </div>
     </section>
   );

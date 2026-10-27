@@ -25,8 +25,8 @@ function messageUrl(kind: "error" | "message", message: string) {
   return `/lister/apply?${kind === "error" ? "edit=1&" : ""}${kind}=${encodeURIComponent(message)}`;
 }
 
-function legalDetailsUrl(kind: "error" | "message", message: string) {
-  return `/lister/legal-details?${kind}=${encodeURIComponent(message)}`;
+function legalDetailsUrl(kind: "error" | "message", message: string, onboarding = false) {
+  return `/lister/legal-details?${onboarding ? "onboarding=1&" : ""}${kind}=${encodeURIComponent(message)}`;
 }
 
 function isValidEmail(email: string) {
@@ -81,13 +81,14 @@ async function saveLegalProfileForUser(userId: string, input: SellerLegalInput) 
 
 export async function saveSellerLegalProfile(formData: FormData) {
   const { user } = await requireRole("lister");
+  const onboarding = formData.get("onboarding") === "1";
   const sellerLegal = sellerLegalFromFormData(formData);
   const legalError = sellerLegalValidationError(sellerLegal);
-  if (legalError) redirect(legalDetailsUrl("error", legalError));
+  if (legalError) redirect(legalDetailsUrl("error", legalError, onboarding));
   const saved = await saveLegalProfileForUser(user.id, sellerLegal);
   if (saved.error) {
     console.error("Seller legal profile save failed", { code: saved.error.code, message: saved.error.message });
-    redirect(legalDetailsUrl("error", "We couldn't save your seller details. Please try again."));
+    redirect(legalDetailsUrl("error", "We couldn't save your seller details. Please try again.", onboarding));
   }
   revalidatePath("/lister/legal-details");
   revalidatePath("/lister");
@@ -95,6 +96,7 @@ export async function saveSellerLegalProfile(formData: FormData) {
   revalidatePath(`/lister/storefront/${user.id}`);
   revalidatePath("/admin/listers");
   revalidatePath("/admin/applications");
+  if (onboarding) redirect("/lister/onboarding");
   redirect(legalDetailsUrl("message", saved.changed ? "Seller details saved and sent for review." : "Your seller details are already up to date."));
 }
 

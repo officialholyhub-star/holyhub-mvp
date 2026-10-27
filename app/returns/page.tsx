@@ -19,6 +19,7 @@ export default function ReturnsPage() {
       </LegalSection>
 
       <LegalSection title="4. Refunds after a valid cancellation">
+        <p>For a multi-seller order, a partial refund covers the affected items, seller portion or delivery amount. HolyHub’s internal commission credit, seller transfer reversal or same-seller recovery must not reduce a customer refund properly due. Seller liquidity must not delay a properly due refund. Faulty or damaged returns are not automatically restored to sellable stock.</p>
         <p>The seller must reimburse the payments required by law without undue delay. This includes the cost of the least expensive common and generally acceptable delivery option offered by the seller; any extra amount paid for a more expensive delivery option does not have to be reimbursed.</p>
         <p>Where the seller has not offered to collect the goods, the refund must be made no later than 14 days after the seller receives the goods back or, if earlier, after the customer supplies evidence that the goods were sent back. In other cases, the refund must be made no later than 14 days after the seller is informed of the cancellation. The refund must use the same payment method unless the customer expressly agrees otherwise, and no refund fee may be imposed.</p>
         <p>The seller may be able to deduct an amount for diminished value caused by handling beyond what is necessary to establish the nature, characteristics and functioning of the goods, where the law allows.</p>
@@ -46,7 +47,7 @@ export default function ReturnsPage() {
       </LegalSection>
 
       <LegalSection title="8. How to request help">
-        <p>Until HolyHub&apos;s in-app refund workflow is launched, marketplace support can be requested by emailing <a className="text-link" href="mailto:official.holyhub@gmail.com">official.holyhub@gmail.com</a>. Include your order details and the seller or product involved.</p>
+        <p>Marketplace cancellations and refunds are reviewed and processed through HolyHub support. You can request support by emailing <a className="text-link" href="mailto:official.holyhub@gmail.com">official.holyhub@gmail.com</a>. Include your order details and the seller or product involved.</p>
       </LegalSection>
     </LegalPage>
   );

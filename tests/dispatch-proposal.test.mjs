@@ -95,6 +95,7 @@ async function webhook(file, timingError = false, eventType = input.eventType, p
   const calls = [];
   const session = { id: input.sessionId, payment_status: paymentStatus, amount_total: 7200, currency: 'gbp', payment_intent: 'pi_fixture' };
   const { POST } = moduleFrom(file, {
+    '@/lib/stripe-processing-fee': { getStripeProcessingFee: async () => null },
     '@/lib/dispatch-promise': helper,
     'next/server': { NextResponse: { json: (value, options) => Response.json(value, options) } },
     '@/lib/stripe': { getStripe: () => ({ webhooks: { constructEvent: () => ({ id: input.eventId, created: input.eventCreated, type: eventType, livemode: false, data: { object: session } }) } }) },

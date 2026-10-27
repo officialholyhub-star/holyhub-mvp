@@ -13,6 +13,8 @@ import { BASKET_STORAGE_KEY, MAX_BASKET_QUANTITY, type BasketItem } from "@/lib/
 import { variantLineKey } from "@/lib/product-variants";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import { deliveryPostcode, NI_DELIVERY_MESSAGE } from "@/lib/delivery-territory";
+
 type BasketViewProps = { error?: string };
 async function loadAvailability(ids: string[]) {
   return createClient().from("products")
@@ -49,6 +51,9 @@ export function BasketView({ error }: BasketViewProps) {
   const [availableProducts, setAvailableProducts] = useState<BasketProduct[] | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string>();
+  const [postcode, setPostcode] = useState("");
+  const niPostcode = deliveryPostcode(postcode);
+  const isNorthernIreland = niPostcode.territory === "ni";
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [sellerDetailsReady, setSellerDetailsReady] = useState<Record<string, boolean>>({});
   const firstWarning = useRef<HTMLElement | null>(null);
@@ -138,6 +143,7 @@ export function BasketView({ error }: BasketViewProps) {
   }
 
   async function checkout(formData: FormData) {
+    if (isNorthernIreland) { setCheckoutError(NI_DELIVERY_MESSAGE); return; }
     if (!allSellerDetailsReady) {
       setCheckoutError("Seller details must be verified before checkout.");
       return;
@@ -208,12 +214,28 @@ export function BasketView({ error }: BasketViewProps) {
             <div className="meta-row"><span className="meta-label">Total</span><strong>£{total.toFixed(2)}</strong></div>
             <form action={checkout}>
               <input type="hidden" name="basket" value={basketPayload} />
+              <fieldset className="form">
+                <legend>Delivery address</legend>
+                <p>Delivery to England, Scotland and Wales only.</p>
+                <label>Recipient name<input name="delivery_recipient_name" autoComplete="shipping name" required maxLength={200} /></label>
+                <label>Address line 1<input name="delivery_address_line1" autoComplete="shipping address-line1" required maxLength={200} /></label>
+                <label>Address line 2 (optional)<input name="delivery_address_line2" autoComplete="shipping address-line2" maxLength={200} /></label>
+                <label>Town/city<input name="delivery_city" autoComplete="shipping address-level2" required maxLength={200} /></label>
+                <label>Postcode<input name="delivery_postcode" autoComplete="shipping postal-code" required maxLength={12} value={postcode} onChange={event => setPostcode(event.target.value)} /></label>
+                <input type="hidden" name="delivery_country" value="GB" />
+                <p>Country: United Kingdom — England, Scotland and Wales</p>
+              </fieldset>
+              {isNorthernIreland && <div className="notice" role="status">
+                <p>{NI_DELIVERY_MESSAGE}</p><p>HolyHub is launching delivery to England, Scotland and Wales first.</p>
+                <Link className="button button-secondary" href={`/shipping/northern-ireland?area=${encodeURIComponent(niPostcode.outward!)}`}>Request Northern Ireland shipping</Link>
+              </div>}
               <label className="terms-consent">
                 <input type="checkbox" name="accept_terms" checked={termsAccepted} onChange={event => setTermsAccepted(event.target.checked)} required />
                 <span>I agree to the <Link href="/terms">Customer Terms</Link>, <Link href="/shipping">Shipping Policy</Link> and <Link href="/returns">Returns Policy</Link>.</span>
               </label>
-              <button className="button button-primary checkout-button" type="submit" disabled={checking || !allSellerDetailsReady}>{checking ? "Checking basket…" : !allSellerDetailsReady ? "Checking seller details…" : "Proceed to secure checkout"}</button>
+              <button className="button button-primary checkout-button" type="submit" disabled={checking || !allSellerDetailsReady || isNorthernIreland}>{checking ? "Checking basket…" : !allSellerDetailsReady ? "Checking seller details…" : "Proceed to secure checkout"}</button>
             </form>
+            <p><Link href="/shipping/northern-ireland">Request Northern Ireland shipping</Link></p>
             <p className="muted-small">Prices are rechecked securely before payment.</p>
           </aside>
         </div>

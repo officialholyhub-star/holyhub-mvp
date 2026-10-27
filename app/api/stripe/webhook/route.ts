@@ -72,6 +72,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
   }
 
+  if (["refund.created", "refund.updated", "refund.failed", "transfer.created", "transfer.updated", "transfer.reversed"].includes(event.type)) {
+    try {
+      const { processFinancialWebhook } = await import("@/lib/payment-operations");
+      await processFinancialWebhook(event);
+      return NextResponse.json({ received: true });
+    } catch {
+      console.error("Financial webhook reconciliation failed", { eventId: event.id, eventType: event.type });
+      return NextResponse.json({ error: "Financial event requires reconciliation." }, { status: 500 });
+    }
+  }
+
   if (event.type === "charge.updated" || event.type === "charge.succeeded") {
     try {
       await reconcileChargeFee(event.data.object as Stripe.Charge);
@@ -105,8 +116,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const shippingDetails = session.collected_information?.shipping_details;
-    const address = shippingDetails?.address;
     const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
     const admin = createAdminClient();
     const { data: orderId, error } = await admin.rpc("process_checkout_payment", {
@@ -116,14 +125,7 @@ export async function POST(request: Request) {
       p_amount_total: session.amount_total,
       p_currency: session.currency,
       p_payment_intent_id: paymentIntentId,
-      p_delivery_address: {
-        delivery_recipient_name: shippingDetails?.name ?? null,
-        delivery_address_line1: address?.line1 ?? null,
-        delivery_address_line2: address?.line2 ?? null,
-        delivery_city: address?.city ?? null,
-        delivery_postcode: address?.postal_code ?? null,
-        delivery_country: address?.country ?? null,
-      },
+      p_delivery_address: {}, // The database uses the immutable HolyHub checkout snapshot.
     });
     if (error) {
       console.error("Stripe checkout transaction failed", { ...context, status, code: error.code, reason: databaseFailureReason(error.code, error.message) });

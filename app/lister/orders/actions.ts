@@ -56,8 +56,7 @@ export async function updateSellerFulfilment(formData: FormData) {
   if (intent === "status" && status === "cancelled") {
     if (!validCancellationReason(clean(formData.get("cancellation_reason")), clean(formData.get("cancellation_custom_reason")))) redirect(errorMessage("Choose a cancellation reason. Other needs a short explanation."));
     if (clean(formData.get("cancellation_confirmation")) !== "final") redirect(errorMessage("Complete both cancellation confirmations first."));
-    // seller_orders has no dedicated cancellation audit columns. Do not overwrite
-    // private notes or the parent order's cancellation date with seller audit data.
+    // The guarded cancellation RPC stores the reason with the refund operation.
   }
   if (intent === "status") {
     const next = existing.fulfilment_status === "pending" ? ["packed", "cancelled"] : existing.fulfilment_status === "packed" ? ["dispatched", "cancelled"] : existing.fulfilment_status === "dispatched" ? ["delivered"] : [];
@@ -70,6 +69,20 @@ export async function updateSellerFulfilment(formData: FormData) {
   const statusChange = intent === "status" || intent === "correction";
   const expectedStatus = clean(formData.get("expected_status"));
   if (statusChange && expectedStatus && expectedStatus !== existing.fulfilment_status) redirect(errorMessage("This order has changed. Refresh before updating it."));
+  if (intent === "status" && status === "cancelled") {
+    const reason = clean(formData.get("cancellation_reason"));
+    const explanation = clean(formData.get("cancellation_custom_reason"));
+    const { error } = await supabase.rpc("cancel_seller_order_with_refund", {
+      p_seller_order_id: sellerOrderId,
+      p_expected_status: existing.fulfilment_status,
+      p_reason: explanation ? `${reason}: ${explanation}` : reason,
+    });
+    if (error) redirect(errorMessage("Cancellation could not be recorded. Ask HolyHub to review any existing refund."));
+    revalidatePath("/lister/orders");
+    revalidatePath("/lister");
+    revalidatePath("/account/orders");
+    redirect("/lister/orders?message=Cancellation%20recorded.%20Refund%20queued%20for%20processing.");
+  }
   const metadata = { carrier: carrier || null, carrier_other: carrier === "Other" ? carrierOther : null, tracking_number: trackingNumber || null, tracking_url: trackingUrl || null };
   const dispatchedAt = status === "dispatched" ? existing.dispatched_at ?? new Date().toISOString() : existing.dispatched_at;
   const deliveredAt = status === "delivered" ? existing.delivered_at ?? new Date().toISOString() : null;

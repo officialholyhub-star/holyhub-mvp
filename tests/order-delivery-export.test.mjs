@@ -112,7 +112,7 @@ function exportRoute() {
   const db = database(tables);
   return load('app/lister/orders/export/route.ts', { 'next/server': next, '@/lib/auth/require-user': { requireRole: async role => { assert.equal(role, 'lister'); return { supabase: db, user: { id: 'seller-a' } }; } }, '@/lib/supabase/admin': { createAdminClient: () => db }, '@/lib/fulfilment': fulfilment }).GET;
 }
-test('paid webhook passes real shipping fields to the atomic order transaction', async () => {
+test('paid webhook leaves delivery address selection to the trusted database snapshot', async () => {
   const calls = [];
   const db = { rpc: async (name, args) => { calls.push({ name, args }); return { data: 'order-test', error: null }; } };
   const session = { id: 'stripe-session', payment_intent: 'pi_shipping_fixture', payment_status: 'paid', currency: 'gbp', amount_total: 1200, collected_information: { shipping_details: { name: 'Recipient', address: { line1: '10 Real Road', line2: 'Flat 2', city: 'London', postal_code: 'SW1A 1AA', country: 'GB' } } } };
@@ -120,12 +120,12 @@ test('paid webhook passes real shipping fields to the atomic order transaction',
   const response = await POST(new Request('https://example.com/webhook', { method: 'POST', headers: { 'stripe-signature': 'test' }, body: '{}' }));
   assert.equal(response.status, 200);
   assert.equal(calls[0].name, 'process_checkout_payment');
-  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].args.p_delivery_address)), address);
-  // Older Checkout Sessions may contain no shipping information; never fabricate it.
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0].args.p_delivery_address)), {});
+  // Stripe shipping information is never an address source, including older sessions.
   delete session.collected_information;
   const withoutShipping = await POST(new Request('https://example.com/webhook', { method: 'POST', headers: { 'stripe-signature': 'test' }, body: '{}' }));
   assert.equal(withoutShipping.status, 200);
-  for (const key of Object.keys(address)) assert.equal(calls[1].args.p_delivery_address[key], null);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[1].args.p_delivery_address)), {});
 });
 test('selected export accepts repeated and comma-separated IDs but excludes another seller and shared-order items', async () => {
   for (const ids of [`ids=${ownId}&ids=${otherId}`, `ids=${ownId},${otherId}`]) {
@@ -162,7 +162,8 @@ test('customer page filters to its owner and the migration retains customer/sell
   assert.ok(migration.includes("private.has_role('admin')"));
   assert.ok(migration.includes("set search_path = ''"));
   assert.ok(migration.includes('from public, anon'));
-  assert.ok(fs.readFileSync('app/checkout/actions.ts', 'utf8').includes('shipping_address_collection: { allowed_countries: ["GB"] }'));
+  assert.ok(!fs.readFileSync('app/checkout/actions.ts', 'utf8').includes('shipping_address_collection:'));
+  assert.ok(fs.readFileSync('app/checkout/actions.ts', 'utf8').includes('delivery_address: deliveryAddress'));
 });
 
 test('lister page shows only its delivery address, items and selected-order controls', async () => {

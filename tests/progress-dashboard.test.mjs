@@ -24,9 +24,11 @@ test('no shop always offers setup even with submitted products or stale cookie',
   const html = await page('app/lister/page.tsx', listerClient({ shop: null, products: [product('old', 'pending')] }), {}, dependencies);
   assert.match(html, /Continue shop setup/); assert.doesNotMatch(html, /Your shop is saved/);
 });
-test('returning lister skips completed introductions; active setup handoff remains available', async () => {
+test('returning lister keeps activation requirements visible regardless of cookie or products', async () => {
   for (const [cookie, products] of [[undefined, []], ['2:later', []], ['3:later', [product('draft', 'draft')]], ['4:later', [product('live', 'approved', true)]]]) {
-    await assert.rejects(page('app/lister/onboarding/page.tsx', listerClient({ products }), {}, { ...dependencies, 'next/headers': { cookies: async () => ({ get: () => cookie && { value: cookie } }) } }), /redirect:\/lister$/);
+    const html = await page('app/lister/onboarding/page.tsx', listerClient({ products }), {}, { ...dependencies, 'next/headers': { cookies: async () => ({ get: () => cookie && { value: cookie } }) } });
+    assert.match(html, /Activation requirements/);
+    assert.match(html, /Seller details needed/);
   }
   const handoff = await page('app/lister/onboarding/page.tsx', listerClient(), {}, { ...dependencies, 'next/headers': { cookies: async () => ({ get: () => ({ value: '3:later' }) }) } });
   assert.match(handoff, /Shop saved/); assert.match(handoff, /Continue/);
@@ -40,7 +42,7 @@ test('success revisits for approved/rejected users never claim a new submission'
 });
 test('mixed catalogue surfaces every relevant stage and saved rejection feedback', () => {
   const { ListingStage } = load('components/listing-stage.tsx');
-  const html = render(React.createElement(ListingStage, { products: [product('draft', 'draft'), product('waiting', 'pending'), product('returned', 'rejected'), product('hidden', 'approved'), product('live', 'approved', true)] }));
+  const html = render(React.createElement(ListingStage, { publiclyAvailable: true, products: [product('draft', 'draft'), product('waiting', 'pending'), product('returned', 'rejected'), product('hidden', 'approved'), product('live', 'approved', true)] }));
   for (const text of ['saved as drafts', 'Some products are awaiting HolyHub review', 'Please add a clear cover photo', 'Edit product', 'hidden approved products', '1 product is live', 'No resubmission is needed for products awaiting review']) assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /None of your products are currently live/);
 });
@@ -71,7 +73,7 @@ test('admin overview uses recorded portion counts and correct filter destination
   const html = await page('app/admin/page.tsx', adminClient());
   assert.match(html, /6 reviews waiting/); assert.match(html, /status=pending/); assert.match(html, /status=packed/); assert.match(html, /status=rejected/);
   assert.match(html, /<strong>2<\/strong><h2>Needs preparing/); assert.match(html, /<strong>3<\/strong><h2>Processing/);
-  assert.match(html, /1 need shop setup · 0 shops have no live products · 1 shops have live products/);
+  assert.match(html, /1 need shop setup · 0 shops have no prepared approved products · 1 shops have prepared approved products/);
   assert.doesNotMatch(html, /Refunds<\/span>|overdue orders<\/h2>/);
 });
 test('admin unavailable/null counts and readiness remain distinct from genuine zero', async () => {
@@ -83,7 +85,7 @@ test('admin unavailable/null counts and readiness remain distinct from genuine z
 test('readiness preserves equal-named accounts and ignores products from unrelated accounts', () => {
   const { listerReadiness } = load('lib/admin-listers.ts');
   const result = listerReadiness([{ user_id: 'a' }], [{ user_id: 'a' }, { user_id: 'b' }], [{ user_id: 'a', business_name: 'Same' }, { user_id: 'b', business_name: 'Same' }], [{ lister_user_id: 'a', review_status: 'approved', is_published: true }, { lister_user_id: 'unrelated', review_status: 'approved', is_published: true }]);
-  assert.deepEqual(JSON.parse(JSON.stringify(result)), { total: 2, setupNeeded: 0, live: 1, notLive: 1 });
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), { total: 2, setupNeeded: 0, prepared: 1, notPrepared: 1 });
 });
 test('admin returned queue displays saved feedback and friendly read-only status', async () => {
   const html = await page('app/admin/products/page.tsx', { from: table => query({ data: table === 'products' ? [{ ...product('returned', 'rejected'), description: 'Description', category_type: 'Books', price: 10, created_at: '2026-10-01' }] : [{ user_id: 'owner', business_name: 'Shop' }] }) }, { status: 'rejected' }, { '@/app/admin/actions': {} });

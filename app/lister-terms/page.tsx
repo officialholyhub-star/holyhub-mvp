@@ -35,6 +35,7 @@ export default function ListerTermsPage() {
       </LegalSection>
 
       <LegalSection title="6. Customer payments and seller transfers">
+        <p>A multi-seller basket uses one customer payment to HolyHub through Stripe Connect separate charges and transfers. HolyHub records each seller’s product value, delivery, commission and eligible proceeds separately.</p>
         <p>HolyHub may collect the customer&apos;s marketplace payment through its payment provider. For MVP, your eligible proceeds for a seller order portion are not transferred merely because the customer paid or because you dispatched the order.</p>
         <p>Your eligible proceeds are transferred only after your own seller order portion is confirmed delivered or completed under HolyHub&apos;s implemented order lifecycle. In a multi-seller basket, one seller&apos;s completed portion does not release another seller&apos;s proceeds.</p>
         <p>Amounts properly deductible from your seller proceeds may include the stated HolyHub commission, applicable processing charges and any verified same-seller debt or recovery expressly permitted by these terms. HolyHub must not use another seller&apos;s money to satisfy an amount you owe.</p>
@@ -47,6 +48,7 @@ export default function ListerTermsPage() {
       <LegalSection title="8. Returns, refunds and seller responsibility">
         <p>You must comply with applicable consumer cancellation, return, refund, quality and product-safety obligations. A lister cannot remove or veto a customer&apos;s statutory rights.</p>
         <p>Where evidence shows that you caused the problem—for example non-dispatch, seller cancellation, or wrong, faulty, damaged or materially not-as-described goods—you normally bear the appropriate verified seller-side financial consequence. Where HolyHub caused the problem, HolyHub bears the appropriate HolyHub-side cost. A chargeback or dispute does not automatically make you responsible; responsibility must be assessed from the relevant evidence.</p>
+        <p>Refunds are limited to the affected seller’s items or delivery amount. Before transfer, the relevant held allocation is reduced. After transfer, HolyHub refunds the customer and seeks an appropriate reversal or recovery from that seller. Another seller’s allocation is never used to meet your responsibility.</p>
         <p>When product value is refunded, HolyHub credits back its 5% commission proportionally to the refunded product amount. A delivery-only refund does not create a HolyHub commission adjustment because commission is not charged on delivery. A customer refund that is legally or contractually due must not be reduced because of HolyHub fees, payment-processing fees or internal settlement costs.</p>
       </LegalSection>
 

@@ -1,3 +1,5 @@
+export const PAYMENT_POLICY = { commissionBasisPoints: 500, release: "seller_delivered" } as const;
+
 export type CheckoutPriceLine = {
   listerId: string;
   lineTotal: number;
@@ -16,9 +18,10 @@ export function toPence(value: string | number) {
 
 export function calculateHolyHubCommission(productSubtotal: number) {
   if (!Number.isSafeInteger(productSubtotal) || productSubtotal < 0) return null;
-  const wholeUnits = Math.floor(productSubtotal / 20);
-  const remainder = productSubtotal % 20;
-  const commission = wholeUnits + (remainder >= 10 ? 1 : 0);
+  const divisor = 10_000 / PAYMENT_POLICY.commissionBasisPoints;
+  const wholeUnits = Math.floor(productSubtotal / divisor);
+  const remainder = productSubtotal % divisor;
+  const commission = wholeUnits + (remainder >= divisor / 2 ? 1 : 0);
   return Number.isSafeInteger(commission) ? commission : null;
 }
 

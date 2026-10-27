@@ -42,8 +42,6 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
         && session.amount_total === checkout.amount_total
         && stripeCurrency === checkout.currency.toUpperCase()
       ) {
-        const shippingDetails = session.collected_information?.shipping_details;
-        const address = shippingDetails?.address;
         const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id ?? null;
         const admin = createAdminClient();
 
@@ -55,14 +53,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
             p_amount_total: session.amount_total,
             p_currency: session.currency,
             p_payment_intent_id: paymentIntentId,
-            p_delivery_address: {
-              delivery_recipient_name: shippingDetails?.name ?? null,
-              delivery_address_line1: address?.line1 ?? null,
-              delivery_address_line2: address?.line2 ?? null,
-              delivery_city: address?.city ?? null,
-              delivery_postcode: address?.postal_code ?? null,
-              delivery_country: address?.country ?? null,
-            },
+            p_delivery_address: {}, // The database uses the immutable HolyHub checkout snapshot.
           });
           if (error) {
             unavailable = true;

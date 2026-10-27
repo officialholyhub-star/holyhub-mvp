@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-export default async function SellerLegalDetailsPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string }> }) {
+export default async function SellerLegalDetailsPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; onboarding?: string }> }) {
   const params = await searchParams;
   const { supabase, user } = await requireRole("lister");
   const { data, error } = await supabase.from("seller_legal_profiles").select(SELLER_LEGAL_FIELDS).eq("user_id", user.id).maybeSingle();
@@ -26,10 +26,11 @@ export default async function SellerLegalDetailsPage({ searchParams }: { searchP
       {!error && profile?.verification_status === "pending" && <p className="notice notice-info">Seller details are waiting for HolyHub review.</p>}
       {!error && profile?.verification_status === "rejected" && <p className="notice notice-error">Changes needed. {profile.verification_note ?? "Please check your seller details and submit them again."}</p>}
       {!error && <form className="form" action={saveSellerLegalProfile}>
+        {params.onboarding === "1" && <input type="hidden" name="onboarding" value="1" />}
         <SellerLegalFields profile={profile} defaultEmail={user.email ?? ""} />
         <button className="button button-primary" type="submit">Save seller details</button>
       </form>}
-      <Link className="button button-quiet form-back" href="/lister">Back to lister space</Link>
+      <Link className="button button-quiet form-back" href={params.onboarding === "1" ? "/lister/onboarding" : "/lister"}>{params.onboarding === "1" ? "Return to onboarding" : "Back to lister space"}</Link>
     </div>
   </section>;
 }

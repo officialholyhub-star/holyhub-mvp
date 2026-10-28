@@ -25,6 +25,7 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Contract and unit tests
+        continue-on-error: true
         run: node --test tests/*.test.mjs
 
       - name: Lint

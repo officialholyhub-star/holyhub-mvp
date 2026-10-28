@@ -73,7 +73,7 @@ export function CustomerOnboarding({ error, userId, editPreferences = false }: {
           {step === 3 && <p className="eyebrow">Join HolyHub</p>}
           <h1 ref={heading} tabIndex={-1}>{step === 1 ? "What brings you to HolyHub? 💙" : step === 2 ? "What does your faith journey currently look like?" : "Create your HolyHub account"}</h1>
           {step < 3 ? <>
-            <p className={styles.helper}>{step === 1 ? "Choose as many as you like." : "Optional — choose an answer only if you’d like to."}</p>
+            <p className={styles.helper}>{step === 1 ? "Choose as many as you like." : "Optional — choose an answer only if you’d like to. Your faith answer isn’t saved to your HolyHub account."}</p>
             <div className={`${styles.options} ${step === 2 ? styles.single : ""}`} role={step === 2 ? "radiogroup" : "group"} aria-label={step === 1 ? "Your interests" : "Faith journey"}>
               {(step === 1 ? interests : faithOptions).map((label, index) => {
                 const selected = step === 1 ? chosen.includes(label) : faith === label;
@@ -96,6 +96,7 @@ export function CustomerOnboarding({ error, userId, editPreferences = false }: {
               <div className="field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" value={fields.email} onChange={event => setFields(current => ({ ...current, email: event.target.value }))} required /></div>
               <div className="field"><label htmlFor="password">Password</label><PasswordInput id="password" name="password" autoComplete="new-password" value={fields.password} onChange={event => setFields(current => ({ ...current, password: event.target.value }))} minLength={12} maxLength={128} required /><small>Use 12–128 characters.</small></div>
               <div className="field"><label htmlFor="confirm_password">Confirm password</label><PasswordInput id="confirm_password" name="confirm_password" autoComplete="new-password" value={fields.confirm_password} onChange={event => setFields(current => ({ ...current, confirm_password: event.target.value }))} minLength={12} maxLength={128} required /></div>
+              <label className="terms-consent"><input type="checkbox" name="confirm_age_18" required /><span>I confirm I am 18 or over. HolyHub accounts, buying and selling are 18+.</span></label>
               <label className="terms-consent"><input type="checkbox" name="accept_terms" checked={fields.accept_terms} onChange={event => setFields(current => ({ ...current, accept_terms: event.target.checked }))} required /><span>I agree to the <Link href="/terms">Customer Terms</Link> and acknowledge the <Link href="/privacy">Privacy Notice</Link>.</span></label>
               <label className="terms-consent"><input type="checkbox" checked={fields.marketing} onChange={event => setFields(current => ({ ...current, marketing: event.target.checked }))} aria-describedby="marketing-status" /><span>Yes, I’d like HolyHub to email me about the launch and send me occasional marketplace updates, including new Christian brands and products.</span></label>
               <p id="marketing-status" className={styles.note}>Email subscriptions aren’t available yet. This preference won’t be saved and won’t subscribe you to emails.</p>

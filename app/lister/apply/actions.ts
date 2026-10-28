@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireRole, requireUser } from "@/lib/auth/require-user";
+import { requireAdultUser, requireRole } from "@/lib/auth/require-user";
 import { applicationCategoryValue } from "@/lib/application-categories";
 import { getListerApplication } from "@/lib/lister-applications";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -99,7 +99,7 @@ export async function saveSellerLegalProfile(formData: FormData) {
 }
 
 export async function submitListerApplication(formData: FormData) {
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await requireAdultUser("/lister/apply");
   const { application, error: lookupError } = await getListerApplication(supabase, user.id);
   if (lookupError) redirect(messageUrl("error", "We couldn't load your existing application. Please try again."));
   if (application?.status === "approved") redirect(messageUrl("message", "Your lister application has already been approved."));

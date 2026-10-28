@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getListerApplication } from "@/lib/lister-applications";
 import { ApplicationCategoryField } from "@/components/application-category-field";
 import { SellerLegalFields } from "@/components/seller-legal-fields";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireAdultUser } from "@/lib/auth/require-user";
 import { formatSellerAddress, sellerEntityLabel, SELLER_LEGAL_FIELDS, type SellerLegalProfile } from "@/lib/seller-legal";
 import { submitListerApplication } from "./actions";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ListerApplicationPage({ searchParams }: { searchParams: Promise<{ error?: string; message?: string; edit?: string }> }) {
   const params = await searchParams;
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await requireAdultUser("/lister/apply");
   const [{ data: profile }, { application, error: applicationError }, sellerLegalResult] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).single(),
     getListerApplication(supabase, user.id),

@@ -1,0 +1,165 @@
+name: C2 Restore Drill
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/c2-restore-drill.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: holyhub-c2-restore-drill
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    name: Restore encrypted backup into disposable Supabase project
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RESTORE_DB_URL: ${{ secrets.RESTORE_DB_URL }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      EXPECTED_RESTORE_PROJECT_REF: 'bwonljkwshumhvmerjbz'
+      SOURCE_RUN_ID: '40759458794'
+      SOURCE_ARTIFACT_ID: '12848182991'
+
+    steps:
+      - name: Validate secrets and restore target guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${RESTORE_DB_URL:-}" ]]; then
+            echo 'Missing required GitHub secret: RESTORE_DB_URL' >&2
+            exit 1
+          fi
+          if [[ -z "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ]]; then
+            echo 'Missing required GitHub secret: BACKUP_ENCRYPTION_PASSPHRASE' >&2
+            exit 1
+          fi
+
+          echo "::add-mask::${RESTORE_DB_URL}"
+          echo "::add-mask::${BACKUP_ENCRYPTION_PASSPHRASE}"
+
+          if [[ "$RESTORE_DB_URL" != *"${EXPECTED_RESTORE_PROJECT_REF}"* ]]; then
+            echo 'Refusing restore: RESTORE_DB_URL does not target the approved disposable restore project.' >&2
+            exit 1
+          fi
+
+          if [[ "$RESTORE_DB_URL" == *'ueqwzpuiuidihzhtbmvo'* || "$RESTORE_DB_URL" == *'mgzsxzixobyfdlutxtgs'* ]]; then
+            echo 'Refusing restore: RESTORE_DB_URL matches an existing HolyHub non-disposable project.' >&2
+            exit 1
+          fi
+
+          echo 'Restore target guard passed for the approved disposable project.'
+
+      - name: Download encrypted backup artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ env.SOURCE_ARTIFACT_ID }}
+          path: restore-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: officialholyhub-star/holyhub-mvp
+          run-id: ${{ env.SOURCE_RUN_ID }}
+          digest-mismatch: error
+
+      - name: Verify encrypted backup checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t encrypted_files < <(find restore-artifact -type f -name '*.gpg' -print)
+          mapfile -t checksum_files < <(find restore-artifact -type f -name '*.gpg.sha256' -print)
+
+          if [[ "${#encrypted_files[@]}" -ne 1 || "${#checksum_files[@]}" -ne 1 ]]; then
+            echo 'Expected exactly one encrypted backup and one checksum file.' >&2
+            exit 1
+          fi
+
+          encrypted="${encrypted_files[0]}"
+          checksum="${checksum_files[0]}"
+          if [[ "$(dirname "$encrypted")" != "$(dirname "$checksum")" ]]; then
+            echo 'Encrypted backup and checksum are not colocated.' >&2
+            exit 1
+          fi
+
+          cd "$(dirname "$encrypted")"
+          sha256sum --check --strict "$(basename "$checksum")"
+
+      - name: Decrypt backup into ephemeral runner storage
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/c2-restore/sql
+          encrypted="$(find restore-artifact -type f -name '*.gpg' -print -quit)"
+
+          printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" | gpg \
+            --batch \
+            --quiet \
+            --pinentry-mode loopback \
+            --passphrase-fd 0 \
+            --output /tmp/c2-restore/backup.tar.gz \
+            --decrypt "$encrypted"
+
+          tar -xzf /tmp/c2-restore/backup.tar.gz -C /tmp/c2-restore/sql
+          for required in roles.sql schema.sql data.sql; do
+            if [[ ! -s "/tmp/c2-restore/sql/${required}" ]]; then
+              echo "Missing or empty required restore file: ${required}" >&2
+              exit 1
+            fi
+          done
+          rm -f /tmp/c2-restore/backup.tar.gz
+
+      - name: Install PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          psql --version
+
+      - name: Preflight disposable restore target
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc 'select current_database();' > /dev/null
+          public_tables="$(psql "$RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';")"
+          if [[ "$public_tables" != '0' ]]; then
+            echo "Refusing restore: disposable target public schema is not empty (${public_tables} base tables found)." >&2
+            exit 1
+          fi
+          echo 'Disposable target preflight passed.'
+
+      - name: Restore logical backup
+        shell: bash
+        working-directory: /tmp/c2-restore/sql
+        run: |
+          set -euo pipefail
+          psql \
+            --single-transaction \
+            --variable ON_ERROR_STOP=1 \
+            --file roles.sql \
+            --file schema.sql \
+            --command 'SET session_replication_role = replica' \
+            --file data.sql \
+            --dbname "$RESTORE_DB_URL"
+
+      - name: Verify restored application schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          public_tables="$(psql "$RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';")"
+          if [[ "$public_tables" -eq 0 ]]; then
+            echo 'Restore verification failed: no public application tables were restored.' >&2
+            exit 1
+          fi
+          echo "Restore verification passed: ${public_tables} public application tables present."
+
+      - name: Remove decrypted restore material
+        if: always()
+        shell: bash
+        run: |
+          rm -rf /tmp/c2-restore restore-artifact

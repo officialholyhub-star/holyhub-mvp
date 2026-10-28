@@ -2,7 +2,7 @@ name: HolyHub CI
 
 on:
   push:
-    branches: [main, alea/stage4-payments, alea/c13-age-assurance-review]
+    branches: [main, alea/stage4-payments]
   workflow_dispatch:
 
 jobs:
@@ -25,7 +25,6 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Contract and unit tests
-        continue-on-error: true
         run: node --test tests/*.test.mjs
 
       - name: Lint

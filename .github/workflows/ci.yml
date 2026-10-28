@@ -2,7 +2,7 @@ name: HolyHub CI
 
 on:
   push:
-    branches: [main, alea/stage4-payments]
+    branches: [main, alea/stage4-payments, alea/c13-age-assurance-review]
   workflow_dispatch:
 
 jobs:

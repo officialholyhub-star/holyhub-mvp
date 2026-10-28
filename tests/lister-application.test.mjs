@@ -43,10 +43,11 @@ function fixture({applications=[],readError=null,saveError=null,race=false,legal
   };return query;
  }
  const supabase={from:table=>{assert.equal(table,'lister_applications');return builder();}};
+ const userContext=()=>({user:{id:'fixture'},supabase});
  const dependencies={
   'next/navigation':{redirect:path=>{throw new Error(path);}},
   'next/cache':{revalidatePath(){}},
-  '@/lib/auth/require-user':{requireUser:async()=>({user:{id:'fixture'},supabase})},
+  '@/lib/auth/require-user':{requireUser:async()=>userContext(),requireAdultUser:async()=>userContext()},
   '@/lib/supabase/admin':{createAdminClient:()=>{adminCalls++;return {from:table=>table==='lister_applications'?builder(true):table==='seller_legal_profiles'?legalBuilder():(()=>{throw new Error(`Unexpected table ${table}`)})()};}},
  };
  const {submitListerApplication}=loadTypescript('app/lister/apply/actions.ts',dependencies);
@@ -67,10 +68,11 @@ function loadComponent(file, dependencies) {
 async function renderApplication(application, readError, params={}) {
  const f=fixture({applications:application?[application]:[],readError});
  const legalModule=loadTypescript('lib/seller-legal.ts');
+ const adultContext=async()=>({user:{id:'fixture',email:'alex@example.test'},supabase:{from:table=>table==='profiles'?{select(){return this;},eq(){return this;},single:async()=>({data:{full_name:'Alex'}})}:table==='seller_legal_profiles'?{select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null,error:null})}:f.supabase.from(table)}});
  const dependencies={
   '@/components/draft-form':{DraftForm:'form',ClearDraft:()=>null},
   'next/link':{default:props=>React.createElement('a',props),__esModule:true},
-  '@/lib/auth/require-user':{requireUser:async()=>({user:{id:'fixture',email:'alex@example.test'},supabase:{from:table=>table==='profiles'?{select(){return this;},eq(){return this;},single:async()=>({data:{full_name:'Alex'}})}:table==='seller_legal_profiles'?{select(){return this;},eq(){return this;},maybeSingle:async()=>({data:null,error:null})}:f.supabase.from(table)}})},
+  '@/lib/auth/require-user':{requireUser:adultContext,requireAdultUser:adultContext},
   '@/lib/product-categories':loadTypescript('lib/product-categories.ts'),
   '@/lib/lister-applications':loadTypescript('lib/lister-applications.ts'),
   '@/lib/seller-legal':legalModule,
@@ -154,7 +156,7 @@ test('another user’s application cannot be updated or used to create a duplica
 test('authentication is required before lookup or privileged client creation',async()=>{
  const {submitListerApplication}=loadTypescript('app/lister/apply/actions.ts',{
   'next/navigation':{redirect:()=>{}},'next/cache':{revalidatePath(){}},
-  '@/lib/auth/require-user':{requireUser:async()=>{throw new Error('Sign in required');}},
+  '@/lib/auth/require-user':{requireUser:async()=>{throw new Error('Sign in required');},requireAdultUser:async()=>{throw new Error('Sign in required');}},
   '@/lib/supabase/admin':{createAdminClient:()=>{throw new Error('Must not be called');}},
  });
  await assert.rejects(submitListerApplication(form()),/Sign in required/);

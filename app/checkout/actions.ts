@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireAdultUser } from "@/lib/auth/require-user";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { checkoutRedirectUrls } from "@/lib/checkout-origin";
@@ -36,7 +36,7 @@ export async function startCheckout(formData: FormData) {
   const basket = parseBasket(typeof formData.get("basket") === "string" ? formData.get("basket") as string : "");
   if (!basket) checkoutError("Your basket is invalid. Please review it and try again.");
 
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await requireAdultUser("/basket");
   const requestedQuantities = new Map<string, { id: string; quantity: number; variantId?: string }>();
   for (const item of basket) {
     const key = `${item.id}:${item.variantId ?? "base"}`;

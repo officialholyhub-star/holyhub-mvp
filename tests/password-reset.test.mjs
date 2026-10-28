@@ -131,6 +131,6 @@ test('existing login redirects and signup returns account destination for welcom
   const { actions } = setup();
   assert.equal((await destination(actions.login, { email: EMAIL, password: 'existing-password' })).pathname, '/account');
   const data = new FormData();
-  Object.entries({ full_name: 'Alex', email: EMAIL, ...passwords, accept_terms: 'on' }).forEach(([key, value]) => data.set(key, value));
+  Object.entries({ full_name: 'Alex', email: EMAIL, ...passwords, confirm_age_18: 'on', accept_terms: 'on' }).forEach(([key, value]) => data.set(key, value));
   assert.equal((await actions.signup(data)).next, '/account');
 });

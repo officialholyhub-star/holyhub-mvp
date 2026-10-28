@@ -41,7 +41,7 @@ export async function startCheckout(formData: FormData) {
   for (const item of basket) {
     const key = `${item.id}:${item.variantId ?? "base"}`;
     const quantity = (requestedQuantities.get(key)?.quantity ?? 0) + item.quantity;
-    if (!Number.isSafeInteger(quantity) || quantity > MAX_BASKET_QUANTITY) checkoutError("Your basket quantity is invalid. Please review your basket.");
+    if (!Number.isSafeInteger(quantity) || quantity > MAX_BASKET_QUANTITY) checkoutError("Your basket quantity is invalid. Please review it and try again.");
     requestedQuantities.set(key, { ...item, quantity });
   }
   const normalizedBasket = Array.from(requestedQuantities.values());

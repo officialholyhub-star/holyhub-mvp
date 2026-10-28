@@ -23,7 +23,7 @@ export async function requireUser() {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("account_status")
+    .select("account_status, age_18_plus_confirmed_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -32,11 +32,20 @@ export async function requireUser() {
     redirect("/auth/blocked");
   }
 
-  return { supabase, user };
+  return { supabase, user, profile };
+}
+
+export async function requireAdultUser(next = "/account") {
+  const context = await requireUser();
+  if (context.profile.age_18_plus_confirmed_at === null) {
+    const destination = safeInternalPath(next, "/account");
+    redirect(`/account/age-confirmation?next=${encodeURIComponent(destination)}`);
+  }
+  return context;
 }
 
 async function requireRoleIdentity(role: AppRole) {
-  const context = await requireUser();
+  const context = role === "lister" ? await requireAdultUser("/lister") : await requireUser();
   const { data, error } = await context.supabase
     .from("user_roles")
     .select("role")

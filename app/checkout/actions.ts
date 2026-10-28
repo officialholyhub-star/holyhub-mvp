@@ -41,7 +41,7 @@ export async function startCheckout(formData: FormData) {
   for (const item of basket) {
     const key = `${item.id}:${item.variantId ?? "base"}`;
     const quantity = (requestedQuantities.get(key)?.quantity ?? 0) + item.quantity;
-    if (!Number.isSafeInteger(quantity) || quantity > MAX_BASKET_QUANTITY) checkoutError("Your basket quantity is invalid. Please review it and try again.");
+    if (!Number.isSafeInteger(quantity) || quantity > MAX_BASKET_QUANTITY) checkoutError("Your basket quantity is invalid. Please review your basket.");
     requestedQuantities.set(key, { ...item, quantity });
   }
   const normalizedBasket = Array.from(requestedQuantities.values());
@@ -148,7 +148,7 @@ export async function startCheckout(formData: FormData) {
   }).select("id").single();
   if (checkoutErrorResult || !checkoutRecord) {
     console.error("Checkout session database insert failed", checkoutErrorResult);
-    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed after checkout insert failure", error); }
+    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
     checkoutError("We couldn't prepare your checkout. Please try again.");
   }
 
@@ -187,7 +187,7 @@ export async function startCheckout(formData: FormData) {
   }));
   if (sellerSnapshotError) {
     console.error("Checkout seller snapshot insert failed", sellerSnapshotError);
-    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed after seller snapshot failure", error); }
+    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
     checkoutError("We couldn't prepare your checkout. Please try again.");
   }
 
@@ -205,7 +205,7 @@ export async function startCheckout(formData: FormData) {
   })));
   if (itemsError) {
     console.error("Checkout item snapshot insert failed", itemsError);
-    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed after checkout items failure", error); }
+    try { await stripe.checkout.sessions.expire(session.id); } catch (error) { console.error("Stripe session expiry failed", error); }
     checkoutError("We couldn't prepare your checkout. Please try again.");
   }
 

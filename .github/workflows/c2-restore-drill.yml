@@ -57,32 +57,26 @@ jobs:
 
           echo 'Restore target guard passed for the approved disposable project.'
 
-      - name: Prepare direct database connection
+      - name: Normalize restore connection URI
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import os
-          import urllib.parse
+          active_url="$RESTORE_DB_URL"
+          if [[ "$active_url" == *'['* || "$active_url" == *']'* ]]; then
+            active_url="${active_url//\[/}"
+            active_url="${active_url//\]/}"
+            echo 'Removed placeholder square brackets from the saved restore URI.'
+          else
+            echo 'Saved restore URI contains no placeholder square brackets.'
+          fi
 
-          source = urllib.parse.urlsplit(os.environ['RESTORE_DB_URL'])
-          password = source.password
-          if not password:
-              raise SystemExit('RESTORE_DB_URL does not contain a database password')
+          if [[ "$active_url" != *"${EXPECTED_RESTORE_PROJECT_REF}"* ]]; then
+            echo 'Refusing restore after URI normalization: target project ref mismatch.' >&2
+            exit 1
+          fi
 
-          project_ref = os.environ['EXPECTED_RESTORE_PROJECT_REF']
-          encoded_password = urllib.parse.quote(password, safe='')
-          direct_url = (
-              f'postgresql://postgres:{encoded_password}'
-              f'@db.{project_ref}.supabase.co:5432/postgres?sslmode=require'
-          )
-
-          print(f'::add-mask::{password}')
-          print(f'::add-mask::{direct_url}')
-          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
-              env_file.write(f'ACTIVE_RESTORE_DB_URL={direct_url}\n')
-          PY
-          echo 'Prepared direct database connection for the disposable project without exposing credentials.'
+          echo "::add-mask::${active_url}"
+          printf 'ACTIVE_RESTORE_DB_URL=%s\n' "$active_url" >> "$GITHUB_ENV"
 
       - name: Download encrypted backup artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -158,7 +152,7 @@ jobs:
             echo "Refusing restore: disposable target public schema is not empty (${public_tables} base tables found)." >&2
             exit 1
           fi
-          echo 'Disposable target preflight passed using the direct database connection.'
+          echo 'Disposable target preflight passed.'
 
       - name: Restore logical backup
         shell: bash

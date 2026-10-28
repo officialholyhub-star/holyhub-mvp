@@ -16,16 +16,17 @@ const { signup, login } = loadTypescript('app/auth/actions.ts', {
 });
 function form(overrides = {}) {
   const data = new FormData();
-  for (const [key, value] of Object.entries({ full_name: 'Alex', email: 'alex@example.test', password: 'abcdefghijkl', confirm_password: 'abcdefghijkl', accept_terms: 'on', ...overrides })) data.set(key, value);
+  for (const [key, value] of Object.entries({ full_name: 'Alex', email: 'alex@example.test', password: 'abcdefghijkl', confirm_password: 'abcdefghijkl', confirm_age_18: 'on', accept_terms: 'on', ...overrides })) data.set(key, value);
   return data;
 }
+assert.match((await signup(form({ confirm_age_18: '' }))).error, /18 or over/);
 assert.match((await signup(form({ password: 'abcdefghijk' }))).error, /12/);
 assert.match((await signup(form({ accept_terms: '' }))).error, /terms/);
 assert.match((await signup(form({ confirm_password: 'differentpassword' }))).error, /match/);
 assert.match((await signup(form({ full_name: '' }))).error, /first name/);
 assert.match((await signup(form({ password: 'x'.repeat(129) }))).error, /128/);
 assert.equal((await signup(form())).next, '/account');
-assert.deepEqual(JSON.parse(JSON.stringify(payload.options.data)), { full_name: 'Alex' });
+assert.deepEqual(JSON.parse(JSON.stringify(payload.options.data)), { full_name: 'Alex', age_18_plus_confirmed: true });
 await signup(form({ faith: 'sensitive-value', interests: 'sensitive-value', marketing: 'on' }));
 assert.equal(JSON.stringify(payload).includes('sensitive-value'), false);
 assert.equal(JSON.stringify(payload).includes('marketing'), false);
@@ -36,4 +37,4 @@ assert.equal(confirmation.userId, undefined);
 response = { data: {}, error: { message: 'sensitive-provider-detail' } };
 assert.equal((await signup(form())).error.includes('sensitive-provider-detail'), false);
 await assert.rejects(login(form({ password: 'oldshort' })), /REDIRECT:\/account/);
-console.log('PASS signup server validation, optional data exclusion, confirmation branch, provider errors and existing short-password login');
+console.log('PASS signup server validation, required 18+ confirmation, optional data exclusion, confirmation branch, provider errors and existing short-password login');

@@ -2,6 +2,11 @@ name: C2 Restore Drill
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/c2-restore-drill.yml'
 
 permissions:
   contents: read

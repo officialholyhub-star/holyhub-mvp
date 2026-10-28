@@ -57,6 +57,33 @@ jobs:
 
           echo 'Restore target guard passed for the approved disposable project.'
 
+      - name: Prepare direct database connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import urllib.parse
+
+          source = urllib.parse.urlsplit(os.environ['RESTORE_DB_URL'])
+          password = source.password
+          if not password:
+              raise SystemExit('RESTORE_DB_URL does not contain a database password')
+
+          project_ref = os.environ['EXPECTED_RESTORE_PROJECT_REF']
+          encoded_password = urllib.parse.quote(password, safe='')
+          direct_url = (
+              f'postgresql://postgres:{encoded_password}'
+              f'@db.{project_ref}.supabase.co:5432/postgres?sslmode=require'
+          )
+
+          print(f'::add-mask::{password}')
+          print(f'::add-mask::{direct_url}')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as env_file:
+              env_file.write(f'ACTIVE_RESTORE_DB_URL={direct_url}\n')
+          PY
+          echo 'Prepared direct database connection for the disposable project without exposing credentials.'
+
       - name: Download encrypted backup artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
@@ -125,13 +152,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          psql "$RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc 'select current_database();' > /dev/null
-          public_tables="$(psql "$RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';")"
+          psql "$ACTIVE_RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc 'select current_database();' > /dev/null
+          public_tables="$(psql "$ACTIVE_RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';")"
           if [[ "$public_tables" != '0' ]]; then
             echo "Refusing restore: disposable target public schema is not empty (${public_tables} base tables found)." >&2
             exit 1
           fi
-          echo 'Disposable target preflight passed.'
+          echo 'Disposable target preflight passed using the direct database connection.'
 
       - name: Restore logical backup
         shell: bash
@@ -145,13 +172,13 @@ jobs:
             --file schema.sql \
             --command 'SET session_replication_role = replica' \
             --file data.sql \
-            --dbname "$RESTORE_DB_URL"
+            --dbname "$ACTIVE_RESTORE_DB_URL"
 
       - name: Verify restored application schema
         shell: bash
         run: |
           set -euo pipefail
-          public_tables="$(psql "$RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';")"
+          public_tables="$(psql "$ACTIVE_RESTORE_DB_URL" --variable ON_ERROR_STOP=1 -Atqc "select count(*) from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE';")"
           if [[ "$public_tables" -eq 0 ]]; then
             echo 'Restore verification failed: no public application tables were restored.' >&2
             exit 1

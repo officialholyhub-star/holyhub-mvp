@@ -1,11 +1,7 @@
 name: Unpack HolyHub Stage 1
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'holyhub-stage1-connected.zip'
-      - '.github/workflows/unpack-stage1.yml'
+  # Historical import, manual-only: automatically unpacking Stage 1 would overwrite the MVP.
   workflow_dispatch:
 
 permissions:

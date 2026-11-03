@@ -1,0 +1,11 @@
+.env*
+!.env.example
+tests/
+test-results/
+playwright-report/
+*.zip
+*.log
+.next/
+node_modules/
+supabase/
+scripts/demo.mjs

@@ -1,0 +1,9 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireUser } from "@/lib/auth/require-user";
+import { isUuid } from "@/lib/businesses";
+import { money,type OrderItem } from "@/lib/marketplace";
+export default async function CheckoutReview({params}:{params:Promise<{id:string}>}){
+ const {id}=await params;if(!isUuid(id))notFound();const {supabase,user}=await requireUser(`/checkout/${id}`);const {data:order,error}=await supabase.from("orders").select("*").eq("id",id).eq("customer_id",user.id).maybeSingle();if(error)throw new Error("Order unavailable");if(!order)notFound();const {data:items,error:itemError}=await supabase.from("order_items").select("*").eq("order_id",id);if(itemError)throw new Error("Order details unavailable");
+ return <section className="content-narrow"><Link href="/basket" className="text-link">← Back to basket</Link><div className="section-heading"><p className="eyebrow">One basket. Shared values.</p><h1 className="page-title">Review your finds.</h1><p>This is an unpaid order preview—not a completed purchase.</p></div><div className="card"><div className="record-list">{(items as OrderItem[]).map(i=><div className="meta-row" key={i.id}><span>{i.quantity} × {i.product_name}</span><strong>{money(i.total_pence)}</strong></div>)}</div><div className="meta-row top-space"><strong>Item subtotal</strong><strong>{money(order.subtotal_pence)}</strong></div><p className="muted-small">Shipping and tax calculations are pending. Prices and availability will be checked again when payments become available.</p><p className="notice notice-info">Checkout is not open yet. Stripe Connect, delivery rules and tax treatment must be configured and tested before HolyHub can accept payments.</p><button className="button button-primary full-width" disabled>Secure payment coming soon</button><p className="muted-small">No card details, payment or stock reservation have been taken.</p></div></section>;
+}

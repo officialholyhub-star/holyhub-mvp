@@ -1,0 +1,2 @@
+"use client";
+export default function ErrorPage({reset}:{reset:()=>void}){return <section className="empty-state card"><h1 className="page-title">A little pause.</h1><p>We couldn’t open this page. Please try again. If your account is unavailable, contact HolyHub for help.</p><button className="button button-primary" onClick={reset}>Try again</button><p><a className="text-link" href="mailto:Official.holyhub@gmail.com">Contact HolyHub</a></p></section>;}

@@ -1,0 +1,4 @@
+-- LOCAL TEST ONLY. Never include this in a deployment migration.
+INSERT OR IGNORE INTO hh_members(id,email,name,created_at) VALUES('local-other-owner','other@sites.test','Other local owner','2026-01-01');
+INSERT OR IGNORE INTO hh_businesses(id,owner_id,name,category,location,summary,description,website,status,created_at,updated_at) VALUES('local-other-business','local-other-owner','Other local test business','Other','Test','Only a local test.','Only a local permissions test.','https://example.com','pending','2026-01-01','2026-01-01');
+INSERT OR IGNORE INTO hh_products(id,business_id,name,description,category,price_pence,stock,delivery_info,created_at,updated_at) VALUES('local-other-product','local-other-business','Private local product','A private local permissions fixture.','Other',100,1,'Only a local test.','2026-01-01','2026-01-01');

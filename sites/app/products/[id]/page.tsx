@@ -1,0 +1,9 @@
+import Image from "next/image";
+import Link from "@/components/site-link";
+import { notFound } from "next/navigation";
+import { all, one, productSelect, visibleProducts, money, type Product, type Business } from "@/lib/data";
+export default async function ProductPage({params}:{params:Promise<{id:string}>}) {
+ const {id}=await params,product=await one<Product>(productSelect+" WHERE p.id=? AND "+visibleProducts,id);if(!product)notFound();
+ const business=await one<Business>("SELECT * FROM hh_businesses WHERE id=?",product.business_id),photos=await all<{id:string}>("SELECT id FROM hh_photos WHERE product_id=? ORDER BY created_at,id LIMIT 5",id);
+ return <><Link className="text-link" href="/products">← Back to discoveries</Link><div className="product-detail-grid"><div>{photos.map((photo,i)=><Image key={photo.id} src={`/api/photos/${photo.id}`} alt={`${product.name}${i?` — photo ${i+1}`:""}`} width={900} height={900} unoptimized priority={i===0} className={`detail-product-image ${i?"top-space":""}`}/>)}</div><div><p className="editorial-kicker">{product.category}</p><h1 className="page-title">{product.name}</h1><Link className="text-link" href={`/businesses/${product.business_id}`}>By {product.business_name}</Link><p className="product-price">{money(product.price_pence)}</p><p className="preserve-lines">{product.description}</p><p className="status-pill">{product.stock>0?"Contact the brand for availability":"Currently out of stock"}</p><section className="story"><h2>Delivery & collection</h2><p>{product.delivery_info}</p></section>{business?.website&&<a href={business.website} target="_blank" rel="noopener noreferrer" className="button button-primary full-width">Visit brand to enquire →</a>}<p className="muted-small">Purchases are arranged directly with the business, not through HolyHub. Confirm price, availability, delivery and returns with the seller before buying.</p></div></div></>;
+}

@@ -1,0 +1,4 @@
+import { member, all } from "@/lib/data";
+import { AccountNav, Empty } from "@/components/page-ui";
+export const dynamic="force-dynamic";
+export default async function Notifications(){const user=await member("/notifications"),rows=await all<{id:string;message:string;created_at:string}>("SELECT * FROM hh_notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 50",user.id);return <><AccountNav/><h1 className="page-title">Your updates.</h1><p>Application and moderation updates appear here.</p>{rows.length?<div className="record-list">{rows.map(row=><article className="record-row" key={row.id}><div><p>{row.message}</p><time className="muted-small">{new Date(row.created_at).toLocaleDateString("en-GB")}</time></div></article>)}</div>:<Empty title="You’re all caught up."><p>We’ll show your business review updates here.</p></Empty>}</>;}

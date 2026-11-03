@@ -1,0 +1,28 @@
+name: HolyHub Sites checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sites:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sites
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install locked Sites dependencies
+        run: npx --yes pnpm@10.15.1 install --frozen-lockfile
+      - name: Typecheck
+        run: node node_modules/typescript/bin/tsc --noEmit
+      - name: Lint application
+        run: node node_modules/eslint/bin/eslint.js app components lib db
+      - name: Build deployable Worker
+        run: npm run build

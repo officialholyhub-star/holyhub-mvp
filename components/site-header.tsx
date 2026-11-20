@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CustomerSetupReminder } from "@/components/customer-setup-reminder";
 import { createClient } from "@/lib/supabase/server";
 import { HolyHubIcon } from "@/components/holyhub-icon";
 import { SiteMenu } from "@/components/site-menu";
@@ -23,7 +22,6 @@ export async function SiteHeader() {
 
   return (
     <header className="site-header">
-      {user && <CustomerSetupReminder userId={user.id} />}
       <div className="site-header-inner">
         <Link className="home-nav-button" href="/" aria-label="Home">
           <HolyHubIcon name="home" />

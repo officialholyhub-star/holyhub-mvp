@@ -2,7 +2,7 @@ import "server-only";
 
 import { assertCrmDatabaseEnvironment, getCrmPool } from "@/lib/crm/db/client";
 import { getCrmEnvironment } from "@/lib/crm/env";
-import { createCrmAction, completeCrmAction } from "@/lib/crm/services/actions";
+import { completeCrmAction } from "@/lib/crm/services/actions";
 import { transitionRelationshipStage } from "@/lib/crm/services/relationships";
 import {
   assessSyntheticEligibility, isFictionalOrganisation, isFictionalRoute, normaliseRoute, type SafetyMatch,
@@ -136,7 +136,7 @@ export async function listOperatorView(view: string, query: string, relatedId?: 
       if (!isFictionalRoute("email",normal)) throw new CrmInputError("Only fictional .test/.example/.invalid routes are allowed.");
       let organisationId=validId(subjectOrganisationId,true);
       let contactId=validId(subjectContactId,true);
-      const linked=await db.query(`SELECT contact_id,organisation_id FROM crm.contact_routes
+      const linked=await db.query(`SELECT contact_id,organisation_id,health FROM crm.contact_routes
         WHERE channel='email' AND normalised_value=$1 LIMIT 1`,[normal]);
       if(linked.rows.length) {
         contactId=contactId??(linked.rows[0].contact_id?String(linked.rows[0].contact_id):null);
@@ -159,9 +159,15 @@ export async function listOperatorView(view: string, query: string, relatedId?: 
            OR (organisation_id IS NOT NULL AND organisation_id=$3)
            OR (contact_id IS NOT NULL AND contact_id=$4))`,[normal,organisationKey,organisationId,contactId]);
       const controls=results.rows as SafetyMatch[];
-      return { assessment: assessSyntheticEligibility({
+      const assessment=assessSyntheticEligibility({
         channel:"email",routeValue:normal,purpose:"marketing",organisationId,organisationKey,contactId,
-      },controls),controls };
+      },controls);
+      const health=linked.rows[0]?.health;
+      if(health==="failed"||health==="held"){
+        assessment.safetyBlocked=true;
+        assessment.reasons=[...new Set([...assessment.reasons,"route_health_"+health])];
+      }
+      return { assessment,controls };
     }
     default: throw new CrmInputError("Unknown CRM view.");
   }
@@ -223,6 +229,15 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
            VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
         (id?[id,contactId,organisationId,channel,normal,normal,health]:[contactId,organisationId,channel,normal,normal,health]))).rows[0];
       await audit(c,"contact_route",String(row.id),actor,id?"record_updated":"record_created",old,row,"Synthetic contact route edit");
+      if(health==="failed"||health==="held") {
+        const controlType=health==="failed"?"failed_route":"temporary_hold";
+        const held=await c.query(`INSERT INTO crm.safety
+          (scope_type,contact_route_id,channel,purpose,safety_type,reason,source_system,source_reference,route_normalised_value)
+          VALUES ('route',$1,$2,'marketing',$3,$4,'n18_synthetic_2a',$5,$6)
+          ON CONFLICT DO NOTHING RETURNING id`,
+          [row.id,channel,controlType,"Synthetic route health set to "+health,"synthetic:route-health:"+row.id,normal]);
+        if(held.rows.length)await audit(c,"safety",String(held.rows[0].id),actor,"status",null,"active","Synthetic route health hold");
+      }
       await activity(c,actor,"route_saved","Synthetic contact route saved",{contactId,organisationId});
       return row;
     });
@@ -236,7 +251,24 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       if(!/^(example|synthetic|test)(?:\s|\s*[-:])/i.test(title))throw new CrmInputError("Action must use a fictional title.");
       let dueAt:Date|null=null;
       if(data.dueAt){dueAt=new Date(field(data.dueAt,"Due date",60));if(Number.isNaN(dueAt.getTime()))throw new CrmInputError("Invalid due date.");}
-      return createCrmAction({relationshipId:validId(data.relationshipId)!,actionType,title,dueAt,source:"n18_synthetic_2a"},actor);
+      const relationshipId=validId(data.relationshipId)!;
+      return withTx(async c=>{
+        await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[relationshipId+"|"+actionType+"|"+title.toLowerCase()]);
+        const existing=(await c.query(`SELECT * FROM crm.actions
+          WHERE relationship_id=$1 AND action_type=$2 AND lower(title)=lower($3) AND status='open'
+          ORDER BY created_at DESC LIMIT 1`,[relationshipId,actionType,title])).rows[0];
+        if(existing)return {...existing,replayed:true};
+        const relationship=(await c.query("SELECT organisation_id FROM crm.relationships WHERE id=$1",[relationshipId])).rows[0];
+        if(!relationship)throw new CrmInputError("Relationship not found.");
+        const row=(await c.query(`INSERT INTO crm.actions
+          (relationship_id,organisation_id,action_type,title,due_at,status,assigned_to_internal_user_id,source)
+          VALUES($1,$2,$3,$4,$5,'open',$6,'n18_synthetic_2a') RETURNING *`,
+          [relationshipId,relationship.organisation_id,actionType,title,dueAt,actor])).rows[0];
+        await activity(c,actor,"action_created","Synthetic action created: "+title,{
+          relationshipId,organisationId:String(relationship.organisation_id),
+        });
+        return {...row,replayed:false};
+      });
     }
     case "completeAction": return completeCrmAction(validId(data.id)!,actor);
     case "applySafety": return withTx(async c => {
@@ -316,7 +348,20 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const id=validId(data.id)!;
       const reason=field(data.reason,"Review outcome",500);
       if(reason.length<8)throw new CrmInputError("Review outcome must contain evidence.");
-      if(kind==="action")return completeCrmAction(id,actor);
+      if(kind==="action")return withTx(async c=>{
+        const existing=(await c.query(`SELECT a.*,r.organisation_id FROM crm.actions a
+          JOIN crm.relationships r ON r.id=a.relationship_id
+          WHERE a.id=$1 AND a.status='open' AND a.action_type='needs_review' FOR UPDATE OF a`,[id])).rows[0];
+        if(!existing)throw new CrmInputError("Open synthetic Needs Review action not found.");
+        const row=(await c.query(`UPDATE crm.actions SET status='completed',completed_at=now(),
+          updated_at=now() WHERE id=$1 RETURNING *`,[id])).rows[0];
+        await audit(c,"action",id,actor,"status","open","completed",reason);
+        await activity(c,actor,"review_resolved","Synthetic Needs Review resolved: "+reason,{
+          relationshipId:String(existing.relationship_id),
+          organisationId:existing.organisation_id?String(existing.organisation_id):null,
+        });
+        return row;
+      });
       return withTx(async c=>{
         const old=(await c.query(`SELECT * FROM crm_ops.integration_events
           WHERE id=$1 AND status='needs_review' AND source_system='synthetic' FOR UPDATE`,[id])).rows[0];

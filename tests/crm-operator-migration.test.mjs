@@ -14,6 +14,6 @@ test('Drizzle migration journal tracks the safety migration and snapshot',()=>{
 test('eligibility checks route, contact and organisation evidence, not sender account',()=>{
   assert.match(service,/contact_id IS NOT NULL AND contact_id=\$4/);
   assert.match(service,/organisation_key IS NOT NULL AND organisation_key=\$2/);
-  assert.match(service,/SELECT contact_id,organisation_id FROM crm.contact_routes/);
+  assert.match(service,/SELECT contact_id,organisation_id,health FROM crm.contact_routes/);
   assert.doesNotMatch(service,/senderAccountId|communicationAccountId/);
 });

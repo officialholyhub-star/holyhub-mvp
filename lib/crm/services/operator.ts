@@ -160,8 +160,8 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       if (id&&!old) throw new CrmInputError("Organisation not found.");
       const result=await c.query(id
         ? `UPDATE crm.organisations SET canonical_name=$2,canonical_domain=$3,category=$4,updated_at=now() WHERE id=$1 RETURNING *`
-        : `INSERT INTO crm.organisations(canonical_name,canonical_domain,category,source_confidence) VALUES($2,$3,$4,'synthetic') RETURNING *`,
-        id?[id,name,domain,category]:[null,name,domain,category]);
+        : `INSERT INTO crm.organisations(canonical_name,canonical_domain,category,source_confidence) VALUES($1,$2,$3,'synthetic') RETURNING *`,
+        id?[id,name,domain,category]:[name,domain,category]);
       const row=result.rows[0];
       await audit(c,"organisation",String(row.id),actor,id?"record_updated":"record_created",old,row,"Synthetic operator edit");
       await activity(c,actor,"organisation_saved","Synthetic organisation saved",{organisationId:String(row.id)});
@@ -177,8 +177,8 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       if (id&&!old) throw new CrmInputError("Contact not found.");
       const row=(await c.query(id
         ? `UPDATE crm.contacts SET display_name=$2,organisation_id=$3,job_title=$4,updated_at=now() WHERE id=$1 RETURNING *`
-        : `INSERT INTO crm.contacts(display_name,organisation_id,job_title,source_confidence) VALUES($2,$3,$4,'synthetic') RETURNING *`,
-        [id,displayName,organisationId,jobTitle])).rows[0];
+        : `INSERT INTO crm.contacts(display_name,organisation_id,job_title,source_confidence) VALUES($1,$2,$3,'synthetic') RETURNING *`,
+        (id?[id,displayName,organisationId,jobTitle]:[displayName,organisationId,jobTitle]))).rows[0];
       await audit(c,"contact",String(row.id),actor,id?"record_updated":"record_created",old,row,"Synthetic operator edit");
       await activity(c,actor,"contact_saved","Synthetic contact saved",{contactId:String(row.id),organisationId});
       return row;
@@ -198,8 +198,8 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const row=(await c.query(id
         ? `UPDATE crm.contact_routes SET contact_id=$2,organisation_id=$3,channel=$4,route_value=$5,normalised_value=$6,health=$7,updated_at=now() WHERE id=$1 RETURNING *`
         : `INSERT INTO crm.contact_routes (contact_id,organisation_id,channel,route_value,normalised_value,health)
-           VALUES($2,$3,$4,$5,$6,$7) RETURNING *`,
-        [id,contactId,organisationId,channel,normal,normal,health])).rows[0];
+           VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
+        (id?[id,contactId,organisationId,channel,normal,normal,health]:[contactId,organisationId,channel,normal,normal,health]))).rows[0];
       await audit(c,"contact_route",String(row.id),actor,id?"record_updated":"record_created",old,row,"Synthetic contact route edit");
       await activity(c,actor,"route_saved","Synthetic contact route saved",{contactId,organisationId});
       return row;

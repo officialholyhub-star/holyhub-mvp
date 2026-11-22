@@ -1,4 +1,5 @@
 import { requireCrmUser } from "@/lib/crm/auth";
+import CrmConsole from "./console";
 import { getCrmDashboardCounts } from "@/lib/crm/services/dashboard";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,8 @@ export default async function CrmDashboardPage() {
           </article>
         ))}
       </div>
+
+      <CrmConsole role={crmUser.crmRole} />
 
       <p className="muted-small">Sandbox only. HubSpot remains HolyHub&apos;s live CRM and no live Gmail/Tally integration is enabled here.</p>
     </section>

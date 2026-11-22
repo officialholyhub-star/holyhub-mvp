@@ -71,15 +71,18 @@ export default function CrmConsole({role}:{role:string}) {
   const [timeline,setTimeline]=useState<Row[]>([]);
   const [stageList,setStageList]=useState<Row[]>([]);
   const [checkRoute,setCheckRoute]=useState("");
+  const [checkOrganisationId,setCheckOrganisationId]=useState("");
+  const [checkContactId,setCheckContactId]=useState("");
   const [checkResult,setCheckResult]=useState<Row|null>(null);
   const [reviewReason,setReviewReason]=useState("");
   const [clearReason,setClearReason]=useState("");
   const [clearEvidence,setClearEvidence]=useState("");
   const editable=role==="crm_admin"||role==="crm_operator";
 
-  async function getView(view:string,q="",id=""):Promise<Row> {
+  async function getView(view:string,q="",id="",extra:Record<string,string>={}):Promise<Row> {
     const params=new URLSearchParams({view,q});
     if(id)params.set("id",id);
+    for(const [key,value] of Object.entries(extra))if(value)params.set(key,value);
     const response=await fetch("/api/crm/operate?"+params.toString(),{cache:"no-store"});
     const body=await response.json() as {ok:boolean;error?:string;data?:Row};
     if(!body.ok||!body.data)throw new Error(body.error||"CRM read unavailable");
@@ -151,7 +154,7 @@ export default function CrmConsole({role}:{role:string}) {
   }
   async function checkEligibility() {
     setBusy(true);setError("");setCheckResult(null);
-    try{setCheckResult(await getView("eligibility",checkRoute));}
+    try{setCheckResult(await getView("eligibility",checkRoute,"",{organisationId:checkOrganisationId,contactId:checkContactId}));}
     catch(e){setError(e instanceof Error?e.message:"Eligibility check failed");}
     finally{setBusy(false);}
   }
@@ -222,6 +225,8 @@ export default function CrmConsole({role}:{role:string}) {
           <p className="muted-small">Testing a fictional address never authorises sending. Objections and failed-route holds apply regardless of sender mailbox.</p>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <input value={checkRoute} onChange={e=>setCheckRoute(e.target.value)} aria-label="Fictional email route" placeholder="someone@fictional.test" />
+            <input value={checkOrganisationId} onChange={e=>setCheckOrganisationId(e.target.value)} aria-label="Optional linked organisation ID" placeholder="Organisation ID (optional)" />
+            <input value={checkContactId} onChange={e=>setCheckContactId(e.target.value)} aria-label="Optional linked contact ID" placeholder="Contact ID (optional)" />
             <button type="button" disabled={busy} onClick={()=>void checkEligibility()}>Check route</button>
           </div>
           {checkResult&&<p role="status">Delivery: BLOCKED · Safety: {String((checkResult.assessment as Row)?.safetyBlocked?"active control":"no matched control")} ·

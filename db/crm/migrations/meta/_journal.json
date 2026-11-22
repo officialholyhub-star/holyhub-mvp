@@ -8,6 +8,13 @@
       "when": 1792784880158,
       "tag": "0000_old_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795353595560,
+      "tag": "0001_n18_safety_retention",
+      "breakpoints": true
     }
   ]
 }

@@ -16,7 +16,7 @@ export async function GET(request:NextRequest) {
   try {
     await requireCrmUser();
     const url=new URL(request.url);
-    const data=await listOperatorView(url.searchParams.get("view")||"organisations",url.searchParams.get("q")||"",url.searchParams.get("id")||undefined);
+    const data=await listOperatorView(url.searchParams.get("view")||"organisations",url.searchParams.get("q")||"",url.searchParams.get("id")||undefined,url.searchParams.get("organisationId")||undefined,url.searchParams.get("contactId")||undefined);
     return NextResponse.json({ok:true,data});
   } catch(error) {return handleError(error);}
 }

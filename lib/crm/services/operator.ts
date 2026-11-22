@@ -62,7 +62,7 @@ async function activity(c: SqlClient, actor: string, activityType: string, summa
 }
 function queryText(q: string): string { return q.slice(0,120).trim(); }
 
-export async function listOperatorView(view: string, query: string, relatedId?: string) {
+export async function listOperatorView(view: string, query: string, relatedId?: string, subjectOrganisationId?: string, subjectContactId?: string) {
   await assertCrmDatabaseEnvironment();
   if (getCrmEnvironment() === "production") throw new CrmInputError("N18 2A console is sandbox-only.");
   const q = queryText(query);
@@ -134,12 +134,34 @@ export async function listOperatorView(view: string, query: string, relatedId?: 
       let normal: string;
       try { normal = normaliseRoute("email", q); } catch { throw new CrmInputError("A fictional email route is required."); }
       if (!isFictionalRoute("email",normal)) throw new CrmInputError("Only fictional .test/.example/.invalid routes are allowed.");
+      let organisationId=validId(subjectOrganisationId,true);
+      let contactId=validId(subjectContactId,true);
+      const linked=await db.query(`SELECT contact_id,organisation_id FROM crm.contact_routes
+        WHERE channel='email' AND normalised_value=$1 LIMIT 1`,[normal]);
+      if(linked.rows.length) {
+        contactId=contactId??(linked.rows[0].contact_id?String(linked.rows[0].contact_id):null);
+        organisationId=organisationId??(linked.rows[0].organisation_id?String(linked.rows[0].organisation_id):null);
+      }
+      if(contactId&&!organisationId){
+        const linkedContact=await db.query("SELECT organisation_id FROM crm.contacts WHERE id=$1",[contactId]);
+        organisationId=linkedContact.rows[0]?.organisation_id?String(linkedContact.rows[0].organisation_id):null;
+      }
+      let organisationKey:string|null=null;
+      if(organisationId) {
+        const org=await db.query("SELECT canonical_domain,canonical_name FROM crm.organisations WHERE id=$1",[organisationId]);
+        organisationKey=org.rows.length?String(org.rows[0].canonical_domain||org.rows[0].canonical_name).trim().toLowerCase():null;
+      }
       const results = await db.query(`SELECT status,scope_type AS "scopeType",safety_type AS "safetyType",
          channel,purpose,route_normalised_value AS "routeNormalisedValue",organisation_key AS "organisationKey",
          organisation_id AS "organisationId",contact_id AS "contactId" FROM crm.safety
-         WHERE status='active' AND route_normalised_value=$1`,[normal]);
+         WHERE status='active' AND (route_normalised_value=$1
+           OR (organisation_key IS NOT NULL AND organisation_key=$2)
+           OR (organisation_id IS NOT NULL AND organisation_id=$3)
+           OR (contact_id IS NOT NULL AND contact_id=$4))`,[normal,organisationKey,organisationId,contactId]);
       const controls=results.rows as SafetyMatch[];
-      return { assessment: assessSyntheticEligibility({channel:"email",routeValue:normal,purpose:"marketing"},controls),controls };
+      return { assessment: assessSyntheticEligibility({
+        channel:"email",routeValue:normal,purpose:"marketing",organisationId,organisationKey,contactId,
+      },controls),controls };
     }
     default: throw new CrmInputError("Unknown CRM view.");
   }

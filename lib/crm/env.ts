@@ -19,11 +19,6 @@ export function getCrmDatabaseUrl(): string {
   return value;
 }
 
-export function getSandboxAdminAuthSubject(): string | null {
-  if (expectedCrmDatabaseEnvironment() !== "sandbox") return null;
-  return process.env.CRM_SANDBOX_ADMIN_AUTH_SUBJECT?.trim() || null;
-}
-
 export function assertNoProductionDatabaseHint(databaseUrl: string): void {
   if (expectedCrmDatabaseEnvironment() !== "sandbox") return;
   const lowered = databaseUrl.toLowerCase();

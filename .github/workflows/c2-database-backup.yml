@@ -1,0 +1,107 @@
+name: C2 Database Backup
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: holyhub-c2-database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Encrypted Supabase logical backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      SUPABASE_CLI_VERSION: '2.122.0'
+      SUPABASE_CLI_DEB_SHA256: '119a0f7123f381846f80cf3c4efe96cffb943db55b747177c411f2ac705a5942'
+
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${SUPABASE_DB_URL:-}" ]]; then
+            echo 'Missing required GitHub secret: SUPABASE_DB_URL' >&2
+            exit 1
+          fi
+          if [[ -z "${BACKUP_ENCRYPTION_PASSPHRASE:-}" ]]; then
+            echo 'Missing required GitHub secret: BACKUP_ENCRYPTION_PASSPHRASE' >&2
+            exit 1
+          fi
+          echo "::add-mask::${SUPABASE_DB_URL}"
+          echo "::add-mask::${BACKUP_ENCRYPTION_PASSPHRASE}"
+
+      - name: Install pinned Supabase CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEB="supabase_${SUPABASE_CLI_VERSION}_linux_amd64.deb"
+          URL="https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/${DEB}"
+          curl --fail --silent --show-error --location "$URL" --output "$DEB"
+          printf '%s  %s\n' "$SUPABASE_CLI_DEB_SHA256" "$DEB" | sha256sum --check --strict
+          sudo dpkg -i "$DEB"
+          rm -f "$DEB"
+          supabase --version
+          docker --version
+
+      - name: Create logical backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p backup
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f backup/data.sql --use-copy --data-only -x 'storage.buckets_vectors' -x 'storage.vector_indexes'
+
+      - name: Encrypt and verify backup package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          STAMP="$(date -u +'%Y%m%dT%H%M%SZ')"
+          PLAINTEXT="holyhub-db-${STAMP}.tar.gz"
+          ENCRYPTED="${PLAINTEXT}.gpg"
+
+          tar -C backup -czf "$PLAINTEXT" roles.sql schema.sql data.sql
+          printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" | gpg \
+            --batch \
+            --yes \
+            --pinentry-mode loopback \
+            --passphrase-fd 0 \
+            --symmetric \
+            --cipher-algo AES256 \
+            --output "$ENCRYPTED" \
+            "$PLAINTEXT"
+
+          printf '%s' "$BACKUP_ENCRYPTION_PASSPHRASE" | gpg \
+            --batch \
+            --quiet \
+            --pinentry-mode loopback \
+            --passphrase-fd 0 \
+            --decrypt "$ENCRYPTED" | tar -tzf - > /dev/null
+
+          sha256sum "$ENCRYPTED" > "${ENCRYPTED}.sha256"
+          rm -rf backup "$PLAINTEXT"
+
+          echo "encrypted=$ENCRYPTED" >> "$GITHUB_OUTPUT"
+          echo "checksum=${ENCRYPTED}.sha256" >> "$GITHUB_OUTPUT"
+          echo "artifact=holyhub-db-backup-${STAMP}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload encrypted off-site backup
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.package.outputs.artifact }}
+          path: |
+            ${{ steps.package.outputs.encrypted }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30

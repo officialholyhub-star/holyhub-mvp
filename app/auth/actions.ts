@@ -64,6 +64,7 @@ export async function signup(formData: FormData): Promise<{ error?: string; next
   const confirmPassword = raw(formData.get("confirm_password"));
   const acceptedTerms = formData.get("accept_terms") === "on";
 
+  if (formData.get("age_18_plus_confirmed") !== "on") return { error: "Please confirm you are aged 18 or over to create an account." };
   if (!acceptedTerms) return { error: "Please agree to the HolyHub terms to create an account." };
   if (!isValidEmail(email)) return { error: "Enter a valid email address." };
   if (!fullName) return { error: "Enter your first name." };
@@ -79,7 +80,7 @@ export async function signup(formData: FormData): Promise<{ error?: string; next
     email,
     password,
     options: {
-      data: { full_name: fullName },
+      data: { age_18_plus_confirmed: true, full_name: fullName },
       emailRedirectTo: `${siteUrl}/auth/callback?next=/account`,
     },
   });

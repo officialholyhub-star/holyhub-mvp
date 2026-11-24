@@ -317,6 +317,9 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
           (relationship_id,organisation_id,action_type,title,due_at,status,assigned_to_internal_user_id,source)
           VALUES($1,$2,$3,$4,$5,'open',$6,'n18_synthetic_2a') RETURNING *`,
           [relationshipId,relationship.organisation_id,actionType,title,dueAt,actor])).rows[0];
+        await audit(c,"action",String(row.id),actor,"record_created",null,
+          {title,actionType,relationshipId,dueAt:dueAt?.toISOString()??null},
+          "Synthetic action created");
         await activity(c,actor,"action_created","Synthetic action created: "+title,{
           relationshipId,organisationId:String(relationship.organisation_id),
         });

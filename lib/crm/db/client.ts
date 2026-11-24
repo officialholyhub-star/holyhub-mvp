@@ -3,6 +3,7 @@ import "server-only";
 import { Pool } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { assertNoProductionDatabaseHint, expectedCrmDatabaseEnvironment, getCrmDatabaseUrl } from "@/lib/crm/env";
+import { assertCrmRuntimeIdentity } from "@/lib/crm/db/runtime-identity";
 import * as schema from "@/lib/crm/db/schema";
 
 let pool: Pool | null = null;
@@ -28,18 +29,16 @@ export async function assertCrmDatabaseEnvironment(): Promise<"sandbox" | "produ
   if (verifiedEnvironment === expected) return expected;
 
   const result = await getCrmPool().query(
-    "select value from crm_config.system_settings where key = 'system_environment' limit 1",
+    `SELECT
+       (SELECT value FROM crm_config.system_settings WHERE key='system_environment' LIMIT 1) AS db_environment,
+       current_user::text AS db_role,
+       session_user::text AS login_role`,
   );
-  const actual = (result.rows[0] as { value?: string } | undefined)?.value;
-
-  if (!actual) {
-    throw new Error("CRM database is missing the required system_environment marker.");
-  }
-  if (actual !== expected) {
-    throw new Error(`CRM environment mismatch: runtime expects ${expected}, database reports ${actual}.`);
-  }
-
-  verifiedEnvironment = actual;
+  // Check the database environment and login principal on the same connection.
+  // This prevents an accidentally configured owner/admin connection from being
+  // treated as a safe CRM application principal.
+  assertCrmRuntimeIdentity(result.rows[0], expected);
+  verifiedEnvironment = expected;
   return expected;
 }
 

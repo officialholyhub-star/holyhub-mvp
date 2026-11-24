@@ -7,6 +7,7 @@ import { transitionRelationshipStage } from "@/lib/crm/services/relationships";
 import {
   assessSyntheticEligibility, isFictionalOrganisation, isFictionalRoute, normaliseRoute, type SafetyMatch,
 } from "@/lib/crm/safety/rules";
+import { isFictionalContactName, isFictionalOrganisationKey, isSyntheticOrigin } from "@/lib/crm/safety/fictional-targets";
 
 type SqlRow = Record<string, unknown>;
 type SqlClient = { query: (sql: string, values?: unknown[]) => Promise<{ rows: SqlRow[] }> };
@@ -60,6 +61,48 @@ async function activity(c: SqlClient, actor: string, activityType: string, summa
     [ids.organisationId ?? null,ids.contactId ?? null,ids.relationshipId ?? null,activityType,actor,summary],
   );
 }
+async function assertFictionalOrganisationRecord(c:SqlClient,id:string):Promise<void> {
+  const row=(await c.query("SELECT canonical_name,canonical_domain FROM crm.organisations WHERE id=$1",[id])).rows[0];
+  if(!row||!isFictionalOrganisation(String(row.canonical_name),row.canonical_domain?String(row.canonical_domain):null))
+    throw new CrmInputError("A fictional organisation is required.");
+}
+async function assertFictionalContactRecord(c:SqlClient,id:string):Promise<void> {
+  const row=(await c.query("SELECT display_name,organisation_id FROM crm.contacts WHERE id=$1",[id])).rows[0];
+  if(!row||!isFictionalContactName(String(row.display_name)))throw new CrmInputError("A fictional contact is required.");
+  if(row.organisation_id)await assertFictionalOrganisationRecord(c,String(row.organisation_id));
+}
+async function assertFictionalRelationshipRecord(c:SqlClient,id:string):Promise<void> {
+  const row=(await c.query("SELECT organisation_id FROM crm.relationships WHERE id=$1",[id])).rows[0];
+  if(!row||!row.organisation_id)throw new CrmInputError("A fictional relationship is required.");
+  await assertFictionalOrganisationRecord(c,String(row.organisation_id));
+}
+async function assertFictionalRouteRecord(c:SqlClient,id:string):Promise<void> {
+  const row=(await c.query("SELECT channel,normalised_value,contact_id,organisation_id FROM crm.contact_routes WHERE id=$1",[id])).rows[0];
+  if(!row||!isFictionalRoute(String(row.channel),String(row.normalised_value)))
+    throw new CrmInputError("A fictional contact route is required.");
+  if(row.contact_id)await assertFictionalContactRecord(c,String(row.contact_id));
+  if(row.organisation_id)await assertFictionalOrganisationRecord(c,String(row.organisation_id));
+  if(!row.contact_id&&!row.organisation_id)throw new CrmInputError("Fictional route owner is missing.");
+}
+async function assertFictionalActionRecord(c:SqlClient,id:string):Promise<void> {
+  const row=(await c.query("SELECT source,relationship_id FROM crm.actions WHERE id=$1",[id])).rows[0];
+  if(!row||!isSyntheticOrigin(String(row.source)))throw new CrmInputError("A fictional action is required.");
+  await assertFictionalRelationshipRecord(c,String(row.relationship_id));
+}
+async function assertFictionalSafetyRecord(c:SqlClient,id:string):Promise<void> {
+  const row=(await c.query("SELECT source_system,channel,route_normalised_value,organisation_key,organisation_id,contact_id,contact_route_id FROM crm.safety WHERE id=$1",[id])).rows[0];
+  if(!row||!isSyntheticOrigin(String(row.source_system)))throw new CrmInputError("A fictional safety control is required.");
+  if(row.route_normalised_value&&!isFictionalRoute(String(row.channel||"email"),String(row.route_normalised_value)))
+    throw new CrmInputError("Safety control has a non-fictional route.");
+  if(row.organisation_key&&!isFictionalOrganisationKey(String(row.organisation_key)))
+    throw new CrmInputError("Safety control has a non-fictional organisation key.");
+  if(row.organisation_id)await assertFictionalOrganisationRecord(c,String(row.organisation_id));
+  if(row.contact_id)await assertFictionalContactRecord(c,String(row.contact_id));
+  if(row.contact_route_id)await assertFictionalRouteRecord(c,String(row.contact_route_id));
+  if(!row.route_normalised_value&&!row.organisation_key&&!row.organisation_id&&!row.contact_id&&!row.contact_route_id)
+    throw new CrmInputError("Safety control has no fictional target evidence.");
+}
+
 function queryText(q: string): string { return q.slice(0,120).trim(); }
 
 export async function listOperatorView(view: string, query: string, relatedId?: string, subjectOrganisationId?: string, subjectContactId?: string) {
@@ -186,6 +229,7 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const category=field(data.category,"Category",80,true)||null;
       const old=id ? (await c.query("SELECT * FROM crm.organisations WHERE id=$1",[id])).rows[0] : null;
       if (id&&!old) throw new CrmInputError("Organisation not found.");
+      if(id)await assertFictionalOrganisationRecord(c,id);
       const result=await c.query(id
         ? `UPDATE crm.organisations SET canonical_name=$2,canonical_domain=$3,category=$4,updated_at=now() WHERE id=$1 RETURNING *`
         : `INSERT INTO crm.organisations(canonical_name,canonical_domain,category,source_confidence) VALUES($1,$2,$3,'synthetic') RETURNING *`,
@@ -203,6 +247,8 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const jobTitle=field(data.jobTitle,"Job title",120,true)||null;
       const old=id?(await c.query("SELECT * FROM crm.contacts WHERE id=$1",[id])).rows[0]:null;
       if (id&&!old) throw new CrmInputError("Contact not found.");
+      if(id)await assertFictionalContactRecord(c,id);
+      if(organisationId)await assertFictionalOrganisationRecord(c,organisationId);
       const row=(await c.query(id
         ? `UPDATE crm.contacts SET display_name=$2,organisation_id=$3,job_title=$4,updated_at=now() WHERE id=$1 RETURNING *`
         : `INSERT INTO crm.contacts(display_name,organisation_id,job_title,source_confidence) VALUES($1,$2,$3,'synthetic') RETURNING *`,
@@ -223,6 +269,9 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const health=choice(data.health,["unknown","valid","failed","held"],"route health");
       const old=id?(await c.query("SELECT * FROM crm.contact_routes WHERE id=$1",[id])).rows[0]:null;
       if(id&&!old)throw new CrmInputError("Route not found.");
+      if(id)await assertFictionalRouteRecord(c,id);
+      if(contactId)await assertFictionalContactRecord(c,contactId);
+      if(organisationId)await assertFictionalOrganisationRecord(c,organisationId);
       const row=(await c.query(id
         ? `UPDATE crm.contact_routes SET contact_id=$2,organisation_id=$3,channel=$4,route_value=$5,normalised_value=$6,health=$7,updated_at=now() WHERE id=$1 RETURNING *`
         : `INSERT INTO crm.contact_routes (contact_id,organisation_id,channel,route_value,normalised_value,health)
@@ -254,10 +303,14 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const relationshipId=validId(data.relationshipId)!;
       return withTx(async c=>{
         await c.query("SELECT pg_advisory_xact_lock(hashtext($1))",[relationshipId+"|"+actionType+"|"+title.toLowerCase()]);
+        await assertFictionalRelationshipRecord(c,relationshipId);
         const existing=(await c.query(`SELECT * FROM crm.actions
           WHERE relationship_id=$1 AND action_type=$2 AND lower(title)=lower($3) AND status='open'
           ORDER BY created_at DESC LIMIT 1`,[relationshipId,actionType,title])).rows[0];
-        if(existing)return {...existing,replayed:true};
+        if(existing) {
+          await assertFictionalActionRecord(c,String(existing.id));
+          return {...existing,replayed:true};
+        }
         const relationship=(await c.query("SELECT organisation_id FROM crm.relationships WHERE id=$1",[relationshipId])).rows[0];
         if(!relationship)throw new CrmInputError("Relationship not found.");
         const row=(await c.query(`INSERT INTO crm.actions
@@ -270,7 +323,7 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
         return {...row,replayed:false};
       });
     }
-    case "completeAction": return completeCrmAction(validId(data.id)!,actor);
+    case "completeAction": return completeCrmAction(validId(data.id)!,actor,true);
     case "applySafety": return withTx(async c => {
       const scope=choice(data.scopeType,["route","contact","organisation"],"safety scope");
       const safetyType=choice(data.safetyType,["marketing_objection","failed_route","temporary_hold"],"safety type");
@@ -286,6 +339,7 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       const routeId=scope==="route"?validId(data.contactRouteId,true):null;
       let route=field(data.routeValue,"Fictional route",240,true);
       if(routeId){
+        await assertFictionalRouteRecord(c,routeId);
         const match=(await c.query("SELECT channel,normalised_value FROM crm.contact_routes WHERE id=$1",[routeId])).rows[0];
         if(!match)throw new CrmInputError("Contact route not found.");
         if(match.channel!==channel)throw new CrmInputError("Contact route channel mismatch.");
@@ -297,7 +351,9 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
         if(!isFictionalRoute(channel,normal))throw new CrmInputError("Only fictional routes are allowed.");
       }
       let key=field(data.organisationKey,"Fictional organisation key",200,true).toLowerCase()||null;
+      if(contactId)await assertFictionalContactRecord(c,contactId);
       if(organisationId){
+        await assertFictionalOrganisationRecord(c,organisationId);
         const org=(await c.query("SELECT canonical_name,canonical_domain FROM crm.organisations WHERE id=$1",[organisationId])).rows[0];
         if(!org)throw new CrmInputError("Organisation not found.");
         key=String(org.canonical_domain||org.canonical_name).trim().toLowerCase();
@@ -335,6 +391,7 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
       if(reason.length<8||!evidence.startsWith("synthetic:review-"))throw new CrmInputError("Documented synthetic review evidence is required.");
       const old=(await c.query("SELECT * FROM crm.safety WHERE id=$1 AND status='active' FOR UPDATE",[id])).rows[0];
       if(!old)throw new CrmInputError("Active safety control not found; already cleared or invalid.");
+      await assertFictionalSafetyRecord(c,id);
       const row=(await c.query(`UPDATE crm.safety SET status='cleared',cleared_at=now(),
         cleared_by_internal_user_id=$2,clearance_evidence=$3 WHERE id=$1 RETURNING *`,[id,actor,evidence])).rows[0];
       await audit(c,"safety",id,actor,"status","active","cleared",reason+" | "+evidence);
@@ -353,6 +410,7 @@ export async function runOperatorMutation(operation: string, data: RequestData, 
           JOIN crm.relationships r ON r.id=a.relationship_id
           WHERE a.id=$1 AND a.status='open' AND a.action_type='needs_review' FOR UPDATE OF a`,[id])).rows[0];
         if(!existing)throw new CrmInputError("Open synthetic Needs Review action not found.");
+        await assertFictionalActionRecord(c,id);
         const row=(await c.query(`UPDATE crm.actions SET status='completed',completed_at=now(),
           updated_at=now() WHERE id=$1 RETURNING *`,[id])).rows[0];
         await audit(c,"action",id,actor,"status","open","completed",reason);

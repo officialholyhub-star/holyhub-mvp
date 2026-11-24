@@ -2,7 +2,9 @@ import "server-only";
 
 import { and, eq } from "drizzle-orm";
 import { assertCrmDatabaseEnvironment, getCrmDb } from "@/lib/crm/db/client";
-import { actions, activity, fieldChangeAudit } from "@/lib/crm/db/schema";
+import { actions, activity, fieldChangeAudit, organisations, relationships } from "@/lib/crm/db/schema";
+import { isFictionalOrganisation } from "@/lib/crm/safety/rules";
+import { isSyntheticOrigin } from "@/lib/crm/safety/fictional-targets";
 
 export type CreateActionInput = {
   relationshipId: string;
@@ -54,13 +56,22 @@ export async function createCrmAction(input: CreateActionInput, actorInternalUse
   });
 }
 
-export async function completeCrmAction(actionId: string, actorInternalUserId: string) {
+export async function completeCrmAction(actionId: string, actorInternalUserId: string, syntheticTargetOnly = false) {
   await assertCrmDatabaseEnvironment();
   const db = getCrmDb();
 
   return db.transaction(async (tx) => {
     const [existing] = await tx.select().from(actions).where(and(eq(actions.id, actionId), eq(actions.status, "open"))).limit(1);
     if (!existing) throw new Error("Open CRM action not found.");
+    if (syntheticTargetOnly) {
+      const [relationship] = await tx.select().from(relationships).where(eq(relationships.id, existing.relationshipId)).limit(1);
+      const [org] = relationship
+        ? await tx.select().from(organisations).where(eq(organisations.id, relationship.organisationId)).limit(1)
+        : [];
+      if (!isSyntheticOrigin(existing.source) || !org || !isFictionalOrganisation(org.canonicalName, org.canonicalDomain)) {
+        throw new Error("Sandbox action target is not fictional.");
+      }
+    }
 
     const completedAt = new Date();
     const [updated] = await tx

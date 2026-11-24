@@ -2,7 +2,8 @@ import "server-only";
 
 import { eq } from "drizzle-orm";
 import { assertCrmDatabaseEnvironment, getCrmDb } from "@/lib/crm/db/client";
-import { activity, fieldChangeAudit, pipelineStages, relationships, stageHistory } from "@/lib/crm/db/schema";
+import { activity, fieldChangeAudit, organisations, pipelineStages, relationships, stageHistory } from "@/lib/crm/db/schema";
+import { isFictionalOrganisation } from "@/lib/crm/safety/rules";
 
 export async function transitionRelationshipStage(input: {
   relationshipId: string;
@@ -17,6 +18,12 @@ export async function transitionRelationshipStage(input: {
   return db.transaction(async (tx) => {
     const [relationship] = await tx.select().from(relationships).where(eq(relationships.id, input.relationshipId)).limit(1);
     if (!relationship) throw new Error("CRM relationship not found.");
+    if (input.source === "n18_synthetic_2a") {
+      const [org] = await tx.select().from(organisations).where(eq(organisations.id, relationship.organisationId)).limit(1);
+      if (!org || !isFictionalOrganisation(org.canonicalName, org.canonicalDomain)) {
+        throw new Error("Sandbox relationship target is not fictional.");
+      }
+    }
 
     const [newStage] = await tx.select().from(pipelineStages).where(eq(pipelineStages.id, input.newStageId)).limit(1);
     if (!newStage || !newStage.active) throw new Error("Target pipeline stage is unavailable.");

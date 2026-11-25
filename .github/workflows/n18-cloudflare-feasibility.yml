@@ -31,3 +31,42 @@ jobs:
 
       - name: Verify this feasibility job did not edit source files
         run: git diff --exit-code -- package.json package-lock.json next.config.ts proxy.ts
+
+  isolated-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: "true"
+      CRM_ENVIRONMENT: sandbox
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_synthetic_test_only
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    steps:
+      - name: Check out isolated N18 source
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Create disposable project copy away from repository
+        run: |
+          mkdir -p "$RUNNER_TEMP/n18-cloudflare-compat"
+          rsync -a --exclude=.git --exclude=node_modules --exclude=.next ./ "$RUNNER_TEMP/n18-cloudflare-compat/"
+          test -f "$RUNNER_TEMP/n18-cloudflare-compat/package.json"
+
+      - name: Install packages only in disposable copy
+        working-directory: ${{ runner.temp }}/n18-cloudflare-compat
+        run: npm ci --no-audit --no-fund
+
+      - name: Initialise vinext in disposable copy only
+        working-directory: ${{ runner.temp }}/n18-cloudflare-compat
+        run: npx --yes vinext@1.4.0 init --platform=cloudflare --name=n18-synthetic-compat-only --cdn-cache=none --data-cache=none --image-optimization=none
+
+      - name: Build Cloudflare candidate (no publish, no secrets)
+        working-directory: ${{ runner.temp }}/n18-cloudflare-compat
+        run: npm run build:vinext
+
+      - name: Confirm original repo source unchanged
+        run: git diff --exit-code -- package.json package-lock.json next.config.ts proxy.ts

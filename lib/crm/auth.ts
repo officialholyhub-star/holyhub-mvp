@@ -15,7 +15,15 @@ export class CrmAuthorizationError extends Error {
 }
 
 export async function requireCrmUser(allowedRoles: CrmRole[] = ["crm_admin", "crm_operator", "crm_viewer"]) {
-  const { user } = await requireUser();
+  // CRM staff operations require a verified step-up MFA session in addition
+  // to an active user and a separately bound CRM staff record. This applies
+  // to viewers as well as writers because CRM pages expose contact information.
+  const { user, supabase } = await requireUser();
+  const { data: aal, error: assuranceError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (assuranceError || !aal || aal.currentLevel !== "aal2" || aal.nextLevel !== "aal2") {
+    throw new CrmAuthorizationError("CRM staff access requires a verified MFA session.");
+  }
   await assertCrmDatabaseEnvironment();
   const db = getCrmDb();
 

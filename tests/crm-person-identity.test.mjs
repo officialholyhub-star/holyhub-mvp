@@ -6,6 +6,9 @@ import { loadTypescript } from "./helpers/load-typescript.mjs";
 let sessionSubject = "synthetic-operator-a";
 let databaseAvailable = true;
 let databaseReads = 0;
+let aalCurrent = "aal2";
+let aalNext = "aal2";
+let mfaNetworkError = null;
 const internalUsers = {
   authProvider: "authProvider",
   authSubject: "authSubject",
@@ -50,7 +53,12 @@ const auth = loadTypescript("lib/crm/auth.ts",{
   "@/lib/auth/require-user":{
     requireUser:async()=>{
       if(!sessionSubject) throw new Error("No verified Supabase session");
-      return {user:{id:sessionSubject}};
+      return {user:{id:sessionSubject},supabase:{auth:{mfa:{
+        getAuthenticatorAssuranceLevel:async()=>({
+          data:mfaNetworkError?null:{currentLevel:aalCurrent,nextLevel:aalNext},
+          error:mfaNetworkError,
+        }),
+      }}}};
     },
   },
   "@/lib/crm/db/client":{
@@ -66,6 +74,9 @@ function reset(subject){
   sessionSubject=subject;
   databaseAvailable=true;
   databaseReads=0;
+  aalCurrent="aal2";
+  aalNext="aal2";
+  mfaNetworkError=null;
 }
 
 test("synthetic operator A is bound only to A's verified session subject",async()=>{
@@ -116,4 +127,36 @@ test("CRM source only reads its existing staff binding; it never creates one on 
   assert.match(source,/eq\(internalUsers\.authProvider, "supabase"\)/);
   assert.match(source,/eq\(internalUsers\.authSubject, user\.id\)/);
   assert.doesNotMatch(source,/\.insert\(internalUsers\)|\.update\(internalUsers\)/);
+});
+
+test("unverified MFA, un-enrolled and un-challenged staff are denied before any DB query",async()=>{
+  for(const [current,next] of [["aal1","aal1"],["aal1","aal2"],[null,null]]){
+    reset("synthetic-operator-a");
+    aalCurrent=current;
+    aalNext=next;
+    await assert.rejects(auth.requireCrmUser(["crm_operator"]),/verified MFA session/);
+    assert.equal(databaseReads,0);
+  }
+});
+
+test("stale AAL2 claims after MFA unenrolment are denied",async()=>{
+  reset("synthetic-operator-a");
+  aalCurrent="aal2";
+  aalNext="aal1";
+  await assert.rejects(auth.requireCrmUser(["crm_operator"]),/verified MFA session/);
+  assert.equal(databaseReads,0);
+});
+
+test("MFA network/provider errors fail closed instead of falling back to login alone",async()=>{
+  reset("synthetic-operator-a");
+  mfaNetworkError=new Error("MFA provider unavailable");
+  await assert.rejects(auth.requireCrmUser(["crm_operator"]),/verified MFA session/);
+  assert.equal(databaseReads,0);
+});
+
+test("role binding is evaluated only after the validated MFA assurance check",()=>{
+  const source=fs.readFileSync("lib/crm/auth.ts","utf8");
+  assert.match(source,/supabase\.auth\.mfa\.getAuthenticatorAssuranceLevel\(\)/);
+  assert.match(source,/aal\.currentLevel !== "aal2" \|\| aal\.nextLevel !== "aal2"/);
+  assert.ok(source.indexOf("getAuthenticatorAssuranceLevel()")<source.indexOf("getCrmDb()"));
 });

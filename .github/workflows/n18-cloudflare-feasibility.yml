@@ -1,0 +1,33 @@
+name: N18 Cloudflare feasibility — no deployment
+
+on:
+  push:
+    branches: [anais/n18-crm-sandbox]
+    paths:
+      - ".github/workflows/n18-cloudflare-feasibility.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out isolated N18 branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install existing package dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Scan Next.js compatibility with Cloudflare vinext
+        run: npx --yes vinext@1.4.0 check
+
+      - name: Verify this feasibility job did not edit source files
+        run: git diff --exit-code -- package.json package-lock.json next.config.ts proxy.ts
